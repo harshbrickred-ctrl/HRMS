@@ -1,0 +1,2125 @@
+You are a **Principal Product Architect, Enterprise Software Architect, HRMS Domain Expert, Product Manager, SaaS Strategist, Technical Program Manager, Security Architect, and CTO-level technology advisor**.
+
+I am planning to build a complete **enterprise-grade Human Resource Management System (HRMS)** for my company.
+
+The system will initially be developed and deployed as an **in-house HRMS for internal company use**. However, from the architecture and product-design stage itself, it must be designed so that it can later evolve into a **commercial, scalable, multi-tenant enterprise SaaS HRMS** without requiring a major architectural rewrite.
+
+The immediate objective is **not to build everything possible**.
+
+The immediate objective is to:
+
+1. Understand the HRMS market deeply.
+2. Identify weaknesses and gaps in existing HRMS products.
+3. Determine what an excellent modern HRMS should actually contain.
+4. Define a realistic internal MVP.
+5. Build it within 3 months.
+6. Use a 4-person development team.
+7. Avoid infrastructure/deployment expenditure during initial development as much as reasonably possible.
+8. Prepare the architecture and documentation for future Azure/cloud investment.
+9. Establish a foundation capable of evolving into a commercial SaaS product.
+
+---
+
+# PROJECT CONTEXT
+
+## Development Team
+
+Total developers: 4
+
+Suggested structure:
+
+* 1 Lead Developer / Solution Architect
+* 1 Backend Engineer
+* 1 Frontend Engineer
+* 1 Full Stack / QA Automation Engineer
+
+This is a small team, so every architectural and product decision must account for actual development capacity.
+
+## Initial Timeline
+
+Total initial development window:
+
+**12 weeks / 3 months**
+
+The timeline must be treated as a hard delivery constraint.
+
+## Initial Infrastructure Budget
+
+During initial development and internal validation:
+
+**Target infrastructure/tooling investment = ₹0 wherever reasonably achievable using free/open-source/local tooling, free tiers, local development infrastructure, and existing organizational resources.**
+
+Do not assume that Azure infrastructure will be purchased from Day 1.
+
+Instead:
+
+### Phase 1 — Zero/Minimal Cost Development
+
+Use:
+
+* Open-source software
+* Local development environments
+* Free IDEs/tooling where suitable
+* Free database editions where suitable
+* Free CI/CD tiers where available
+* Free authentication/development tooling where possible
+* Local object/file storage during development where appropriate
+* Docker/local containers where beneficial
+* Local/test environments
+* Existing company infrastructure where already available
+
+Clearly distinguish between:
+
+* Truly free/open-source
+* Free tier
+* Trial
+* Limited free quota
+* Existing enterprise license
+* Paid service
+
+Never represent a paid service as free.
+
+### Phase 2 — Production / Azure Investment
+
+Once the product is validated internally and leadership approves production investment, the platform should be capable of moving toward Azure services for:
+
+* Application hosting
+* Database hosting
+* Object/file storage
+* Identity
+* Messaging
+* Monitoring
+* Backup
+* Security
+* Scaling
+* Disaster recovery
+* Networking
+
+The documentation must therefore explain **both the initial zero/minimal-cost implementation and the future Azure production architecture**.
+
+---
+
+# PRIMARY OBJECTIVE
+
+Create a comprehensive, enterprise-grade **HRMS Product + SDLC + Architecture + Execution + Business Proposal document** that can ultimately be presented to the CEO for approval.
+
+This must NOT be a shallow HRMS feature list.
+
+It must be a realistic product strategy and software engineering blueprint.
+
+The documentation must combine:
+
+* Business strategy
+* HR domain understanding
+* Current HRMS market analysis
+* Competitive/product analysis
+* Requirements engineering
+* Product strategy
+* UX
+* System architecture
+* Security
+* Database design
+* API design
+* SDLC
+* Project planning
+* Testing
+* DevOps
+* Deployment
+* SaaS readiness
+* Cost strategy
+* Risk management
+
+---
+
+# PART 1 — EXECUTIVE BUSINESS CASE
+
+Start with a CEO-friendly executive summary.
+
+Explain:
+
+* Why the company should build an internal HRMS
+* What operational problems it solves
+* Why an integrated HR platform is strategically useful
+* Why existing tools may not fully satisfy organizational requirements
+* Expected business benefits
+* Expected employee benefits
+* Expected HR benefits
+* Expected management benefits
+* Expected IT/operations benefits
+* Expected productivity improvements
+* Reduction of spreadsheet/manual processes
+* Centralization of employee data
+* Better visibility
+* Better workflow automation
+* Better reporting
+* Better auditability
+* Better employee experience
+* Long-term strategic value of owning the software platform
+* Future SaaS commercialization potential
+
+Do not make unsupported ROI claims.
+
+Clearly identify:
+
+* Known facts
+* Assumptions
+* Estimates
+* Metrics that must be measured after implementation
+
+---
+
+# PART 2 — PROBLEM STATEMENT
+
+Perform a detailed current-state analysis of common HR operations.
+
+Analyze problems across:
+
+* Employee management
+* Recruitment
+* Candidate tracking
+* Onboarding
+* Employee documentation
+* Attendance
+* Leave
+* Payroll coordination
+* Timesheets
+* Performance
+* Training
+* Assets
+* Employee requests
+* Expenses
+* Offboarding
+* Compliance
+* HR analytics
+* Management reporting
+* Employee communications
+
+Analyze problems separately for:
+
+* CEO
+* HR Head
+* HR Executive
+* Recruiter
+* Manager
+* Employee
+* Finance
+* IT
+* Leadership
+
+Map:
+
+**Current Process → Pain Point → Operational Impact → Business Impact → Proposed Digital Solution**
+
+---
+
+# PART 3 — CURRENT MARKET HRMS ANALYSIS
+
+THIS IS A CRITICAL NEW SECTION.
+
+Conduct a **current market analysis of existing HRMS products**.
+
+The objective is NOT simply to list competitors.
+
+The objective is to understand:
+
+1. What the industry already does well.
+2. What employees expect from modern HRMS products.
+3. What HR teams expect.
+4. What enterprise customers expect.
+5. Where existing HRMS products are strong.
+6. Where they are weak.
+7. What users complain about.
+8. Where product complexity becomes a problem.
+9. Which features are table stakes.
+10. Which features create meaningful differentiation.
+11. Where there may be underserved market opportunities.
+12. What we should build ourselves.
+13. What we should integrate instead.
+14. What should be postponed.
+15. What could eventually become SaaS differentiation.
+
+## Market Research Scope
+
+Research current products such as, where relevant:
+
+* Workday
+* SAP SuccessFactors
+* Oracle HCM
+* UKG
+* ADP
+* BambooHR
+* Rippling
+* Deel
+* Zoho People
+* Darwinbox
+* Keka
+* greytHR
+* Freshteam / Freshworks HR offerings
+* PeopleStrong
+* Pocket HRMS
+* Other relevant Indian and international HRMS platforms
+
+Do NOT blindly use this exact list.
+
+Identify additional important competitors if relevant.
+
+Because this is a **current market analysis**, use up-to-date web research and prefer:
+
+* Official vendor documentation
+* Official product pages
+* Product documentation
+* Pricing pages
+* Independent industry reviews
+* Credible analyst sources
+* Customer reviews
+* Relevant user/community feedback
+
+Clearly distinguish vendor claims from observed or independently reported information.
+
+## Competitive Analysis
+
+Create a structured comparison for major competitors covering:
+
+* Target customer
+* Geography
+* Company size
+* Core modules
+* Recruitment
+* Core HR
+* Attendance
+* Leave
+* Payroll
+* Performance
+* Employee self-service
+* Manager capabilities
+* Workflow automation
+* Document management
+* Asset management
+* Expense
+* Helpdesk
+* Analytics
+* Integrations
+* Mobile support
+* AI capabilities
+* Customization
+* Reporting
+* Security
+* SSO
+* API support
+* Multi-tenancy
+* Implementation complexity
+* Pricing model
+* Major strengths
+* Major weaknesses
+* Common complaints
+* Best-fit customer
+* Potential limitations
+
+Use a clear comparison table.
+
+## Product Strength Analysis
+
+For each important HRMS product identify:
+
+### Strengths
+
+What they do exceptionally well.
+
+### Weaknesses
+
+Where they have limitations.
+
+### Benefits
+
+What business value they provide.
+
+### User Experience
+
+What is good/bad about their UX.
+
+### Enterprise Capability
+
+What makes the platform enterprise-ready.
+
+### Customization
+
+How configurable the system is.
+
+### Integration Capability
+
+How well it integrates with the broader enterprise.
+
+### Pricing / Commercial Model
+
+How the product is positioned commercially.
+
+### Market Position
+
+Who it appears designed for.
+
+### Key Lessons For Us
+
+What we should learn from it.
+
+---
+
+# PART 4 — USER REVIEW / PAIN-POINT ANALYSIS
+
+Where reliable public reviews are available, analyze recurring complaints from users of HRMS systems.
+
+Look for patterns such as:
+
+* Poor UX
+* Complex navigation
+* Excessive configuration
+* Weak reporting
+* Difficult customization
+* Limited workflow flexibility
+* Slow support
+* Hidden costs
+* Expensive implementations
+* Poor mobile experience
+* Integration limitations
+* Payroll issues
+* Attendance inaccuracies
+* Difficult migrations
+* Poor data visibility
+* Lack of transparency
+* Weak APIs
+* Excessive administrative complexity
+
+Do NOT treat individual reviews as universal facts.
+
+Identify patterns across multiple sources.
+
+Create:
+
+**Observed Market Pain → Evidence → Potential Product Opportunity**
+
+---
+
+# PART 5 — MARKET GAP ANALYSIS
+
+Based on the competitor research, identify:
+
+* Common features shared by nearly all HRMS products
+* Features that have become industry table stakes
+* Features users strongly expect
+* Features that are often poorly implemented
+* Features that create unnecessary complexity
+* Underserved needs
+* Potential differentiation opportunities
+* Potential SaaS niches
+
+Then define:
+
+## What We Should NOT Compete On
+
+For example:
+
+* Commodity functionality
+* Generic payroll capabilities
+* Features that already have excellent specialized solutions
+
+## What We COULD Compete On
+
+Potential areas may include:
+
+* Exceptional UX
+* Configurable workflows
+* Developer-friendly APIs
+* Enterprise automation
+* Flexible employee lifecycle
+* Better analytics
+* Custom organizational processes
+* AI-assisted HR operations
+* Better integrations
+* Better employee self-service
+* Better admin experience
+
+Do not assume these are opportunities.
+
+Validate them from research.
+
+---
+
+# PART 6 — PRODUCT STRATEGY FROM MARKET FINDINGS
+
+Turn market findings into product decisions.
+
+Create a table:
+
+Market Observation | Competitor Evidence | User Problem | Opportunity | Proposed Response | MVP? | Future SaaS?
+
+Explicitly answer:
+
+### Based on the market, what should we build?
+
+### What should we build better than existing products?
+
+### What should we simply implement as standard functionality?
+
+### What should we integrate rather than develop?
+
+### What should we avoid building?
+
+### What could become our SaaS differentiation?
+
+This section should directly influence the MVP scope.
+
+---
+
+# PART 7 — PRODUCT VISION
+
+Define the product vision.
+
+The platform should support the complete employee lifecycle:
+
+Candidate
+→ Recruitment
+→ Offer
+→ Preboarding
+→ Onboarding
+→ Employee
+→ Attendance
+→ Leave
+→ Payroll Coordination
+→ Performance
+→ Development
+→ Promotion / Transfer
+→ Asset Management
+→ Employee Requests
+→ Offboarding
+→ Exit
+→ Alumni
+
+Define:
+
+* Product vision
+* Product mission
+* Product principles
+* Strategic differentiators
+* Long-term product direction
+
+---
+
+# PART 8 — SDLC PLANNING
+
+Create a complete Software Development Life Cycle.
+
+Use:
+
+1. Discovery
+2. Market Research
+3. Business Analysis
+4. Requirement Gathering
+5. Requirement Validation
+6. Feasibility Analysis
+7. Product Definition
+8. Scope Definition
+9. UX Research
+10. UX/UI Design
+11. Architecture
+12. Database Design
+13. API Design
+14. Security Design
+15. Development
+16. Code Review
+17. Automated Testing
+18. Integration Testing
+19. Security Testing
+20. Performance Testing
+21. UAT
+22. Deployment
+23. Training
+24. Production Launch
+25. Monitoring
+26. Post-launch Improvement
+
+For every SDLC phase define:
+
+* Objective
+* Activities
+* Deliverables
+* Inputs
+* Outputs
+* Owner
+* Stakeholders
+* Dependencies
+* Risks
+* Exit criteria
+
+Also identify what deliverables are **mandatory before development begins**.
+
+---
+
+# PART 9 — REQUIREMENTS ENGINEERING
+
+Create a rigorous requirements process.
+
+Include:
+
+* BRD
+* PRD
+* SRS
+* Functional requirements
+* Non-functional requirements
+* User stories
+* Acceptance criteria
+* Use cases
+* Business rules
+* Assumptions
+* Constraints
+* Dependencies
+* Traceability matrix
+
+Requirements should receive unique IDs.
+
+Example:
+
+FR-CORE-001
+
+NFR-SEC-001
+
+NFR-PERF-001
+
+Every major requirement should eventually map to:
+
+Requirement
+→ User Story
+→ Development Task
+→ Test Case
+→ Release
+
+---
+
+# PART 10 — STAKEHOLDERS & PERSONAS
+
+Identify stakeholders and user personas for:
+
+* CEO
+* HR Head
+* HR Executive
+* Recruiter
+* Employee
+* Manager
+* Department Head
+* Finance
+* Payroll
+* IT Administrator
+* System Administrator
+* Security Administrator
+* Compliance
+* Leadership
+
+For each define:
+
+* Goals
+* Responsibilities
+* Workflows
+* Pain points
+* Permissions
+* Dashboards
+* KPIs
+* Important actions
+
+---
+
+# PART 11 — HRMS MODULE ARCHITECTURE
+
+Design the complete module architecture.
+
+Consider:
+
+## Core HR
+
+## Recruitment / ATS
+
+## Onboarding
+
+## Attendance
+
+## Leave
+
+## Payroll Support
+
+## Performance
+
+## Employee Self Service
+
+## Manager Portal
+
+## Asset Management
+
+## HR Helpdesk
+
+## Training / Learning
+
+## Expenses / Reimbursements
+
+## Offboarding
+
+## Notifications
+
+## Documents
+
+## Analytics
+
+## Administration
+
+For every module provide:
+
+* Purpose
+* Users
+* Capabilities
+* Functional requirements
+* Core entities
+* Workflows
+* Dependencies
+* Complexity
+* Priority
+* MVP status
+* Phase 2 status
+* Future SaaS relevance
+
+---
+
+# PART 12 — MVP SCOPE FOR 12 WEEKS
+
+Define a realistic MVP for:
+
+**4 developers × 12 weeks**
+
+Use:
+
+### P0 — Must Have
+
+### P1 — Should Have
+
+### P2 — Deferred
+
+Create:
+
+Module | Feature | Priority | Complexity | Dependencies | Estimated Effort | MVP? | Future Value
+
+Be brutally realistic.
+
+Explicitly identify what must NOT enter MVP.
+
+Do not allow feature creep.
+
+---
+
+# PART 13 — PRODUCT REQUIREMENTS DOCUMENT
+
+Create a detailed PRD for the MVP.
+
+Every major feature should include:
+
+* Problem
+* User
+* Objective
+* User story
+* Functional requirements
+* Business rules
+* Acceptance criteria
+* Edge cases
+* Error scenarios
+* Permissions
+* Audit requirements
+* Dependencies
+
+---
+
+# PART 14 — FUNCTIONAL REQUIREMENTS
+
+Create detailed requirements with unique IDs.
+
+For every requirement include:
+
+* ID
+* Title
+* Requirement
+* Description
+* Role
+* Priority
+* Preconditions
+* Main flow
+* Alternate flow
+* Error handling
+* Security considerations
+* Acceptance criteria
+
+---
+
+# PART 15 — TECHNOLOGY STACK
+
+Design the technology strategy around **two distinct stages**.
+
+## STAGE A — INITIAL DEVELOPMENT / ZERO-MINIMAL COST
+
+The application should initially be developed and validated with **no unnecessary infrastructure expenditure**.
+
+Evaluate free/open-source/local options for:
+
+### Frontend
+
+* React
+* Angular
+* Other appropriate alternatives
+
+### Backend
+
+* ASP.NET Core / .NET
+* Other appropriate alternatives
+
+### Database
+
+* SQL Server Developer / Express
+* PostgreSQL
+* Other appropriate alternatives
+
+### Authentication
+
+* Local development identity
+* Microsoft Entra ID where free/available for development or already provided
+* Open-source identity alternatives where appropriate
+
+### Storage
+
+* Local file storage
+* Dockerized object storage
+* MinIO or suitable alternatives for development
+* Existing internal storage where appropriate
+
+### Messaging
+
+* In-process events initially
+* Local messaging infrastructure where appropriate
+
+### Cache
+
+* Local Redis where required
+
+### DevOps
+
+Evaluate:
+
+* GitHub
+* GitHub Actions free capabilities
+* Azure DevOps free capabilities
+* Local CI options
+
+### Monitoring
+
+Evaluate free/open-source approaches:
+
+* OpenTelemetry
+* Structured logging
+* Local dashboards
+* Grafana
+* Prometheus
+* Other appropriate options
+
+### Containers
+
+Evaluate:
+
+* Docker
+* Docker Compose
+
+### API Documentation
+
+Evaluate:
+
+* Swagger / OpenAPI
+
+### Testing
+
+Evaluate suitable free/open-source tools.
+
+For EVERY technology recommendation clearly state:
+
+* Cost during MVP
+* Licensing
+* Limitations
+* Production suitability
+* Future migration path
+* Azure equivalent
+* Migration complexity
+
+---
+
+# PART 16 — FUTURE AZURE PRODUCTION ARCHITECTURE
+
+Create a second architecture that describes what the platform can evolve into after successful internal validation.
+
+Evaluate Azure services such as:
+
+* Azure App Service
+* Azure Container Apps
+* Azure Kubernetes Service where justified
+* Azure SQL Database
+* Azure Database for PostgreSQL
+* Azure Blob Storage
+* Microsoft Entra ID
+* Azure Service Bus
+* Azure Cache for Redis
+* Azure Key Vault
+* Azure Monitor
+* Application Insights
+* Azure Front Door
+* Azure Application Gateway
+* Azure API Management
+* Azure DevOps / GitHub
+* Azure Backup
+* Azure Site Recovery
+
+Do NOT assume all of these should be used.
+
+Evaluate them based on:
+
+* Cost
+* Complexity
+* Scale
+* Security
+* Operational overhead
+* Team size
+* SaaS requirements
+
+Recommend only what is justified.
+
+---
+
+# PART 17 — ZERO-COST TO AZURE MIGRATION STRATEGY
+
+Create explicit documentation showing:
+
+### Development Architecture
+
+Local / free / minimal-cost environment
+
+→
+
+### Internal Production Architecture
+
+Low-cost organization-controlled environment
+
+→
+
+### Enterprise Azure Architecture
+
+Cloud-native production platform
+
+For each major component document:
+
+Current implementation
+→ Future Azure replacement
+→ Migration process
+→ Data migration concerns
+→ Configuration changes
+→ Estimated complexity
+→ Risks
+
+Example:
+
+Local PostgreSQL
+→ Azure PostgreSQL
+or
+
+SQL Server Developer
+→ Azure SQL Database
+
+Local filesystem / MinIO
+→ Azure Blob Storage
+
+In-process events
+→ Azure Service Bus
+
+Local Redis
+→ Azure Cache for Redis
+
+Local OpenTelemetry/Grafana
+→ Azure Monitor / Application Insights
+
+The objective is to avoid architectural dead ends.
+
+---
+
+# PART 18 — SECURITY ARCHITECTURE
+
+Treat HRMS as a highly sensitive enterprise platform.
+
+Cover:
+
+* Authentication
+* MFA
+* SSO readiness
+* RBAC
+* Permission-based authorization
+* Data-level authorization
+* Least privilege
+* Encryption
+* Secrets
+* Session management
+* Secure API design
+* File access security
+* Audit logs
+* Data retention
+* Backup
+* Recovery
+* Threat modeling
+* OWASP risks
+* Security monitoring
+
+Analyze threats including:
+
+* Privilege escalation
+* Broken object-level authorization
+* Unauthorized employee access
+* Salary data exposure
+* PII leakage
+* Document leakage
+* SQL injection
+* XSS
+* CSRF
+* SSRF
+* File upload attacks
+* Credential theft
+* Session hijacking
+* API abuse
+* Insider threats
+
+Provide mitigations.
+
+---
+
+# PART 19 — MULTI-TENANT SAAS READINESS
+
+Analyze:
+
+1. Shared DB / Shared Schema
+2. Shared DB / Separate Schema
+3. Database per Tenant
+4. Hybrid
+
+Compare:
+
+* Security
+* Cost
+* Scalability
+* Isolation
+* Compliance
+* Operations
+* Backup
+* Restore
+* Migration
+
+Recommend the most practical approach for the initial product while minimizing future SaaS migration risk.
+
+Design around:
+
+Tenant
+Organization
+User
+Role
+Permission
+Employee
+Policy
+Workflow
+Subscription
+Feature Flag
+Audit Event
+
+---
+
+# PART 20 — DOMAIN-DRIVEN DESIGN
+
+Identify bounded contexts such as:
+
+* Identity
+* Core HR
+* Recruitment
+* Onboarding
+* Attendance
+* Leave
+* Payroll
+* Performance
+* Employee Services
+* Assets
+* Expenses
+* Offboarding
+* Reporting
+* Notifications
+
+Define:
+
+* Entities
+* Aggregates
+* Value objects
+* Domain events
+* Dependencies
+* Domain ownership
+
+---
+
+# PART 21 — DATABASE ARCHITECTURE
+
+Design conceptual schema for:
+
+* Organization
+* User
+* Employee
+* Department
+* Designation
+* Location
+* Employment
+* Employee Document
+* Attendance
+* Shift
+* Holiday
+* Leave
+* Leave Balance
+* Leave Request
+* Payroll Input
+* Salary Structure
+* Performance
+* Goal
+* Asset
+* Asset Assignment
+* Expense
+* HR Request
+* Workflow
+* Approval
+* Notification
+* Audit Event
+
+Cover:
+
+* Keys
+* Constraints
+* Indexes
+* Soft deletion
+* Effective dating
+* Historical records
+* Audit
+* Data retention
+
+---
+
+# PART 22 — WORKFLOW & APPROVAL ENGINE
+
+Design configurable workflows for:
+
+* Leave
+* Expense
+* Recruitment
+* Offers
+* Employee requests
+* Asset requests
+* Employee changes
+* Resignation
+* Exit
+
+Cover:
+
+* Stages
+* Conditions
+* Approvers
+* Dynamic approvers
+* Delegation
+* Escalation
+* SLA
+* Notifications
+* Rejection
+* Resubmission
+* Versioning
+* Audit history
+
+---
+
+# PART 23 — NOTIFICATION ARCHITECTURE
+
+Design:
+
+* Email
+* In-app
+* Push where appropriate
+* SMS/WhatsApp where justified
+
+Cover:
+
+* Templates
+* Preferences
+* Events
+* Delivery
+* Retry
+* Failure handling
+* Localization
+
+---
+
+# PART 24 — DOCUMENT MANAGEMENT
+
+Securely manage:
+
+* Identity documents
+* Contracts
+* Offer letters
+* Joining documents
+* Certificates
+* Payslips
+* Exit documents
+
+Cover:
+
+* Upload
+* Download
+* Preview
+* Versioning
+* Metadata
+* Access control
+* Expiration
+* Retention
+* Encryption
+* Malware scanning
+* Secure URLs
+* Audit
+
+---
+
+# PART 25 — REPORTING & ANALYTICS
+
+Define dashboards for:
+
+* CEO
+* HR
+* Manager
+* Employee
+
+Reports:
+
+* Headcount
+* Hiring
+* Attrition
+* Attendance
+* Leave
+* Workforce distribution
+* Performance
+* Recruitment funnel
+* Employee tenure
+* HR requests
+
+Separate:
+
+Operational reporting
+Management reporting
+Analytics
+Future BI
+
+---
+
+# PART 26 — API ARCHITECTURE
+
+Define standards for:
+
+* REST
+* Versioning
+* Pagination
+* Filtering
+* Sorting
+* Search
+* Validation
+* Errors
+* Idempotency
+* Rate limiting
+* Correlation IDs
+* Authorization
+* API documentation
+
+Provide representative endpoints.
+
+---
+
+# PART 27 — UX/UI ARCHITECTURE
+
+Design enterprise UX around:
+
+* Employee portal
+* Manager portal
+* HR portal
+* Admin portal
+* CEO dashboard
+
+Cover:
+
+* Navigation
+* Search
+* Tables
+* Forms
+* Dashboards
+* Notifications
+* Approval experiences
+* Employee profile
+* Mobile/responsive behavior
+* Accessibility
+
+Use market research findings to identify UX patterns we should adopt or improve.
+
+---
+
+# PART 28 — PROJECT TEAM & RESPONSIBILITIES
+
+For four engineers define:
+
+* Roles
+* Responsibilities
+* Ownership
+* Cross-functional collaboration
+* Code review
+* Testing
+* Documentation
+* Architecture participation
+
+Avoid excessive specialization that creates bottlenecks.
+
+---
+
+# PART 29 — 12-WEEK IMPLEMENTATION PLAN
+
+Build a detailed week-by-week plan.
+
+For every week define:
+
+* Objectives
+* Features
+* Development tasks
+* Architecture/design work
+* Testing
+* Documentation
+* Dependencies
+* Owner
+* Definition of Done
+
+Evaluate the following suggested structure rather than blindly accepting it:
+
+Weeks 1–2:
+Market research, requirements, UX, architecture
+
+Weeks 3–4:
+Foundation, identity, authorization, database, project infrastructure
+
+Weeks 5–8:
+Core HR, employee lifecycle, attendance, leave, workflows
+
+Weeks 9–10:
+ESS, manager portal, documents, reports
+
+Week 11:
+Security, integrations, performance, UAT
+
+Week 12:
+Data migration, deployment, training, production launch
+
+Modify this where necessary to make it realistic.
+
+---
+
+# PART 30 — SPRINT PLAN
+
+Assume 2-week sprints.
+
+For every sprint define:
+
+* Sprint goal
+* Features
+* Stories
+* Developer allocation
+* Testing
+* Demo
+* Review
+* Retrospective
+* Exit criteria
+
+---
+
+# PART 31 — ESTIMATION & CAPACITY
+
+Calculate realistic capacity:
+
+4 developers × 12 weeks
+
+Then deduct reasonable capacity for:
+
+* Meetings
+* Planning
+* Requirements clarification
+* Code reviews
+* Testing
+* Bugs
+* Deployment
+* Documentation
+* Technical debt
+
+Estimate using:
+
+* Story points
+* Developer-days
+* Complexity
+* Dependencies
+
+Include contingency.
+
+Avoid false precision.
+
+---
+
+# PART 32 — TESTING STRATEGY
+
+Design:
+
+* Unit tests
+* Integration tests
+* API tests
+* UI tests
+* E2E
+* Regression
+* Security
+* Performance
+* Accessibility
+* UAT
+
+Define:
+
+* Test pyramid
+* Automation strategy
+* Environment strategy
+* Test data
+* Coverage expectations
+* Release gates
+
+---
+
+# PART 33 — DEVOPS & CI/CD
+
+Design:
+
+Developer
+→ Pull Request
+→ Build
+→ Static Analysis
+→ Unit Test
+→ Integration Test
+→ Security Scan
+→ Artifact
+→ Development
+→ QA
+→ UAT
+→ Production
+
+Cover:
+
+* Branching
+* PR rules
+* Code review
+* Environments
+* Configuration
+* Secrets
+* Database migration
+* Rollback
+* Feature flags
+
+Ensure the initial setup can operate using free/minimal-cost tooling.
+
+Also document the later Azure CI/CD evolution.
+
+---
+
+# PART 34 — DATA MIGRATION
+
+Assume data may come from:
+
+* Excel
+* CSV
+* Legacy HR systems
+* Documents
+* Email
+
+Define:
+
+* Discovery
+* Mapping
+* Cleansing
+* Transformation
+* Validation
+* Import
+* Reconciliation
+* Duplicate management
+* Rollback
+
+---
+
+# PART 35 — RISK MANAGEMENT
+
+Create a risk register including:
+
+* Scope creep
+* 12-week deadline
+* Feature overload
+* Requirements ambiguity
+* HR workflow ambiguity
+* Integration delays
+* Security vulnerabilities
+* Data migration
+* Infrastructure limitations
+* Free-tier limitations
+* Team dependency
+* Knowledge concentration
+* Production incidents
+* User adoption
+* Compliance
+
+For each:
+
+* Probability
+* Impact
+* Score
+* Mitigation
+* Contingency
+* Owner
+
+---
+
+# PART 36 — CHANGE MANAGEMENT
+
+Create adoption strategy covering:
+
+* HR training
+* Employee onboarding
+* Manager training
+* Documentation
+* Pilot
+* Feedback
+* Support
+* Adoption metrics
+
+---
+
+# PART 37 — GO-LIVE STRATEGY
+
+Define:
+
+* Go-live checklist
+* Data validation
+* Security review
+* Backup
+* Monitoring
+* Rollback
+* Support
+* Communication
+* Training
+
+Create explicit Go/No-Go criteria.
+
+---
+
+# PART 38 — POST-LAUNCH
+
+Define:
+
+### First 30 days
+
+### First 60 days
+
+### First 90 days
+
+Cover:
+
+* Bugs
+* Performance
+* Security
+* Feedback
+* Adoption
+* Feature prioritization
+* Technical debt
+* SaaS preparation
+
+---
+
+# PART 39 — FUTURE SAAS ROADMAP
+
+Create a 12–24 month roadmap covering:
+
+Phase 1 — Internal HRMS
+Phase 2 — Enterprise Hardening
+Phase 3 — SaaS Foundation
+Phase 4 — Commercial SaaS
+Phase 5 — Advanced Platform
+
+Potential future capabilities:
+
+* Multi-tenancy
+* Billing
+* Subscriptions
+* SSO
+* SCIM
+* APIs
+* Webhooks
+* Integrations
+* Custom branding
+* Custom fields
+* Custom workflows
+* Localization
+* Regional compliance
+* Advanced analytics
+* AI
+* Marketplace
+
+Clearly explain which should not be built prematurely.
+
+---
+
+# PART 40 — PRODUCT DIFFERENTIATION
+
+Using the market analysis, define:
+
+### Table Stakes
+
+Features every credible HRMS should have.
+
+### Competitive Improvements
+
+Features we could implement substantially better.
+
+### Strategic Differentiators
+
+Features that can distinguish the future SaaS.
+
+### Experimental Opportunities
+
+Ideas that require validation before major investment.
+
+Rank them according to:
+
+* User value
+* Business value
+* Competitive differentiation
+* Development complexity
+* Revenue potential
+* Risk
+
+---
+
+# PART 41 — PRODUCT KPIs
+
+Define:
+
+### Business KPIs
+
+### Product KPIs
+
+### Technical KPIs
+
+### Security KPIs
+
+### Operational KPIs
+
+Examples:
+
+* Employee adoption
+* Self-service rate
+* HR workload reduction
+* Onboarding completion
+* Leave processing time
+* HR ticket SLA
+* Attendance correction rate
+* Uptime
+* API response time
+* Security incidents
+* User satisfaction
+
+---
+
+# PART 42 — COST STRATEGY
+
+Separate cost into:
+
+## Initial Development
+
+Target zero/minimal infrastructure expenditure.
+
+Document:
+
+* What is free
+* What is open source
+* What requires existing licenses
+* What may have free quotas
+* What could become a cost risk
+
+## Internal Production
+
+Estimate likely infrastructure categories.
+
+## Azure Production
+
+Define future cost categories:
+
+* Compute
+* Database
+* Storage
+* Networking
+* Identity
+* Monitoring
+* Backup
+* Security
+* Messaging
+* CDN / edge
+* Support
+
+Do not invent exact prices without current validated pricing data.
+
+---
+
+# PART 43 — BUILD VS BUY VS INTEGRATE
+
+Evaluate:
+
+* Payroll
+* Attendance
+* Authentication
+* Notifications
+* E-signature
+* Document storage
+* BI
+* Recruitment
+* Background verification
+* Accounting
+
+Recommend:
+
+BUILD
+BUY
+or
+INTEGRATE
+
+based on:
+
+* Differentiation
+* Complexity
+* Risk
+* Cost
+* Security
+* Maintenance
+
+---
+
+# PART 44 — ARCHITECTURAL DECISION RECORDS
+
+Create ADRs for:
+
+ADR-001 Architecture
+ADR-002 Database
+ADR-003 Authentication
+ADR-004 Authorization
+ADR-005 Storage
+ADR-006 Multi-tenancy
+ADR-007 API strategy
+ADR-008 Messaging
+ADR-009 Initial zero-cost architecture
+ADR-010 Azure target architecture
+ADR-011 Observability
+ADR-012 Deployment strategy
+
+Each:
+
+* Context
+* Options
+* Decision
+* Rationale
+* Consequences
+
+---
+
+# PART 45 — ENGINEERING GOVERNANCE
+
+Define:
+
+* Coding standards
+* Git
+* Branch strategy
+* Pull requests
+* Reviews
+* Definition of Ready
+* Definition of Done
+* Logging
+* Exceptions
+* API standards
+* Database standards
+* Security standards
+* Testing standards
+* Documentation standards
+
+---
+
+# PART 46 — PROJECT DOCUMENTATION STRUCTURE
+
+Define the complete documentation hierarchy.
+
+For example:
+
+01 Executive Proposal
+02 Market Analysis
+03 Product Vision
+04 Business Requirements
+05 Product Requirements
+06 SRS
+07 User Stories
+08 Process Flows
+09 UX/UI Specification
+10 System Architecture
+11 Domain Architecture
+12 Database Design
+13 API Specification
+14 Security Architecture
+15 Multi-Tenant Strategy
+16 Testing Strategy
+17 DevOps Strategy
+18 Initial Zero-Cost Architecture
+19 Azure Target Architecture
+20 Migration Strategy
+21 Data Migration
+22 Deployment Guide
+23 Risk Register
+24 Project Plan
+25 Sprint Plan
+26 ADRs
+27 User Manual
+28 Admin Manual
+29 Operations Runbook
+30 SaaS Roadmap
+
+For each document specify:
+
+* Purpose
+* Owner
+* Audience
+* When it should be created
+* Dependencies
+* Whether it is required before development
+
+---
+
+# PART 47 — CEO APPROVAL DOCUMENT
+
+This section must be highly polished and executive-friendly.
+
+It should NOT look like a technical dump.
+
+It must answer:
+
+### 1. Why should we build this?
+
+### 2. What problems exist today?
+
+### 3. What are other HRMS companies doing?
+
+### 4. What are the strengths and weaknesses of existing HRMS products?
+
+### 5. Where are the current market gaps?
+
+### 6. What can our HRMS do better?
+
+### 7. What exactly will we build in 3 months?
+
+### 8. What will we explicitly NOT build?
+
+### 9. What resources are required?
+
+### 10. Can we build the initial product without infrastructure investment?
+
+### 11. What will the future Azure investment look like?
+
+### 12. What are the major risks?
+
+### 13. What measurable business benefits should we expect?
+
+### 14. What is the long-term SaaS opportunity?
+
+---
+
+## CEO DOCUMENT STRUCTURE
+
+### Executive Summary
+
+### Current HRMS Landscape
+
+Provide an executive-level market analysis covering major HRMS platforms.
+
+Summarize:
+
+* Leading products
+* Market positioning
+* Strengths
+* Weaknesses
+* Common user pain points
+* Important capabilities
+* Major trends
+* Gaps/opportunities
+
+Do NOT overload the CEO with technical detail.
+
+---
+
+### Why Existing HRMS Products Are Not Enough
+
+Explain where organizations commonly encounter limitations.
+
+Clearly distinguish:
+
+* Vendor/product limitations
+* Internal process limitations
+* Integration limitations
+* Cost limitations
+* Customization limitations
+* UX limitations
+
+---
+
+### Our Product Opportunity
+
+Based on market evidence explain:
+
+* What we should build
+* What we should build better
+* What should remain standard
+* What should be integrated
+* What should be deferred
+
+---
+
+### Proposed Solution
+
+Describe the HRMS and major modules.
+
+---
+
+### 3-Month MVP
+
+Clearly show:
+
+* P0 features
+* P1 features
+* Deferred features
+
+---
+
+### Technology Strategy
+
+Explain:
+
+**Stage 1: Zero/Minimal-Cost Development**
+
+and
+
+**Stage 2: Azure Production Investment**
+
+Show the transition path.
+
+---
+
+### Team & Timeline
+
+Explain:
+
+* 4 developers
+* 12 weeks
+* Major milestones
+* Critical path
+
+---
+
+### Security & Compliance
+
+Summarize the enterprise protections.
+
+---
+
+### Business Impact
+
+Define measurable expected improvements without inventing unsupported numbers.
+
+---
+
+### Future SaaS Opportunity
+
+Explain how this internal platform can evolve into a commercial product.
+
+---
+
+### Investment Required
+
+Clearly separate:
+
+Initial development cost
+Infrastructure cost during MVP
+Future Azure investment
+Maintenance
+SaaS investment
+
+---
+
+### Risks
+
+Present the top risks and mitigations.
+
+---
+
+### Recommendation
+
+Give a decisive recommendation:
+
+**APPROVE**
+or
+**APPROVE WITH CONDITIONS**
+or
+**DO NOT APPROVE**
+
+Do not avoid making a recommendation.
+
+---
+
+# PART 48 — FINAL ARCHITECTURAL RECOMMENDATION
+
+End the overall document with a concise set of decisions.
+
+## A. Recommended Architecture
+
+Select one architecture.
+
+Do not leave the final recommendation ambiguous.
+
+## B. Recommended Technology Stack
+
+Select one primary stack.
+
+## C. Recommended MVP
+
+Define precisely what should be built.
+
+## D. Explicitly Deferred Features
+
+Define what should not enter the first release.
+
+## E. Market Differentiation
+
+Define where the future product can realistically differentiate.
+
+## F. Critical Path
+
+Define what determines whether the 12-week target succeeds.
+
+## G. Top 10 Risks
+
+Rank them.
+
+## H. Initial Infrastructure Strategy
+
+Explain exactly how to develop without unnecessary infrastructure spending.
+
+## I. Future Azure Strategy
+
+Explain the target architecture and migration path.
+
+## J. SaaS Strategy
+
+Explain how the internal product becomes a commercial platform.
+
+## K. CEO Decision
+
+Give the final recommendation.
+
+## L. First 5 Working Days After Approval
+
+Provide a highly actionable plan covering:
+
+Day 1
+Day 2
+Day 3
+Day 4
+Day 5
+
+The team should know exactly what to do immediately after approval.
+
+---
+
+# CRITICAL QUALITY REQUIREMENTS
+
+Follow these rules strictly.
+
+1. Think like a Principal Architect and product strategist.
+2. Think like a CEO when evaluating investment.
+3. Think like an HR domain expert when defining workflows.
+4. Think like a security architect when handling employee information.
+5. Think like a startup CTO when controlling scope.
+6. Think like an enterprise SaaS architect when designing the future platform.
+7. Do not blindly copy features from competitors.
+8. Use current market evidence to make product decisions.
+9. Perform current web research for market/competitor analysis.
+10. Cite important market claims and distinguish vendor claims from independent evidence.
+11. Do not present assumptions as facts.
+12. Do not invent pricing, market share, customer counts, ROI, or capabilities.
+13. Identify uncertainty explicitly.
+14. Do not recommend microservices simply because the product is "enterprise".
+15. Optimize the MVP for a 4-person team.
+16. Treat the 12-week timeline as a real constraint.
+17. Design a zero/minimal-cost development strategy.
+18. Clearly distinguish free, open-source, free-tier, trial, and paid services.
+19. Document the future Azure architecture separately from the initial architecture.
+20. Ensure the initial architecture has a practical migration path to Azure.
+21. Avoid creating unnecessary cloud/vendor lock-in during the MVP.
+22. Design for future SaaS without prematurely building every SaaS capability.
+23. Treat security, authorization, auditability and data integrity as first-class requirements.
+24. Avoid building a full payroll engine unless business requirements clearly justify it.
+25. Prefer integration over building commodity infrastructure where appropriate.
+26. Clearly distinguish P0, P1 and deferred functionality.
+27. Highlight critical dependencies.
+28. Highlight unrealistic expectations.
+29. Provide recommendations, not merely options.
+30. Ensure every major requirement can eventually trace to implementation and testing.
+31. Keep product architecture, domain architecture and infrastructure architecture distinct.
+32. Avoid duplicate functionality between modules.
+33. Keep terminology consistent throughout the document.
+34. Use tables for comparisons where appropriate.
+35. Use diagrams/mermaid-style architecture representations where helpful.
+36. Make the CEO section executive-friendly while keeping supporting technical sections detailed.
+37. The market analysis must directly influence the product strategy and MVP definition.
+38. The final recommendation should be decisive.
+
+---
+
+# FINAL OUTPUT
+
+Produce the complete documentation in a professional enterprise-project format.
+
+The output must be substantial enough to become the foundation for:
+
+* CEO approval
+* BRD
+* PRD
+* SRS
+* Architecture decisions
+* Database design
+* API design
+* UX planning
+* Jira backlog
+* Sprint planning
+* Engineering standards
+* Testing
+* Deployment
+* Future SaaS planning
+
+The document should make it possible for the team to move from:
+
+**CEO Approval → Discovery → Requirements → Architecture → Design → Development → Testing → Deployment → Internal Adoption → SaaS Evolution**
+
+without major ambiguity.

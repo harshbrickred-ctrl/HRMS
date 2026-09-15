@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>11 — Domain Architecture — PeopleOS Brief</title>
+  <style>
+    :root {
+      --bg: #f7f5f1;
+      --ink: #1c1917;
+      --muted: #57534e;
+      --line: #d6d3d1;
+      --card: #ffffff;
+      --accent: #0f766e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+    }
+    header {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .eyebrow {
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 600;
+      margin: 0 0 0.35rem;
+    }
+    h1 {
+      font-size: 1.55rem;
+      line-height: 1.25;
+      margin: 0 0 0.5rem;
+      font-weight: 650;
+    }
+    .meta { color: var(--muted); font-size: 0.95rem; margin: 0; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      margin: 0.85rem 0;
+    }
+    h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin: 0 0 0.55rem;
+      font-weight: 650;
+    }
+    p { margin: 0; }
+    ul { margin: 0; padding-left: 1.15rem; }
+    li { margin: 0.35rem 0; }
+    a { color: var(--accent); }
+    footer {
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    @media print {
+      body { background: #fff; }
+      section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <p class="eyebrow">PeopleOS · Artifact brief</p>
+      <h1>11 — Domain Architecture</h1>
+      <p class="meta">Audience: Engineering / Architecture · Skim 1–2 minutes · Generated 2026-09-13</p>
+    </header>
+    <section>
+      <h2>Thesis</h2>
+      <p>Defines bounded contexts, MVP modules, deferred domains, aggregates, and domain events for PeopleOS. Aligns product language with NestJS module boundaries inside the modular monolith.</p>
+    </section>
+    <section>
+      <h2>Key takeaways</h2>
+      <ul>
+        <li>India IT consultancy ~500 employees; greytHR incumbent: Fact (org context)</li>
+        <li>Payroll statutory engine not built; integration boundary only: Fact (locked)</li>
+        <li>ATS, Assets, full LMS, Benefits engines deferred: Assumption (MVP freeze)</li>
+        <li>Module list below is the build contract for 12-week MVP: Estimate (capacity-fit)</li>
+        <li>Tenant: Logical customer/org isolation key (tenantid); MVP = one runtime tenant</li>
+        <li>Organization / OrgUnit: Internal hierarchy (BU, department, team)</li>
+        <li>Employee: Person with employment relationship(s); not identical to User</li>
+        <li>User: Login principal; usually 1:1 with Employee for ESS</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Evidence & non-claims</h2>
+      <p>Respect Fact / Assumption / Estimate / Metric-to-measure labels in the source. This brief is not audited ROI or a substitute for the full document.</p>
+    </section>
+    <section>
+      <h2>Deep dive</h2>
+      <p><a href="../../docs/11-domain-architecture.md">../../docs/11-domain-architecture.md</a></p>
+    </section>
+    
+    <footer>Source of truth lives under <code>docs/</code>. Regenerate with <code>node scripts/generate-doc-artifacts.mjs</code>.</footer>
+  </div>
+</body>
+</html>

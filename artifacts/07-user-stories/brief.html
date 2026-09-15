@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>07 — User Stories &amp; Sprint Mapping — PeopleOS Brief</title>
+  <style>
+    :root {
+      --bg: #f7f5f1;
+      --ink: #1c1917;
+      --muted: #57534e;
+      --line: #d6d3d1;
+      --card: #ffffff;
+      --accent: #0f766e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+    }
+    header {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .eyebrow {
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 600;
+      margin: 0 0 0.35rem;
+    }
+    h1 {
+      font-size: 1.55rem;
+      line-height: 1.25;
+      margin: 0 0 0.5rem;
+      font-weight: 650;
+    }
+    .meta { color: var(--muted); font-size: 0.95rem; margin: 0; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      margin: 0.85rem 0;
+    }
+    h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin: 0 0 0.55rem;
+      font-weight: 650;
+    }
+    p { margin: 0; }
+    ul { margin: 0; padding-left: 1.15rem; }
+    li { margin: 0.35rem 0; }
+    a { color: var(--accent); }
+    footer {
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    @media print {
+      body { background: #fff; }
+      section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <p class="eyebrow">PeopleOS · Artifact brief</p>
+      <h1>07 — User Stories &amp; Sprint Mapping</h1>
+      <p class="meta">Audience: Product / HR / BA · Skim 1–2 minutes · Generated 2026-09-13</p>
+    </header>
+    <section>
+      <h2>Thesis</h2>
+      <p>Sprint model: 2-week sprints · Weeks 1–12 · 4 engineers</p>
+    </section>
+    <section>
+      <h2>Key takeaways</h2>
+      <ul>
+        <li>US-ATS-01: Light candidate pipeline — — — After P0 UAT green</li>
+        <li>US-ONB-01: Onboarding checklist — — — Depends Docs</li>
+        <li>US-AST-01: Assign asset to employee — — — —</li>
+        <li>US-HD-01: Simple HR ticket — — — Reuse WF</li>
+        <li>S0: 1–2 — Discovery, PRD freeze, UX, ADRs, greytHR export discovery — US-MIG-01 (discovery tasks), UX wireframes</li>
+        <li>S1: 3–4 — Foundation: auth, RBAC, audit hooks, Docker, CI, OpenAPI — US-IDN-, US-RBAC-, US-AUD-01 (hooks), US-OPS-02..04</li>
+        <li>S2: 5–6 — Core HR + WF definitions + leave policy groundwork — US-CORE-, US-WF-01, US-LEAVE-01/05, US-MIG-02 start</li>
+        <li>S3: 7 — Leave apply/approve + inbox + notifications start — US-LEAVE-02..04, US-WF-02/03, US-NOTIF start</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Evidence & non-claims</h2>
+      <p>Respect Fact / Assumption / Estimate / Metric-to-measure labels in the source. This brief is not audited ROI or a substitute for the full document.</p>
+    </section>
+    <section>
+      <h2>Deep dive</h2>
+      <p><a href="../../docs/07-user-stories.md">../../docs/07-user-stories.md</a></p>
+    </section>
+    
+    <footer>Source of truth lives under <code>docs/</code>. Regenerate with <code>node scripts/generate-doc-artifacts.mjs</code>.</footer>
+  </div>
+</body>
+</html>

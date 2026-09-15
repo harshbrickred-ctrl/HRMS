@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CEO Approval Brief — PeopleOS — Artifact</title>
+  <style>
+    :root { --bg:#f7f5f1; --ink:#1c1917; --muted:#57534e; --line:#d6d3d1; --card:#fff; --accent:#0f766e; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
+    .wrap { max-width:720px; margin:0 auto; padding:2rem 1.25rem 3rem; }
+    header { border-bottom:1px solid var(--line); padding-bottom:1rem; margin-bottom:1.25rem; }
+    .eyebrow { font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); font-weight:600; margin:0 0 .35rem; }
+    h1 { font-size:1.55rem; line-height:1.25; margin:0 0 .5rem; font-weight:650; }
+    .meta { color:var(--muted); font-size:.95rem; margin:0; }
+    .badge { display:inline-block; margin-top:.75rem; padding:.25rem .6rem; border:1px solid var(--accent); color:var(--accent); border-radius:999px; font-size:.8rem; font-weight:600; }
+    section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:1rem 1.1rem; margin:.85rem 0; }
+    h2 { font-size:.85rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0 0 .55rem; font-weight:650; }
+    ul { margin:0; padding-left:1.15rem; } li { margin:.35rem 0; } a { color:var(--accent); }
+    footer { margin-top:1.5rem; font-size:.85rem; color:var(--muted); }
+    @media print { body { background:#fff; } section { break-inside:avoid; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <p class="eyebrow">PeopleOS · Artifact brief · Manual</p>
+      <h1>CEO Approval Brief — Executive Proposal</h1>
+      <p class="meta">Audience: CEO / Leadership · Skim 1–2 minutes</p>
+      <div class="badge">Recommendation: APPROVE WITH CONDITIONS</div>
+    </header>
+    <section>
+      <h2>Thesis</h2>
+      <p>Build a 12-week internal HRMS for ~500 India IT employees: own Core HR, leave, attendance coordination, documents, and approvals; <strong>keep greytHR for payroll</strong>. Do not attempt to out-payroll greytHR.</p>
+    </section>
+    <section>
+      <h2>Key takeaways</h2>
+      <ul>
+        <li><strong>Why:</strong> ownership, workflow/UX/API control, SaaS optionality — not PF/ESI engine replacement.</li>
+        <li><strong>Capacity:</strong> 4 engineers × 12 weeks; Stage 1 infra target ₹0 (OSS / Docker / free-tier CI).</li>
+        <li><strong>Stack:</strong> NestJS + React + PostgreSQL modular monolith; tenant_id ready; Azure after validation.</li>
+        <li><strong>P0:</strong> Identity/RBAC, Core HR, Leave, Attendance, Workflow v1, Documents, ESS/Manager, Notifications, Audit, reports, greytHR CSV migration.</li>
+        <li><strong>Out:</strong> payroll engine, PMS/LMS/expenses, native mobile, AI agents, AKS/microservices, billing.</li>
+        <li><strong>Measure:</strong> adoption &amp; cycle-time metrics — no invented ROI.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Deep dive</h2>
+      <p><a href="../../docs/01-executive-proposal.md">../../docs/01-executive-proposal.md</a></p>
+    </section>
+    <section>
+      <h2>Related artifacts</h2>
+      <ul>
+        <li><a href="../02-market-analysis/brief.html">02-market-analysis</a></li>
+        <li><a href="../23-risk-register/brief.html">23-risk-register</a></li>
+        <li><a href="../appendices/part-48-final-recommendation/brief.html">part-48-final-recommendation</a></li>
+      </ul>
+    </section>
+    <footer>Source of truth: <code>docs/</code>. Manual brief — generator will not overwrite while <code>manual: true</code>.</footer>
+  </div>
+</body>
+</html>
