@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PeopleOS — Manager Weekly Timeline</title>
+  <style>
+    :root { --bg:#f7f5f1; --ink:#1c1917; --muted:#57534e; --line:#d6d3d1; --card:#fff; --accent:#0f766e; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"Segoe UI",Arial,sans-serif; background:var(--bg); color:var(--ink); line-height:1.45; font-size:14px; }
+    .wrap { max-width:1100px; margin:0 auto; padding:1.5rem 1rem 2.5rem; }
+    h1 { font-size:1.6rem; margin:0 0 .35rem; }
+    .meta { color:var(--muted); margin:0 0 1rem; }
+    h2 { font-size:1.05rem; margin:1.4rem 0 .6rem; color:var(--accent); }
+    table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); margin:.5rem 0 1rem; font-size:12.5px; }
+    th, td { border-bottom:1px solid var(--line); padding:.45rem .5rem; text-align:left; vertical-align:top; }
+    th { background:#f0ebe3; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+    .note { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:.75rem 1rem; margin:1rem 0; }
+    @media print {
+      body { background:#fff; font-size:11px; }
+      .wrap { max-width:none; padding:0; }
+      table { page-break-inside:auto; }
+      tr { page-break-inside:avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>PeopleOS — Manager Weekly Development Timeline</h1>
+    <p class="meta">4 engineers · 12 weeks · Payroll stays on greytHR · Kickoff assumption: <strong>Mon 21 Sep 2026</strong> → Pilot ends <strong>Fri 11 Dec 2026</strong></p>
+
+    <h2>Phase summary</h2>
+    <table>
+      <thead><tr><th>Phase</th><th>Weeks</th><th>Dates</th><th>Expect</th></tr></thead>
+      <tbody>
+        <tr><td>Plan &amp; design</td><td>1–2</td><td>21 Sep – 02 Oct 2026</td><td>Scope frozen; designs ready</td></tr>
+        <tr><td>Foundation</td><td>3–4</td><td>05 Oct – 16 Oct 2026</td><td>Login, security, app running</td></tr>
+        <tr><td>Core product</td><td>5–8</td><td>19 Oct – 13 Nov 2026</td><td>Employees, leave, approvals, attendance</td></tr>
+        <tr><td>User portals</td><td>9–10</td><td>16 Nov – 27 Nov 2026</td><td>ESS/Manager, docs, reports</td></tr>
+        <tr><td>Validate</td><td>11</td><td>30 Nov – 04 Dec 2026</td><td>UAT + migration dry-run</td></tr>
+        <tr><td>Go-live</td><td>12</td><td>07 Dec – 11 Dec 2026</td><td>Pilot with small user group</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Weekly plan</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Week</th>
+          <th>Feature</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Description</th>
+          <th>Checkpoint for manager</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>Scope freeze &amp; discovery</td><td>21 Sep 2026</td><td>25 Sep 2026</td><td>Confirm problems with HR; lock P0 vs later; list greytHR exports</td><td>Signed P0 list; export checklist started</td></tr>
+        <tr><td>2</td><td>UX + architecture ready</td><td>28 Sep 2026</td><td>02 Oct 2026</td><td>Screens, tech decisions, DB design, greytHR field mapping</td><td>“Ready to build” sign-off</td></tr>
+        <tr><td>3</td><td>Login &amp; platform setup</td><td>05 Oct 2026</td><td>09 Oct 2026</td><td>Login, Docker test env, CI pipeline</td><td>Demo: app runs; login works</td></tr>
+        <tr><td>4</td><td>Roles, permissions &amp; audit</td><td>12 Oct 2026</td><td>16 Oct 2026</td><td>RBAC for Employee/Manager/HR/Admin; audit log</td><td>Demo: access control + audit</td></tr>
+        <tr><td>5</td><td>Core HR (employee &amp; org)</td><td>19 Oct 2026</td><td>23 Oct 2026</td><td>Org structure, employee profiles, manager hierarchy, search</td><td>Demo: HR creates/searches employees</td></tr>
+        <tr><td>6</td><td>Leave management</td><td>26 Oct 2026</td><td>30 Oct 2026</td><td>Leave types, balances, apply leave, holidays</td><td>Demo: employee applies leave</td></tr>
+        <tr><td>7</td><td>Leave approvals (workflow)</td><td>02 Nov 2026</td><td>06 Nov 2026</td><td>Approval flow + manager inbox</td><td>Demo: approve/reject leave</td></tr>
+        <tr><td>8</td><td>Attendance</td><td>09 Nov 2026</td><td>13 Nov 2026</td><td>Mark attendance, CSV import, corrections</td><td>Demo: attendance + correction</td></tr>
+        <tr><td>9</td><td>Employee &amp; Manager portals</td><td>16 Nov 2026</td><td>20 Nov 2026</td><td>ESS home, manager team views, docs start</td><td>Demo: usable portals</td></tr>
+        <tr><td>10</td><td>Documents, notifications &amp; reports</td><td>23 Nov 2026</td><td>27 Nov 2026</td><td>Secure docs, alerts, operational reports</td><td>Feature freeze; full P0 demo</td></tr>
+        <tr><td>11</td><td>UAT, security &amp; data dry-run</td><td>30 Nov 2026</td><td>04 Dec 2026</td><td>HR UAT, security checks, greytHR import rehearsal</td><td><strong>Go / No-Go</strong> for pilot</td></tr>
+        <tr><td>12</td><td>Pilot go-live &amp; training</td><td>07 Dec 2026</td><td>11 Dec 2026</td><td>Small pilot live; training; metrics baseline</td><td>Pilot live; Week-12 status report</td></tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

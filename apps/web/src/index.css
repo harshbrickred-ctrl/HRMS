@@ -1,0 +1,125 @@
+:root {
+  /* Design44 palette */
+  --snail-trail: #e9eeea;
+  --key-lime: #e2f28e;
+  --iced-slate: #d5ddd8;
+  --silver-sand: #bdbdb4;
+  --cool-ashes: #929191;
+  --cursed-black: #131412;
+
+  /* Semantic tokens — light */
+  --bg: var(--snail-trail);
+  --surface: #f7faf7;
+  --surface-elevated: #ffffff;
+  --mix-wash: #ffffff;
+  --ink: var(--cursed-black);
+  --muted: var(--cool-ashes);
+  --line: var(--iced-slate);
+  --accent: var(--key-lime);
+  --accent-ink: var(--cursed-black);
+  --accent-hover: #d4e87a;
+  --danger: #8f2f2f;
+  --danger-bg: #f4e8e8;
+  --radius: 1.25rem;
+  --radius-sm: 0.85rem;
+  --shadow: 0 18px 50px rgba(19, 20, 18, 0.08);
+
+  /* Status chips — light */
+  --chip-pending-bg: #fff4d6;
+  --chip-pending-ink: #7a5a00;
+  --chip-pending-line: #f0d78a;
+  --chip-ok-bg: color-mix(in srgb, var(--key-lime) 45%, var(--mix-wash));
+  --chip-ok-ink: #2f4a12;
+  --chip-ok-line: color-mix(in srgb, var(--key-lime) 70%, var(--iced-slate));
+  --chip-danger-bg: var(--danger-bg);
+  --chip-danger-ink: var(--danger);
+  --chip-danger-line: color-mix(in srgb, var(--danger) 25%, var(--mix-wash));
+  --chip-neutral-bg: color-mix(in srgb, var(--iced-slate) 70%, var(--mix-wash));
+  --chip-neutral-ink: var(--cool-ashes);
+  --chip-holiday-bg: #e8eefc;
+  --chip-holiday-ink: #2a3f7a;
+  --chip-holiday-line: #c5d2f0;
+  --chip-leave-bg: #f3e8ff;
+  --chip-leave-ink: #5b2d8e;
+  --chip-leave-line: #ddc4f5;
+  --chip-warn-bg: #fff0e0;
+  --chip-warn-ink: #8a4b00;
+  --chip-warn-line: #f0c48a;
+
+  --font-display: "Syne", "Segoe UI", sans-serif;
+  --font-body: "DM Sans", "Segoe UI", sans-serif;
+
+  color-scheme: light;
+  font-family: var(--font-body);
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #131412;
+  --surface: #1c1e1c;
+  --surface-elevated: #252825;
+  --mix-wash: #252825;
+  --ink: #e9eeea;
+  --muted: #a3a8a4;
+  --line: #353935;
+  --accent: var(--key-lime);
+  --accent-ink: var(--cursed-black);
+  --accent-hover: #d4e87a;
+  --danger: #f0a0a0;
+  --danger-bg: #3a2222;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+
+  --chip-pending-bg: #3d3420;
+  --chip-pending-ink: #f5d98a;
+  --chip-pending-line: #6a5a2e;
+  --chip-ok-bg: color-mix(in srgb, var(--key-lime) 22%, #1c1e1c);
+  --chip-ok-ink: #d4e87a;
+  --chip-ok-line: color-mix(in srgb, var(--key-lime) 40%, #353935);
+  --chip-danger-bg: #3a2222;
+  --chip-danger-ink: #f0a0a0;
+  --chip-danger-line: #5a3030;
+  --chip-neutral-bg: #2a2c2a;
+  --chip-neutral-ink: #a3a8a4;
+  --chip-holiday-bg: #1e2840;
+  --chip-holiday-ink: #a8c0f0;
+  --chip-holiday-line: #3a4a6a;
+  --chip-leave-bg: #2a2040;
+  --chip-leave-ink: #d0b0f0;
+  --chip-leave-line: #4a3a6a;
+  --chip-warn-bg: #3a2e1a;
+  --chip-warn-ink: #f0c48a;
+  --chip-warn-line: #6a5028;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: var(--ink);
+}

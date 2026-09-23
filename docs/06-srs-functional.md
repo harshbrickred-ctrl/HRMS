@@ -516,32 +516,32 @@ Priority: **Must** = P0 · **Should** = P1 stretch · **Could** = backlog.
 
 | Field | Content |
 |-------|---------|
-| **Title** | ESS home dashboard |
-| **Requirement** | Employee shall see quick actions, leave balances summary, pending requests, and unread notifications. |
-| **Role** | EMPLOYEE |
+| **Title** | Me home dashboard |
+| **Requirement** | Employee shall see quick actions, leave balances summary, pending requests, and unread notifications on the unified Home. |
+| **Role** | Any authenticated user (Me section) |
 | **Priority** | Must |
 | **Preconditions** | Login |
-| **Main flow** | Open `/ess` → widgets load |
+| **Main flow** | Open `/ess` → Me widgets load |
 | **Alternate** | Widget error isolated |
 | **Error** | Partial failure banners |
 | **Security** | Self data only |
 | **AC** | Primary actions reachable in ≤2 clicks ([09](09-ux-ui-specification.md)) |
 | **Story** | US-ESS-01 | **Test** | TC-ESS-01 | **Release** | R1 |
 
-### FR-ESS-002 — Manager home & team
+### FR-ESS-002 — Manager team signals on Home & Team section
 
 | Field | Content |
 |-------|---------|
-| **Title** | Manager portal home |
-| **Requirement** | Manager shall see approvals inbox summary, team on leave, and attendance exceptions. |
+| **Title** | Manager team signals |
+| **Requirement** | Manager shall see approvals inbox summary, team on leave, and attendance exceptions — on unified Home teasers and under the **Team** nav section (same shell as Me). |
 | **Role** | MANAGER |
 | **Priority** | Must |
 | **Preconditions** | Has direct reports or tasks |
-| **Main flow** | Open `/manager` → widgets |
+| **Main flow** | Open `/ess` → team teaser widgets; open `/manager/inbox` (or Team Overview) for full team views |
 | **Alternate** | No reports → empty state with explanation |
 | **Error** | Scope leak tests must fail closed |
 | **Security** | Team scope |
-| **AC** | Inbox count matches pending tasks |
+| **AC** | Inbox count matches pending tasks; Team section visible only with MANAGER |
 | **Story** | US-ESS-02 | **Test** | TC-ESS-02 | **Release** | R1 |
 
 ---

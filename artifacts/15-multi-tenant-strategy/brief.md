@@ -1,6 +1,6 @@
 ---
 manual: false
-generated: 2026-09-13
+generated: 2026-09-16
 ---
 
 # 15 — Multi-Tenant SaaS Readiness

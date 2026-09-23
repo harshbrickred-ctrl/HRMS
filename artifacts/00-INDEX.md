@@ -4,7 +4,7 @@ Quick briefs for every blueprint document. Open a folder’s `brief.html` to sha
 
 **Source of truth:** [`docs/`](../docs/00-README.md)  
 **Regenerate:** `node scripts/generate-doc-artifacts.mjs`  
-**Generated:** 2026-09-13
+**Generated:** 2026-09-16
 
 | Artifact | Audience | Brief |
 |----------|----------|-------|
@@ -52,6 +52,7 @@ Quick briefs for every blueprint document. Open a folder’s `brief.html` to sha
 | 29 — KPIs and Cost Strategy | Delivery / Ops / QA | [md](29-kpis-and-cost-strategy/brief.md) · [html](29-kpis-and-cost-strategy/brief.html) |
 | 30 — Engineering Governance | Delivery / Ops / QA | [md](30-engineering-governance/brief.md) · [html](30-engineering-governance/brief.html) |
 | PeopleOS — Management Overview | General | [md](31-management-overview/brief.md) · [html](31-management-overview/brief.html) |
+| PeopleOS — Manager Weekly Development Timeline | General | [md](32-manager-weekly-timeline/brief.md) · [html](32-manager-weekly-timeline/brief.html) |
 | Appendix — Capacity Sheet (4 × 12 Weeks) | Delivery / Ops / QA | [md](appendices/capacity-sheet/brief.md) · [html](appendices/capacity-sheet/brief.html) |
 | Appendix — Competitor Capability Matrix | CEO / Product | [md](appendices/competitor-matrix/brief.md) · [html](appendices/competitor-matrix/brief.html) |
 | Appendix — FR / NFR Catalog | Delivery / Ops / QA | [md](appendices/fr-catalog/brief.md) · [html](appendices/fr-catalog/brief.html) |

@@ -1,0 +1,116 @@
+.user-menu {
+  position: relative;
+}
+
+.user-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: 15rem;
+  min-height: 40px;
+  padding: 0.25rem 0.55rem 0.25rem 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+}
+
+.user-menu-trigger:hover {
+  background: color-mix(in srgb, var(--key-lime) 28%, var(--surface));
+}
+
+.user-menu-avatar {
+  display: grid;
+  place-items: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--key-lime) 55%, var(--mix-wash));
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  color: var(--accent-ink);
+}
+
+.user-menu-email {
+  font-size: 0.82rem;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.user-menu-chevron {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.user-menu-panel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 40;
+  width: min(280px, calc(100vw - 2rem));
+  background: var(--surface-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  padding: 0.45rem;
+}
+
+.user-menu-meta {
+  padding: 0.55rem 0.65rem 0.65rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.35rem;
+}
+
+.user-menu-meta-email {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 650;
+  word-break: break-all;
+}
+
+.user-menu-meta-roles {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.65rem;
+  font: inherit;
+  font-weight: 650;
+  font-size: 0.88rem;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.user-menu-item:hover {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  color: var(--danger);
+}
+
+@media (max-width: 768px) {
+  .user-menu-email {
+    display: none;
+  }
+
+  .user-menu-trigger {
+    max-width: none;
+    padding-right: 0.4rem;
+  }
+}

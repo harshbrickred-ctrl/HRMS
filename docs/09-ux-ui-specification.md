@@ -29,7 +29,7 @@
 
 | Lesson | Adopt in PeopleOS | Avoid |
 |--------|-------------------|-------|
-| Deep IA / many modules overwhelm | Role-based portals with slim nav | Mega-menus of unused P2 modules |
+| Deep IA / many modules overwhelm | Role-grouped sections in one shell; hide unauthorized modules | Mega-menus of unused P2 modules; separate portal apps |
 | Approvals scattered | Unified **Inbox** | Separate approve UIs per module only |
 | Unclear request status | Persistent status timeline | Status only in email |
 | Config sprawl before value | Ship opinionated defaults; progressive disclosure for HR Head config | Empty enterprise config consoles on day 1 |
@@ -40,64 +40,77 @@
 
 ---
 
-## 2. Portal architecture
+## 2. App shell architecture
 
-Five portals share one React app with **role-based shell** and route guards (**Fact**: RBAC in MVP).
+One React app with a **single workspace shell** and **role-grouped navigation** (**Fact**: RBAC in MVP; **D-028**).
 
-| Portal | Route prefix | Primary roles | Purpose |
-|--------|--------------|---------------|---------|
-| **Employee (ESS)** | `/ess` | EMPLOYEE (+ all humans) | Self-service daily HR |
-| **Manager** | `/manager` | MANAGER | Inbox + team visibility |
+| Nav section | Route prefix | Roles that unlock it | Purpose |
+|-------------|--------------|----------------------|---------|
+| **Me** | `/ess` | Always (any authenticated user) | Self-service daily HR |
+| **Team** | `/manager` | MANAGER | Inbox + team visibility |
 | **HR** | `/hr` | HR_EXEC, HR_HEAD | Operate people processes |
 | **Admin** | `/admin` | IT_ADMIN, SECURITY_ADMIN | Identity, roles, system config, audit |
-| **CEO / Leadership** | `/exec` | CEO, LEADERSHIP_READ | Operational read dashboards |
+| **Leadership** | `/exec` | LEADERSHIP_READ | Operational read dashboards |
 
-**Assumption:** Users with multiple roles switch via portal switcher in header (not separate logins).
+**Fact:** A manager is an employee first. Extra responsibilities (Manager, HR, Admin, Leadership) **add sidebar sections** in the same shell — there is **no portal switcher** and no separate “manager app.”
+
+**Assumption:** Users with multiple roles see multiple sections at once; Home at `/ess` surfaces Me widgets plus role teasers (team inbox, HR/Admin jumps).
 
 ### 2.1 Global chrome
 
+Three-zone layout (**D-030**): Top bar · collapsible Sidebar · Main application zone.
+
 ```text
-┌──────────────────────────────────────────────────────────┐
-│ Brand  PortalSwitcher   GlobalSearch*   Alerts   Avatar  │
-├────────────┬─────────────────────────────────────────────┤
-│ Side nav   │  Page header (title, breadcrumbs, actions)  │
-│ (portal)   │─────────────────────────────────────────────│
-│            │  Content                                    │
-│            │                                             │
-└────────────┴─────────────────────────────────────────────┘
-* GlobalSearch: employees for HR/Manager; limited for ESS (**Assumption**)
+┌──────────────────────────────────────────────────────────────┐
+│ [≡] Brand     Search*  Alerts  Theme  User  Sign out         │  ← Top bar
+├────────────┬─────────────────────────────────────────────────┤
+│ Me         │  Page title                                     │
+│ 🏠 Home    │─────────────────────────────────────────────────│
+│ …          │  Elevated content pad (surface + shadow)        │
+│ ─────────  │                                                 │  ← Main zone
+│ Team       │                                                 │
+│ …          │                                                 │
+└────────────┴─────────────────────────────────────────────────┘
+     ↑ Sidebar: icons + labels; dividers between role sections;
+       desktop collapse → icon rail (localStorage)
+* GlobalSearch: employees for HR/Manager; limited for Me self-service (**Assumption**)
 ```
+
+Nav items use Lucide icons. Mobile: off-canvas drawer (collapse preference ignored).
 
 ---
 
 ## 3. Navigation IA
 
-### 3.1 ESS
+Sidebar is composed of **grouped sections**. Only sections the user is authorized for are shown.
+
+### 3.1 Me (always)
 
 | Nav item | Children / notes |
 |----------|------------------|
-| Home | Widgets + quick actions |
+| Home | Widgets + quick actions; role teasers when Manager/HR/Admin/Leadership |
 | Leave | Apply, My requests, Balances, Calendar |
 | Attendance | Mark, Month view, Corrections |
+| People | Company directory (public work details) |
 | Documents | My documents, Policies (company library) |
 | Profile | Personal, Job (read), Contacts |
 | Notifications | Full list |
 
-### 3.2 Manager
+### 3.2 Team (MANAGER)
 
 | Nav item | Notes |
 |----------|-------|
-| Home | Inbox count, team leave today, exceptions |
-| **Inbox** | Default landing for managers with pending > 0 |
+| Overview | Team signals summary |
+| **Inbox** | Approvals; primary Team entry when pending > 0 |
 | Team Leave | Calendar / list |
 | Team Attendance | Month + exceptions |
 | Team Directory | Direct reports |
 
-### 3.3 HR
+### 3.3 HR (HR_EXEC / HR_HEAD)
 
 | Nav item | Notes |
 |----------|-------|
-| Home | Queues: incomplete profiles, import errors, escalations |
+| Overview | Queues: incomplete profiles, import errors, escalations |
 | Employees | Search, create, bulk import |
 | Organization | Depts, designations, locations |
 | Leave Admin | Types, policies, balances, holidays |
@@ -107,17 +120,18 @@ Five portals share one React app with **role-based shell** and route guards (**F
 | Reports | P0 operational set |
 | Migration | CSV tools (permissioned) |
 
-### 3.4 Admin
+### 3.4 Admin (IT_ADMIN / SECURITY_ADMIN)
 
 | Nav item | Notes |
 |----------|-------|
+| Overview | Identity / system health entry |
 | Users & Roles | |
 | Audit log | |
 | Notifications / Email health | |
 | System settings | SMTP, retention labels, feature flags |
 | Jobs | Reminder/escalation job status |
 
-### 3.5 Executive
+### 3.5 Leadership (LEADERSHIP_READ)
 
 | Nav item | Notes |
 |----------|-------|
@@ -129,13 +143,14 @@ Five portals share one React app with **role-based shell** and route guards (**F
 
 ## 4. Key screens (wireframe-level)
 
-### 4.1 ESS Home
+### 4.1 Me Home (`/ess`)
 
 **Layout**
 1. Greeting + date  
-2. **Quick actions** row: Apply Leave · Mark Attendance · Upload Doc · View Inbox status  
+2. **Quick actions** row: Apply Leave · Mark Attendance · Upload Doc · Notifications · Approvals (if Manager)  
 3. Cards: Leave balances (compact) · Pending requests · Unread notifications  
-4. Optional: “On leave this week in your team” teaser if manager dual-role  
+4. If Manager: **Your team** teaser (inbox count, on leave today) linking to Team section  
+5. If HR/Admin/Leadership: **Your responsibilities** jump links  
 
 **Rules**
 - No more than one primary CTA visually dominant (Apply Leave or Mark Attendance by time-of-day heuristic — **Assumption**).  
@@ -224,7 +239,7 @@ Standardize: `Draft` `Pending` `Approved` `Rejected` `Withdrawn` `Escalated` `Lo
 
 ---
 
-## 6. Approvals UX (cross-portal)
+## 6. Approvals UX (Team section)
 
 | Principle | Implementation |
 |-----------|----------------|
@@ -279,17 +294,19 @@ UAT should include keyboard pass on Login, Apply Leave, Inbox.
 
 ## 10. Design tokens (guidance — not a new brand system)
 
-Preserve internal brand if provided; otherwise define CSS variables early:
+Preserve internal brand (Design44); map to **semantic CSS variables** used by the SPA:
 
 | Token | Guidance |
 |-------|----------|
-| `--color-bg` | Neutral light workspace (avoid purple-gradient SaaS cliché) |
-| `--color-primary` | Company brand or restrained blue/teal for IT consultancy |
-| `--color-danger` | Reject / destructive |
-| `--color-success` | Approved |
-| `--color-warning` | Escalated / pending aging |
-| Typography | Clear UI sans already licensed by company; avoid random novelty fonts in app chrome |
+| `--bg` / `--surface` / `--surface-elevated` | Workspace canvas and panels |
+| `--ink` / `--muted` / `--line` | Text and dividers |
+| `--accent` (key-lime) | Primary actions; same brand hue in light and dark |
+| `--danger` / `--danger-bg` | Reject / destructive |
+| Status chip tokens | `--chip-*` — meaning preserved across themes |
+| Typography | Syne (display) + DM Sans (body) |
 | Radius / shadow | Subtle; enterprise density over glassmorphism |
+
+**Theme (D-029):** Support **light**, **dark**, and **system** (default). Preference is client-side (`localStorage`); resolved theme sets `html[data-theme]` and `color-scheme`. Contrast target remains WCAG 2.2 AA for text/UI.
 
 **Exception to marketing frontend rules:** This is an operational product — prioritize clarity and tables over hero compositions.
 
@@ -308,29 +325,30 @@ No playful copy on reject/exit flows.
 
 ---
 
-## 12. Portal permission vs visibility matrix (UX)
+## 12. Surface visibility matrix (UX)
 
 | Surface | Emp | Mgr | HR | Admin | Exec |
 |---------|-----|-----|----|-------|------|
-| ESS Home | ● | ● | ● | ● | ● |
-| Manager Inbox | — | ● | ○ view stuck | — | — |
+| Me Home (`/ess`) | ● | ● | ● | ● | ● |
+| Team Inbox | — | ● | ○ view stuck | — | — |
 | HR Employees | — | team read | ● | — | read reports |
 | Audit | — | — | limited | ● | — |
 | Migration | — | — | ● Head | ● | — |
 
-● full · ○ limited · — hidden
+● full · ○ limited · — hidden (section not shown in nav)
 
 ---
 
 ## 13. UX acceptance checklist (MVP)
 
-- [ ] Manager with pending tasks lands on Inbox or sees persistent Inbox badge  
-- [ ] Apply Leave completable in ≤2 clicks from ESS Home  
-- [ ] Attendance correction reachable from month day cell  
-- [ ] Document download denial shows clear message (no blank error)  
-- [ ] 360px: mark attendance + apply leave usable  
-- [ ] Keyboard path for Inbox approve/reject  
-- [ ] No navigation entries to P2 modules  
+- [ ] Multi-role user sees **grouped sections** (e.g. Me + Team) in one shell — no portal switcher
+- [ ] Manager with pending tasks sees Inbox badge/teaser on Home or reaches Inbox in ≤2 clicks
+- [ ] Apply Leave completable in ≤2 clicks from Me Home
+- [ ] Attendance correction reachable from month day cell
+- [ ] Document download denial shows clear message (no blank error)
+- [ ] 360px: mark attendance + apply leave usable
+- [ ] Keyboard path for Inbox approve/reject
+- [ ] No navigation entries to P2 modules
 
 **Metric-to-measure:** SUS or CES after pilot cohort week 2.
 

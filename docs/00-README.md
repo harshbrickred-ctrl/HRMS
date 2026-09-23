@@ -8,6 +8,10 @@
 
 **Document status:** Foundation pack for CEO approval → discovery → build → internal adoption → future SaaS.
 
+**Living trackers (repo root):**
+- [`../Decision.md`](../Decision.md) — decisions by user/agent + reasons  
+- [`../Progress.md`](../Progress.md) — Completed vs To Do features  
+
 ---
 
 ## Artifacts (quick share)
@@ -39,11 +43,12 @@ For 1–2 minute topic cards (meetings / email / onboarding), use the mirrored p
 ### For CEO / Leadership (30–45 minutes)
 
 1. [31-management-overview.md](31-management-overview.md) — **management presentation narrative (start here for meetings)**
-2. [01-executive-proposal.md](01-executive-proposal.md) — **primary approval document**
-3. [02-market-analysis.md](02-market-analysis.md) — landscape, gaps, what we will / won’t build
-4. [23-risk-register.md](23-risk-register.md) — top risks
-5. [29-kpis-and-cost-strategy.md](29-kpis-and-cost-strategy.md) — costs & build-vs-buy
-6. [28-saas-roadmap.md](28-saas-roadmap.md) — long-term commercialization (do not fund prematurely)
+2. [32-manager-weekly-timeline.md](32-manager-weekly-timeline.md) — **simple weekly timeline with dates (share with manager)**
+3. [01-executive-proposal.md](01-executive-proposal.md) — **primary approval document**
+4. [02-market-analysis.md](02-market-analysis.md) — landscape, gaps, what we will / won’t build
+5. [23-risk-register.md](23-risk-register.md) — top risks
+6. [29-kpis-and-cost-strategy.md](29-kpis-and-cost-strategy.md) — costs & build-vs-buy
+7. [28-saas-roadmap.md](28-saas-roadmap.md) — long-term commercialization (do not fund prematurely)
 
 ### For Product / HR / BA
 

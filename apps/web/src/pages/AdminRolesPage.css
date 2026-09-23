@@ -1,0 +1,142 @@
+.admin-roles {
+  max-width: 960px;
+}
+
+.admin-roles-sub {
+  margin: 0 0 1rem;
+  color: var(--cool-ashes);
+  max-width: 42ch;
+}
+
+.admin-roles-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) 1.2fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.admin-roles-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.1rem 1.15rem;
+}
+
+.admin-roles-panel h2 {
+  margin: 0 0 0.85rem;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.admin-roles-users {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.admin-roles-user {
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--iced-slate) 35%, transparent);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.8rem;
+  cursor: pointer;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.admin-roles-user:hover {
+  border-color: var(--silver-sand);
+}
+
+.admin-roles-user.is-active {
+  border-color: color-mix(in srgb, var(--key-lime) 70%, var(--iced-slate));
+  background: color-mix(in srgb, var(--key-lime) 35%, var(--mix-wash));
+}
+
+.admin-roles-user-email {
+  font-weight: 650;
+  font-size: 0.92rem;
+}
+
+.admin-roles-user-roles {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.admin-roles-checks {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.admin-roles-check {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.55rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.admin-roles-check input {
+  margin-top: 0.2rem;
+}
+
+.admin-roles-check strong {
+  display: block;
+  font-size: 0.88rem;
+  letter-spacing: 0.01em;
+}
+
+.admin-roles-check em {
+  display: block;
+  font-style: normal;
+  color: var(--cool-ashes);
+  font-size: 0.8rem;
+}
+
+.admin-roles-save {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.75rem 1.2rem;
+  background: var(--key-lime);
+  color: var(--cursed-black);
+  font-family: var(--font-display);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-roles-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-roles-alert {
+  margin-bottom: 1rem;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 25%, var(--mix-wash));
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.85rem;
+}
+
+.admin-roles-ok {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.admin-roles-muted {
+  color: var(--cool-ashes);
+}
+
+@media (max-width: 760px) {
+  .admin-roles-grid {
+    grid-template-columns: 1fr;
+  }
+}

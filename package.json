@@ -1,0 +1,18 @@
+{
+  "name": "peopleos",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:api": "npm run start:dev -w api",
+    "dev:web": "npm run dev -w web",
+    "build": "npm run build -w api && npm run build -w web",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "prisma:generate": "npm run prisma:generate -w api",
+    "prisma:migrate": "npm run prisma:migrate -w api",
+    "prisma:seed": "npm run prisma:seed -w api"
+  }
+}

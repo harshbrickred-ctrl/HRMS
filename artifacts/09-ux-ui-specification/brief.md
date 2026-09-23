@@ -1,6 +1,6 @@
 ---
 manual: false
-generated: 2026-09-13
+generated: 2026-09-16
 ---
 
 # 09 — UX / UI Specification
@@ -19,9 +19,10 @@ Constraint: Responsive web only (no native apps) · NestJS API · React SPA/CSR 
 - Trust through transparency: Status chips, balance ledger visibility, audit “why rejected”
 - HR as operator: Dense tables, filters, bulk import — not consumer marketing layouts
 - Mobile-ready ESS: Thumb-friendly primary actions; tables degrade to cards on narrow screens
-- Deep IA / many modules overwhelm: Role-based portals with slim nav — Mega-menus of unused P2 modules
+- Deep IA / many modules overwhelm: Role-grouped sections in one shell — Mega-menus of unused P2 modules; separate portal apps
 - Approvals scattered: Unified Inbox — Separate approve UIs per module only
 - Unclear request status: Persistent status timeline — Status only in email
+- Multi-role users: Same shell; Me always + Team/HR/Admin/Leadership sections when roles apply — No portal switcher
 
 ## Evidence labels
 

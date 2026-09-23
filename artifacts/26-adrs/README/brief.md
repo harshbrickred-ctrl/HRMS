@@ -1,6 +1,6 @@
 ---
 manual: false
-generated: 2026-09-13
+generated: 2026-09-16
 ---
 
 # Architecture Decision Records (ADR-001 … ADR-012)
