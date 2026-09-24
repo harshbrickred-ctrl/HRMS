@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { Smartphone } from 'lucide-react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { MobileDemoModal } from '../mobile-demo/MobileDemoModal';
 import { ThemeToggle } from '../theme/ThemeToggle';
 import './LoginPage.css';
 
@@ -14,6 +16,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   if (!loading && user) {
     return <Navigate to="/ess" replace />;
@@ -36,8 +39,19 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-theme">
+        <button
+          type="button"
+          className="login-mobile-btn"
+          aria-label="Preview mobile app"
+          title="Preview mobile app"
+          onClick={() => setMobileOpen(true)}
+        >
+          <Smartphone size={18} strokeWidth={2} aria-hidden />
+        </button>
         <ThemeToggle />
       </div>
+
+      <MobileDemoModal open={mobileOpen} onClose={() => setMobileOpen(false)} />
       <div className="login-glow login-glow--lime" aria-hidden="true" />
       <div className="login-glow login-glow--slate" aria-hidden="true" />
 

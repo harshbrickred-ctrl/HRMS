@@ -25,6 +25,7 @@
 | C-011 | Unified shell + role-grouped nav (Me/Team/HR/Admin/Leadership) | Foundation | 2026-09-22 | D-028; no portal switcher; smart Home teasers; path namespaces kept |
 | C-012 | Dark mode (light / dark / system) | Foundation | 2026-09-22 | D-029; Design44 semantic tokens; localStorage; shell + auth toggle |
 | C-013 | Shell UX depth (collapse + icons) | Foundation | 2026-09-23 | D-030; Lucide nav icons; section dividers; elevated main pad |
+| C-014 | Expo mobile app + web Mobile preview | Foundation | 2026-09-23 | D-031; Design44 in-web demo from login icon + `/mobile`; Expo ESS client |
 
 ---
 
@@ -84,7 +85,7 @@
 | T-091 | Performance / OKR suite | P2 | Deferred |
 | T-092 | LMS / training engine | P2 | Deferred |
 | T-093 | Expenses engine | P2 | Deferred |
-| T-094 | Native mobile apps | P2 | Deferred |
+| T-094 | Native mobile apps (store shipping) | P2 | Scaffolded (C-014 ESS Expo); store/push/offline still deferred |
 | T-095 | WhatsApp / AI agents | P2 | Deferred |
 | T-096 | Commercial billing / SCIM / marketplace | P2 | Deferred |
 | T-097 | AKS / microservices split | P2 | Deferred |

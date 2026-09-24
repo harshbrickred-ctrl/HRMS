@@ -16,6 +16,7 @@ import { ForgotPasswordOtpPage } from './pages/ForgotPasswordOtpPage';
 import { ForgotPasswordRequestPage } from './pages/ForgotPasswordRequestPage';
 import { ForgotPasswordResetPage } from './pages/ForgotPasswordResetPage';
 import { LoginPage } from './pages/LoginPage';
+import { MobilePreviewPage } from './pages/MobilePreviewPage';
 
 function ph(title: string, blurb: string, upcoming?: string[]) {
   return <PlaceholderPage title={title} blurb={blurb} upcoming={upcoming} />;
@@ -58,6 +59,8 @@ export default function App() {
               <Route path="profile" element={<EssProfilePage />} />
               <Route path="notifications" element={<EssNotificationsPage />} />
             </Route>
+
+            <Route path="/mobile" element={<MobilePreviewPage />} />
 
             <Route path="/manager" element={<RoleOutlet roles={['MANAGER']} />}>
               <Route

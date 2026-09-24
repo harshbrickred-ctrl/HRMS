@@ -3,11 +3,14 @@
   "private": true,
   "workspaces": [
     "apps/api",
-    "apps/web"
+    "apps/web",
+    "apps/mobile"
   ],
   "scripts": {
     "dev:api": "npm run start:dev -w api",
     "dev:web": "npm run dev -w web",
+    "dev:mobile": "npm run start -w mobile",
+    "dev:mobile:web": "npm run web -w mobile",
     "build": "npm run build -w api && npm run build -w web",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",

@@ -25,7 +25,8 @@ export type NavIconId =
   | 'settings'
   | 'jobs'
   | 'leadership'
-  | 'leadershipReports';
+  | 'leadershipReports'
+  | 'mobile';
 
 export type NavItem = {
   to: string;
@@ -57,6 +58,7 @@ const NAV_SECTIONS: NavSection[] = [
       { to: '/ess/documents', label: 'Documents', icon: 'documents' },
       { to: '/ess/profile', label: 'Profile', icon: 'profile' },
       { to: '/ess/notifications', label: 'Notifications', icon: 'notifications' },
+      { to: '/mobile', label: 'Mobile', icon: 'mobile' },
     ],
   },
   {

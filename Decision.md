@@ -36,6 +36,7 @@
 | D-028 | 2026-09-22 | User (+ Agent) | App IA shell | **Single workspace shell** with role-grouped sidebar sections (Me always; Team/HR/Admin/Leadership when roles apply). No portal switcher. Path prefixes `/ess`, `/manager`, `/hr`, `/admin`, `/exec` remain as namespaces. One smart Home at `/ess`. | Manager (and HR/Admin) are employees first; responsibilities add modules, not separate apps | Active |
 | D-029 | 2026-09-22 | Agent | UI theme | Client-side **light / dark / system** preference (default system), stored in `localStorage` (`peopleos-theme`); Design44 semantic CSS tokens + FOUC boot script; profile sync deferred | Stage A velocity; OS-follow default; works on auth pages without API | Active |
 | D-030 | 2026-09-23 | Agent | App chrome UX | Three-zone shell (Top / Sidebar / Main); collapsible sidebar (icon rail) persisted in `localStorage`; Lucide icons on nav + header; section dividers between role groups | Clearer IA scanability; denser desktop without losing mobile drawer | Active |
+| D-031 | 2026-09-23 | User (+ Agent) | Mobile client | Add **Expo** app at `apps/mobile` (ESS-first). Web **in-app mobile demo** (Design44) opens from sign-in smartphone icon and Me → Mobile — no Expo iframe. Native store shipping still out of scope. | Preview without auth; visual parity with web | Active |
 
 ---
 
