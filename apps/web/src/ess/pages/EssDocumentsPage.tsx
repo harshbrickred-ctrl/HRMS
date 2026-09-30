@@ -1,32 +1,26 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useEssData } from '../mock/EssDataContext';
 
-type Tab = 'mine' | 'policies';
-
 export function EssDocumentsPage() {
   const { documents, uploadDocument } = useEssData();
-  const [tab, setTab] = useState<Tab>('mine');
+  const [list, setList] = useState<'mine' | 'policies'>('mine');
   const [name, setName] = useState('');
   const [category, setCategory] = useState('KYC');
-  const [showUpload, setShowUpload] = useState(false);
   const [toastLocal, setToastLocal] = useState<string | null>(null);
 
-  const mine = useMemo(
-    () => documents.filter((d) => d.owner === 'mine'),
-    [documents],
-  );
+  const mine = useMemo(() => documents.filter((doc) => doc.owner === 'mine'), [documents]);
   const policies = useMemo(
-    () => documents.filter((d) => d.owner === 'company'),
+    () => documents.filter((doc) => doc.owner === 'company'),
     [documents],
   );
+  const rows = list === 'mine' ? mine : policies;
 
-  function onUpload(e: FormEvent) {
-    e.preventDefault();
+  function onUpload(event: FormEvent) {
+    event.preventDefault();
     if (!name.trim()) return;
     uploadDocument({ name: name.trim(), category });
     setName('');
-    setShowUpload(false);
-    setTab('mine');
+    setList('mine');
   }
 
   function onDownload(docName: string) {
@@ -34,29 +28,21 @@ export function EssDocumentsPage() {
     window.setTimeout(() => setToastLocal(null), 2500);
   }
 
-  const rows = tab === 'mine' ? mine : policies;
-
   return (
-    <div>
-      <p className="ess-lead">
-        Your documents and company policy library.
-      </p>
-
-      <div className="ess-tabs" role="tablist">
-        <button
-          type="button"
-          className={tab === 'mine' ? 'ess-tab is-active' : 'ess-tab'}
-          onClick={() => setTab('mine')}
-        >
-          My documents
-        </button>
-        <button
-          type="button"
-          className={tab === 'policies' ? 'ess-tab is-active' : 'ess-tab'}
-          onClick={() => setTab('policies')}
-        >
-          Policies
-        </button>
+    <div className="ess-section-stack">
+      <div className="ess-insights">
+        <article className="ess-panel ess-insight">
+          <p className="ess-muted">My files</p>
+          <p className="ess-insight-value">{mine.length}</p>
+        </article>
+        <article className="ess-panel ess-insight">
+          <p className="ess-muted">Policies</p>
+          <p className="ess-insight-value">{policies.length}</p>
+        </article>
+        <article className="ess-panel ess-insight">
+          <p className="ess-muted">Library</p>
+          <p className="ess-insight-value">{documents.length}</p>
+        </article>
       </div>
 
       {toastLocal ? (
@@ -65,38 +51,73 @@ export function EssDocumentsPage() {
         </p>
       ) : null}
 
-      <section className="ess-panel">
-        <div className="ess-panel-head">
-          <h2>{tab === 'mine' ? 'My documents' : 'Policies'}</h2>
-          {tab === 'mine' ? (
-            <button
-              type="button"
-              className="ess-btn ess-btn-primary"
-              onClick={() => setShowUpload((v) => !v)}
-            >
-              {showUpload ? 'Cancel' : 'Upload'}
-            </button>
-          ) : null}
-        </div>
+      <div className="ess-att-split">
+        <section className="ess-panel">
+          <div className="ess-att-toolbar">
+            <h2>{list === 'mine' ? 'My documents' : 'Policies'}</h2>
+            <div className="ess-tabs" role="tablist" aria-label="Document lists">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={list === 'mine'}
+                className={list === 'mine' ? 'ess-tab is-active' : 'ess-tab'}
+                onClick={() => setList('mine')}
+              >
+                Mine
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={list === 'policies'}
+                className={list === 'policies' ? 'ess-tab is-active' : 'ess-tab'}
+                onClick={() => setList('policies')}
+              >
+                Policies
+              </button>
+            </div>
+          </div>
+          {rows.length === 0 ? (
+            <p className="ess-empty">No documents in this list.</p>
+          ) : (
+            <ul className="ess-list">
+              {rows.map((doc) => (
+                <li key={doc.id} className="ess-list-item">
+                  <div className="ess-leave-request-head">
+                    <strong>{doc.name}</strong>
+                    <button type="button" className="ess-btn" onClick={() => onDownload(doc.name)}>
+                      Download
+                    </button>
+                  </div>
+                  <span className="ess-list-meta">
+                    <span>{doc.category}</span>
+                    <span>{doc.uploadedAt}</span>
+                    <span>{doc.sizeLabel}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-        {showUpload && tab === 'mine' ? (
-          <form className="ess-form" onSubmit={onUpload} style={{ marginBottom: '1rem' }}>
+        <section className="ess-panel">
+          <h2>Upload</h2>
+          <form className="ess-form" onSubmit={onUpload}>
             <div className="ess-field">
-              <label htmlFor="doc-name">File name *</label>
+              <label htmlFor="doc-name">File name</label>
               <input
                 id="doc-name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Passport.pdf"
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Passport.pdf"
                 required
               />
             </div>
             <div className="ess-field">
-              <label htmlFor="doc-cat">Category *</label>
+              <label htmlFor="doc-cat">Category</label>
               <select
                 id="doc-cat"
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(event) => setCategory(event.target.value)}
               >
                 <option value="KYC">KYC</option>
                 <option value="Employment">Employment</option>
@@ -107,47 +128,8 @@ export function EssDocumentsPage() {
               Add document
             </button>
           </form>
-        ) : null}
-
-        {rows.length === 0 ? (
-          <p className="ess-empty">No documents in this list.</p>
-        ) : (
-          <div className="ess-table-wrap">
-            <table className="ess-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Category</th>
-                  <th>Uploaded</th>
-                  <th>Size</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((d) => (
-                  <tr key={d.id}>
-                    <td data-label="Name">
-                      <strong>{d.name}</strong>
-                    </td>
-                    <td data-label="Category">{d.category}</td>
-                    <td data-label="Uploaded">{d.uploadedAt}</td>
-                    <td data-label="Size">{d.sizeLabel}</td>
-                    <td data-label="Actions">
-                      <button
-                        type="button"
-                        className="ess-btn"
-                        onClick={() => onDownload(d.name)}
-                      >
-                        Download
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

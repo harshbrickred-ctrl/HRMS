@@ -90,22 +90,20 @@ export function AdminRolesPage() {
   const selected = users.find((u) => u.id === selectedId) ?? null;
 
   return (
-    <div className="admin-roles">
-      <p className="admin-roles-sub">
-        Assign catalog roles. Changes apply on the next permission check.
-      </p>
+    <div className="ess-section-stack">
+      <p className="ess-lead">Assign catalog roles. Changes apply on the next permission check.</p>
 
-      {loading ? <p className="admin-roles-muted">Loading…</p> : null}
+      {loading ? <p className="ess-muted">Loading…</p> : null}
       {error ? (
-        <div className="admin-roles-alert" role="alert">
+        <div className="ess-alert" role="alert">
           {error}
         </div>
       ) : null}
-      {message ? <p className="admin-roles-ok">{message}</p> : null}
+      {message ? <p className="ess-muted">{message}</p> : null}
 
       {!loading ? (
-        <div className="admin-roles-grid">
-          <section className="admin-roles-panel">
+        <div className="ess-att-split">
+          <section className="ess-panel">
             <h2>Users</h2>
             <ul className="admin-roles-users">
               {users.map((u) => (
@@ -129,7 +127,7 @@ export function AdminRolesPage() {
             </ul>
           </section>
 
-          <section className="admin-roles-panel">
+          <section className="ess-panel">
             <h2>{selected ? selected.email : 'Select a user'}</h2>
             {selected ? (
               <>
@@ -151,7 +149,7 @@ export function AdminRolesPage() {
                 </div>
                 <button
                   type="button"
-                  className="admin-roles-save"
+                  className="ess-btn ess-btn-primary"
                   onClick={() => void onSave()}
                   disabled={saving || draftRoles.length === 0}
                 >

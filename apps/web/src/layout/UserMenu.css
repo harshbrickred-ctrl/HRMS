@@ -15,18 +15,37 @@
   color: var(--ink);
   cursor: pointer;
   font: inherit;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
 }
 
 .user-menu-trigger:hover {
   background: color-mix(in srgb, var(--key-lime) 28%, var(--surface));
+  transform: translateY(-1px);
+}
+
+.user-menu-trigger:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.user-menu-avatar,
+.user-menu-avatar-photo {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.user-menu-avatar-photo {
+  object-fit: cover;
+  display: block;
 }
 
 .user-menu-avatar {
   display: grid;
   place-items: center;
-  width: 1.85rem;
-  height: 1.85rem;
-  border-radius: 999px;
   background: color-mix(in srgb, var(--key-lime) 55%, var(--mix-wash));
   font-family: var(--font-display);
   font-size: 0.72rem;
@@ -48,6 +67,11 @@
 .user-menu-chevron {
   flex-shrink: 0;
   color: var(--muted);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.user-menu-trigger[aria-expanded='true'] .user-menu-chevron {
+  transform: rotate(180deg);
 }
 
 .user-menu-panel {
@@ -61,6 +85,8 @@
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow);
   padding: 0.45rem;
+  transform-origin: top right;
+  animation: ui-rise var(--dur-base) var(--ease-out) backwards;
 }
 
 .user-menu-meta {
@@ -97,6 +123,9 @@
   color: var(--ink);
   cursor: pointer;
   text-align: left;
+  transition:
+    background-color var(--dur-fast) ease,
+    color var(--dur-fast) ease;
 }
 
 .user-menu-item:hover {

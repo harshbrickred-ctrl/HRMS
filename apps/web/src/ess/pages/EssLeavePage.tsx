@@ -1,20 +1,36 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { StatusChip } from '../components/StatusChip';
+import { useWorkspace } from '../../workspace/workspaceMock';
 import { useEssData } from '../mock/EssDataContext';
-import { workingDaysBetween } from '../mock/essMock';
+import { workingDaysBetween, type LeaveBalance, type LeaveRequest } from '../mock/essMock';
 
-type Tab = 'apply' | 'requests' | 'balances' | 'calendar';
+type Section = 'apply' | 'requests' | 'balances' | 'calendar';
+
+const SECTIONS: Array<[Section, string]> = [
+  ['apply', 'Apply'],
+  ['requests', 'Requests'],
+  ['balances', 'Balances'],
+  ['calendar', 'Holiday calendar'],
+];
+
+function formatDate(iso: string) {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+function meterShare(part: number, entitled: number) {
+  if (entitled <= 0) return 0;
+  return Math.min(100, Math.max(0, (part / entitled) * 100));
+}
 
 export function EssLeavePage() {
-  const {
-    leaveBalances,
-    leaveRequests,
-    holidays,
-    applyLeave,
-    withdrawLeave,
-  } = useEssData();
-
-  const [tab, setTab] = useState<Tab>('apply');
+  const { leaveBalances, leaveRequests, holidays, applyLeave, withdrawLeave } = useEssData();
+  const { inbox } = useWorkspace();
+  const requests = leaveRequests.map((request) => overlayDecision(request, inbox));
+  const [section, setSection] = useState<Section>('apply');
   const [typeCode, setTypeCode] = useState(leaveBalances[0]?.code ?? 'CL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -25,19 +41,37 @@ export function EssLeavePage() {
 
   const previewDays = useMemo(() => {
     if (!startDate || !endDate) return 0;
-    return workingDaysBetween(
-      startDate,
-      endDate,
-      holidays,
-      halfDayStart,
-      halfDayEnd,
-    );
+    return workingDaysBetween(startDate, endDate, holidays, halfDayStart, halfDayEnd);
   }, [startDate, endDate, holidays, halfDayStart, halfDayEnd]);
 
-  const selectedBalance = leaveBalances.find((b) => b.code === typeCode);
+  const selectedBalance = leaveBalances.find((balance) => balance.code === typeCode);
+  const casual = leaveBalances.find((balance) => balance.code === 'CL');
+  const earned = leaveBalances.find((balance) => balance.code === 'EL');
+  const pending = requests.filter((request) => request.status === 'Pending');
+  const uncapped = selectedBalance?.code === 'LOP';
+  const balanceAfter =
+    !selectedBalance || uncapped ? null : Math.max(0, selectedBalance.available - previewDays);
+  const today = new Date().toISOString().slice(0, 10);
+  const nextHoliday = [...holidays]
+    .filter((holiday) => holiday.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date))[0];
 
-  function onSubmit(e: FormEvent) {
-    e.preventDefault();
+  const months = useMemo(() => {
+    const groups = new Map<string, { date: string; name: string }[]>();
+    for (const holiday of [...holidays].sort((a, b) => a.date.localeCompare(b.date))) {
+      const label = new Date(`${holiday.date}T12:00:00`).toLocaleDateString('en-IN', {
+        month: 'long',
+        year: 'numeric',
+      });
+      const list = groups.get(label) ?? [];
+      list.push(holiday);
+      groups.set(label, list);
+    }
+    return [...groups.entries()];
+  }, [holidays]);
+
+  function onSubmit(event: FormEvent) {
+    event.preventDefault();
     setError(null);
     const result = applyLeave({
       typeCode,
@@ -51,91 +85,100 @@ export function EssLeavePage() {
       setError(result.error);
       return;
     }
+    setStartDate('');
+    setEndDate('');
     setReason('');
     setHalfDayStart(false);
     setHalfDayEnd(false);
-    setTab('requests');
+    setSection('requests');
   }
 
-  const upcomingHolidays = holidays.filter((h) => h.date >= '2026-09-01');
-
   return (
-    <div>
-      <p className="ess-lead">
-        Apply for leave, track requests, check balances, and view holidays.
+    <div className="ess-section-stack">
+      <div className="ess-insights">
+        <article className="ess-panel ess-insight">
+          <p className="ess-muted">Casual leave</p>
+          <p className="ess-insight-value">{casual?.available ?? 0}</p>
+        </article>
+        <article className="ess-panel ess-insight">
+          <p className="ess-muted">Earned leave</p>
+          <p className="ess-insight-value">{earned?.available ?? 0}</p>
+        </article>
+        <article className="ess-panel ess-insight">
+          <p className="ess-muted">Pending requests</p>
+          <p className="ess-insight-value">{pending.length}</p>
+        </article>
+      </div>
+      <p className="ess-att-facts">
+        {nextHoliday ? (
+          <span>
+            Next holiday <strong>{nextHoliday.name}</strong> · {formatDate(nextHoliday.date)}
+          </span>
+        ) : (
+          <span>No upcoming holidays</span>
+        )}
       </p>
 
-      <div className="ess-tabs" role="tablist" aria-label="Leave sections">
-        {(
-          [
-            ['apply', 'Apply'],
-            ['requests', 'My requests'],
-            ['balances', 'Balances'],
-            ['calendar', 'Calendar'],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            className={tab === id ? 'ess-tab is-active' : 'ess-tab'}
-            onClick={() => setTab(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <section className="ess-panel">
+        <div className="ess-att-toolbar">
+          <h2>{SECTIONS.find(([id]) => id === section)?.[1]}</h2>
+          <div className="ess-tabs" role="tablist" aria-label="Leave sections">
+            {SECTIONS.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={section === id}
+                className={section === id ? 'ess-tab is-active' : 'ess-tab'}
+                onClick={() => setSection(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-      {tab === 'apply' ? (
-        <section className="ess-panel">
-          <h2>Apply leave</h2>
+        {section === 'apply' ? (
           <form className="ess-form" onSubmit={onSubmit}>
             {error ? <div className="ess-alert">{error}</div> : null}
-
             <div className="ess-field">
-              <label htmlFor="leave-type">Leave type *</label>
-              <select
-                id="leave-type"
-                value={typeCode}
-                onChange={(e) => setTypeCode(e.target.value)}
-              >
-                {leaveBalances.map((b) => (
-                  <option key={b.code} value={b.code}>
-                    {b.type} ({b.available} available)
+              <label htmlFor="leave-type">Leave type</label>
+              <select id="leave-type" value={typeCode} onChange={(e) => setTypeCode(e.target.value)}>
+                {leaveBalances.map((balance) => (
+                  <option key={balance.code} value={balance.code}>
+                    {balance.code === 'LOP'
+                      ? `${balance.type} (No cap)`
+                      : `${balance.type} (${balance.available} available)`}
                   </option>
                 ))}
               </select>
             </div>
-
-            <div className="ess-field">
-              <label htmlFor="leave-start">Start date *</label>
-              <input
-                id="leave-start"
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  if (!endDate || endDate < e.target.value) {
-                    setEndDate(e.target.value);
-                  }
-                }}
-                required
-              />
+            <div className="ess-leave-dates">
+              <div className="ess-field">
+                <label htmlFor="leave-start">Start date</label>
+                <input
+                  id="leave-start"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    if (!endDate || endDate < e.target.value) setEndDate(e.target.value);
+                  }}
+                  required
+                />
+              </div>
+              <div className="ess-field">
+                <label htmlFor="leave-end">End date</label>
+                <input
+                  id="leave-end"
+                  type="date"
+                  value={endDate}
+                  min={startDate || undefined}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  required
+                />
+              </div>
             </div>
-
-            <div className="ess-field">
-              <label htmlFor="leave-end">End date *</label>
-              <input
-                id="leave-end"
-                type="date"
-                value={endDate}
-                min={startDate || undefined}
-                onChange={(e) => setEndDate(e.target.value)}
-                required
-              />
-            </div>
-
             <div className="ess-check-row">
               <label>
                 <input
@@ -150,27 +193,13 @@ export function EssLeavePage() {
                   type="checkbox"
                   checked={halfDayEnd}
                   onChange={(e) => setHalfDayEnd(e.target.checked)}
-                  disabled={startDate === endDate}
+                  disabled={!startDate || startDate === endDate}
                 />
                 Half day (end)
               </label>
             </div>
-
-            <p className="ess-muted">
-              Working days: <strong>{previewDays || '—'}</strong>
-              {selectedBalance ? (
-                <>
-                  {' '}
-                  · Balance after:{' '}
-                  <strong>
-                    {Math.max(0, selectedBalance.available - previewDays)}
-                  </strong>
-                </>
-              ) : null}
-            </p>
-
             <div className="ess-field">
-              <label htmlFor="leave-reason">Reason *</label>
+              <label htmlFor="leave-reason">Reason</label>
               <textarea
                 id="leave-reason"
                 value={reason}
@@ -178,128 +207,134 @@ export function EssLeavePage() {
                 required
               />
             </div>
-
-            <div className="ess-actions">
-              <button type="submit" className="ess-btn ess-btn-primary">
-                Submit request
-              </button>
-            </div>
+            <p className="ess-muted">
+              {previewDays || '—'} working day{previewDays === 1 ? '' : 's'}
+              {uncapped ? ' · no cap' : balanceAfter == null ? '' : ` · ${balanceAfter} left after`}
+            </p>
+            <button type="submit" className="ess-btn ess-btn-primary">
+              Submit request
+            </button>
           </form>
-        </section>
-      ) : null}
+        ) : null}
 
-      {tab === 'requests' ? (
-        <section className="ess-panel">
-          <h2>My requests</h2>
-          {leaveRequests.length === 0 ? (
+        {section === 'requests' ? (
+          requests.length === 0 ? (
             <p className="ess-empty">No leave requests yet.</p>
           ) : (
-            <div className="ess-table-wrap">
-              <table className="ess-table">
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Dates</th>
-                    <th>Days</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaveRequests.map((r) => (
-                    <tr key={r.id}>
-                      <td data-label="Type">
-                        <strong>{r.type}</strong>
-                        <div className="ess-muted">{r.reason}</div>
-                      </td>
-                      <td data-label="Dates">
-                        {r.startDate}
-                        {r.endDate !== r.startDate ? ` → ${r.endDate}` : ''}
-                      </td>
-                      <td data-label="Days">{r.days}</td>
-                      <td data-label="Status">
-                        <StatusChip status={r.status} />
-                        {r.decisionNote ? (
-                          <div className="ess-muted">{r.decisionNote}</div>
-                        ) : null}
-                      </td>
-                      <td data-label="Actions">
-                        {r.status === 'Pending' ? (
-                          <button
-                            type="button"
-                            className="ess-btn ess-btn-danger"
-                            onClick={() => withdrawLeave(r.id)}
-                          >
-                            Withdraw
-                          </button>
-                        ) : (
-                          <span className="ess-muted">—</span>
-                        )}
-                      </td>
-                    </tr>
+            <ul className="ess-list">
+              {requests.map((request) => (
+                <li key={request.id} className="ess-list-item ess-leave-request">
+                  <div className="ess-leave-request-head">
+                    <strong>{request.type}</strong>
+                    <StatusChip status={request.status} />
+                  </div>
+                  <span className="ess-list-meta">
+                    {formatDate(request.startDate)}
+                    {request.endDate !== request.startDate ? ` → ${formatDate(request.endDate)}` : ''}
+                    <span>
+                      {request.days} day{request.days === 1 ? '' : 's'}
+                    </span>
+                  </span>
+                  <span className="ess-muted">{request.reason}</span>
+                  {request.status === 'Pending' && request.approverName ? (
+                    <span className="ess-muted">With {request.approverName}</span>
+                  ) : null}
+                  {request.status === 'Pending' ? (
+                    <div className="ess-actions">
+                      <button
+                        type="button"
+                        className="ess-btn ess-btn-danger"
+                        onClick={() => withdrawLeave(request.id)}
+                      >
+                        Withdraw
+                      </button>
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )
+        ) : null}
+
+        {section === 'balances' ? (
+          <div className="ess-leave-balances">
+            {leaveBalances.map((balance) => (
+              <BalanceCard key={balance.code} balance={balance} />
+            ))}
+          </div>
+        ) : null}
+
+        {section === 'calendar' ? (
+          <div className="ess-leave-months">
+            {months.map(([month, items]) => (
+              <section key={month}>
+                <h3 className="ess-leave-month">{month}</h3>
+                <ul className="ess-list">
+                  {items.map((holiday) => (
+                    <li key={holiday.date} className="ess-list-item ess-leave-holiday">
+                      <strong>{holiday.name}</strong>
+                      <span className="ess-muted">{formatDate(holiday.date)}</span>
+                    </li>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      ) : null}
-
-      {tab === 'balances' ? (
-        <section className="ess-panel">
-          <h2>Balances</h2>
-          <div className="ess-table-wrap">
-            <table className="ess-table">
-              <thead>
-                <tr>
-                  <th>Type</th>
-                  <th>Entitled</th>
-                  <th>Used</th>
-                  <th>Pending</th>
-                  <th>Available</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaveBalances.map((b) => (
-                  <tr key={b.code}>
-                    <td data-label="Type">{b.type}</td>
-                    <td data-label="Entitled">{b.entitled}</td>
-                    <td data-label="Used">{b.used}</td>
-                    <td data-label="Pending">{b.pending}</td>
-                    <td data-label="Available">
-                      <strong>{b.available}</strong>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </ul>
+              </section>
+            ))}
           </div>
-        </section>
-      ) : null}
-
-      {tab === 'calendar' ? (
-        <section className="ess-panel">
-          <h2>Holiday calendar</h2>
-          <div className="ess-table-wrap">
-            <table className="ess-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Holiday</th>
-                </tr>
-              </thead>
-              <tbody>
-                {upcomingHolidays.map((h) => (
-                  <tr key={h.date}>
-                    <td data-label="Date">{h.date}</td>
-                    <td data-label="Holiday">{h.name}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ) : null}
+        ) : null}
+      </section>
     </div>
+  );
+}
+
+function overlayDecision(
+  request: LeaveRequest,
+  inbox: Array<{ id: string; status: LeaveRequest['status']; approverName: string }>,
+) {
+  const stored = inbox.find((item) => item.id === request.id);
+  if (!stored) return request;
+  return { ...request, status: stored.status, approverName: stored.approverName };
+}
+
+function BalanceCard({ balance }: { balance: LeaveBalance }) {
+  const uncapped = balance.code === 'LOP';
+  const used = meterShare(balance.used, balance.entitled);
+  const pending = meterShare(balance.pending, balance.entitled);
+
+  return (
+    <article className="ess-panel ess-leave-balance">
+      <p className="ess-muted">{balance.type}</p>
+      <p className="ess-leave-available">
+        {uncapped ? 'No cap' : balance.available}
+        {uncapped ? null : <span>available</span>}
+      </p>
+      {uncapped ? (
+        <p className="ess-muted">Unpaid leave. It does not reduce another balance.</p>
+      ) : (
+        <>
+          <div
+            className="ess-leave-meter"
+            role="img"
+            aria-label={`${balance.used} used, ${balance.pending} pending, ${balance.available} available of ${balance.entitled}`}
+          >
+            <span className="ess-leave-meter-used" style={{ width: `${used}%` }} />
+            <span className="ess-leave-meter-pending" style={{ width: `${pending}%` }} />
+          </div>
+          <dl className="ess-leave-balance-meta">
+            <div>
+              <dt>Entitled</dt>
+              <dd>{balance.entitled}</dd>
+            </div>
+            <div>
+              <dt>Used</dt>
+              <dd>{balance.used}</dd>
+            </div>
+            <div>
+              <dt>Pending</dt>
+              <dd>{balance.pending}</dd>
+            </div>
+          </dl>
+        </>
+      )}
+    </article>
   );
 }

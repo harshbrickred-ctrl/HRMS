@@ -4,6 +4,7 @@ import './UserMenu.css';
 
 type UserMenuProps = {
   email: string;
+  photo?: string;
   roles: string[];
   onSignOut: () => void;
 };
@@ -17,7 +18,7 @@ function initialsFromEmail(email: string) {
   return local.slice(0, 2).toUpperCase();
 }
 
-export function UserMenu({ email, roles, onSignOut }: UserMenuProps) {
+export function UserMenu({ email, photo, roles, onSignOut }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -53,9 +54,13 @@ export function UserMenu({ email, roles, onSignOut }: UserMenuProps) {
         aria-controls={menuId}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="user-menu-avatar" aria-hidden>
-          {initialsFromEmail(email)}
-        </span>
+        {photo ? (
+          <img className="user-menu-avatar-photo" src={photo} alt="" />
+        ) : (
+          <span className="user-menu-avatar" aria-hidden>
+            {initialsFromEmail(email)}
+          </span>
+        )}
         <span className="user-menu-email">{email || 'Account'}</span>
         <ChevronDown size={16} aria-hidden className="user-menu-chevron" />
       </button>

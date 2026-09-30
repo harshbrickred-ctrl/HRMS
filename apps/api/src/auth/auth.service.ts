@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -78,6 +82,65 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
     return { success: true };
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    if (newPassword.length < 8) {
+      throw new BadRequestException('Password must be at least 8 characters.');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { roles: { include: { role: true } } },
+    });
+    if (!user || user.status !== 'ACTIVE') {
+      throw new UnauthorizedException();
+    }
+
+    const currentOk = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!currentOk) {
+      throw new UnauthorizedException('Current password is incorrect.');
+    }
+
+    const same = await bcrypt.compare(newPassword, user.passwordHash);
+    if (same) {
+      throw new BadRequestException(
+        'New password must be different from the current password.',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { passwordHash },
+      });
+      await tx.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await tx.auditEvent.create({
+        data: {
+          tenantId: user.tenantId,
+          actorUserId: user.id,
+          action: 'auth.password.change',
+          entityType: 'User',
+          entityId: user.id,
+          metadata: { method: 'settings' },
+        },
+      });
+    });
+
+    return this.issueTokens(
+      user.id,
+      user.tenantId,
+      user.email,
+      user.roles.map((r) => r.role.code),
+    );
   }
 
   async me(userId: string) {

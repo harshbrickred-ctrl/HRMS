@@ -1,7 +1,29 @@
+import type { LucideIcon } from 'lucide-react';
+import { type CSSProperties } from 'react';
+import {
+  ArrowRight,
+  BarChart3,
+  CalendarDays,
+  Clock,
+  Inbox,
+  LayoutDashboard,
+  Shield,
+  Users,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { EmployeePhoto } from '../components/EmployeePhoto';
 import { StatusChip } from '../components/StatusChip';
 import { useEssData } from '../mock/EssDataContext';
+import type { AttendanceDay, Payslip } from '../mock/essMock';
+
+function lineTotal(lines: { amount: number }[]) {
+  return lines.reduce((sum, line) => sum + line.amount, 0);
+}
+
+function netPay(slip: Payslip) {
+  return lineTotal(slip.earnings) - lineTotal(slip.deductions);
+}
 
 function formatToday() {
   return new Date().toLocaleDateString('en-IN', {
@@ -12,6 +34,57 @@ function formatToday() {
   });
 }
 
+function shortMonth(month: string) {
+  const [year, mon] = month.split('-').map(Number);
+  return new Date(year, mon - 1, 1).toLocaleDateString('en-IN', {
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function paidDaysFor(month: string, attendance: AttendanceDay[]) {
+  const [year, mon] = month.split('-').map(Number);
+  const daysInMonth = new Date(year, mon, 0).getDate();
+  const inMonth = attendance.filter((day) => day.date.startsWith(month));
+  if (inMonth.length === 0) return daysInMonth;
+  return inMonth.filter((day) => day.status !== 'Absent').length;
+}
+
+function holidayWhen(date: string) {
+  const value = new Date(`${date}T12:00:00`);
+  return {
+    day: value.toLocaleDateString('en-IN', { day: '2-digit' }),
+    month: value.toLocaleDateString('en-IN', { month: 'short' }),
+    weekday: value.toLocaleDateString('en-IN', { weekday: 'long' }),
+  };
+}
+
+function downloadPayslip(slip: Payslip, gross: number, deductions: number) {
+  const rows = [
+    `Payslip,${slip.label}`,
+    ...slip.earnings.map((line) => `Earning,${line.label},${line.amount}`),
+    ...slip.deductions.map((line) => `Deduction,${line.label},${line.amount}`),
+    `Gross,${gross}`,
+    `Deductions,${deductions}`,
+    `Net,${gross - deductions}`,
+  ];
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `payslip-${slip.month}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+type Shortcut = {
+  to: string;
+  label: string;
+  meta?: string;
+  icon: LucideIcon;
+  accent?: boolean;
+};
+
 export function EssHomePage() {
   const { hasRole } = useAuth();
   const {
@@ -19,46 +92,143 @@ export function EssHomePage() {
     leaveBalances,
     leaveRequests,
     notifications,
-    unreadCount,
-    pendingLeaveCount,
+    holidays,
+    attendance,
+    corrections,
+    payslips,
     markAttendance,
+    salaryHidden,
+    toggleSalaryHidden,
+    showAmount,
   } = useEssData();
 
-  const pending = leaveRequests.filter((r) => r.status === 'Pending').slice(0, 3);
+  const pendingLeave = leaveRequests.filter((r) => r.status === 'Pending');
+  const pendingCorrections = corrections.filter((c) => c.status === 'Pending');
   const unread = notifications.filter((n) => !n.read).slice(0, 3);
   const today = new Date().toISOString().slice(0, 10);
   const hour = new Date().getHours();
   const primaryIsLeave = hour >= 12;
+  const leaveAvailable = leaveBalances.reduce(
+    (sum, balance) => (balance.code === 'LOP' ? sum : sum + balance.available),
+    0,
+  );
+  const latestPayslip = payslips[0];
+  const latestGross = latestPayslip ? lineTotal(latestPayslip.earnings) : 0;
+  const latestDeductions = latestPayslip ? lineTotal(latestPayslip.deductions) : 0;
+  const deductionShare = latestGross === 0 ? 0 : (latestDeductions / latestGross) * 100;
+  const paidDays = latestPayslip ? paidDaysFor(latestPayslip.month, attendance) : 0;
+  const upcomingHolidays = holidays
+    .filter((holiday) => holiday.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 4);
+  const monthKey = today.slice(0, 7);
+  const presentDays = attendance.filter(
+    (day) =>
+      day.date.startsWith(monthKey) &&
+      day.date <= today &&
+      (day.status === 'Present' || day.status === 'PendingCorrection'),
+  ).length;
 
   const isManager = hasRole('MANAGER');
   const isHr = hasRole('HR_EXEC') || hasRole('HR_HEAD');
   const isAdmin = hasRole('SECURITY_ADMIN') || hasRole('IT_ADMIN');
   const isLeadership = hasRole('LEADERSHIP_READ');
-  const hasResponsibilities = isHr || isAdmin || isLeadership;
 
-  // Placeholder until manager APIs exist
   const teamInboxCount = isManager ? 3 : 0;
   const teamOnLeaveToday = isManager ? 2 : 0;
 
+  const roleShortcuts: Shortcut[] = [
+    ...(isManager
+      ? [
+          {
+            to: '/manager/inbox',
+            label: 'Inbox',
+            meta: `${teamInboxCount} waiting`,
+            icon: Inbox,
+          },
+          {
+            to: '/manager/team-leave',
+            label: 'Team leave',
+            meta: `${teamOnLeaveToday} on leave`,
+            icon: CalendarDays,
+          },
+          {
+            to: '/manager/team-attendance',
+            label: 'Team attendance',
+            icon: Clock,
+          },
+        ]
+      : []),
+    ...(isHr
+      ? [
+          {
+            to: '/hr',
+            label: 'HR overview',
+            icon: LayoutDashboard,
+          },
+          {
+            to: '/hr/employees',
+            label: 'Employees',
+            icon: Users,
+          },
+        ]
+      : []),
+    ...(isAdmin
+      ? [
+          {
+            to: '/admin',
+            label: 'Admin overview',
+            icon: LayoutDashboard,
+          },
+          {
+            to: '/admin/roles',
+            label: 'Users & Roles',
+            icon: Shield,
+          },
+        ]
+      : []),
+    ...(isLeadership
+      ? [
+          {
+            to: '/exec',
+            label: 'Leadership',
+            icon: LayoutDashboard,
+          },
+          {
+            to: '/exec/reports',
+            label: 'Reports',
+            icon: BarChart3,
+          },
+        ]
+      : []),
+  ];
+
   return (
-    <div className="ess-section-stack">
-      <div>
-        <p className="ess-greeting">
-          Good {hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'},{' '}
-          {profile.firstName}
-        </p>
-        <p className="ess-lead">{formatToday()} · {profile.title}</p>
+    <div className="ess-home ess-section-stack">
+      <section className="ess-home-hero">
+        <div className="ess-home-hero-person">
+          <EmployeePhoto
+            src={profile.photo}
+            name={`${profile.firstName} ${profile.lastName}`}
+            size="lg"
+          />
+          <div>
+            <p className="ess-greeting">
+              Good {hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'},{' '}
+              {profile.firstName}
+            </p>
+            <p className="ess-lead">
+              {formatToday()} · {profile.title}
+            </p>
+          </div>
+        </div>
         <div className="ess-actions">
           {primaryIsLeave ? (
             <>
               <Link to="/ess/leave" className="ess-btn ess-btn-primary">
                 Apply leave
               </Link>
-              <button
-                type="button"
-                className="ess-btn"
-                onClick={() => markAttendance(today)}
-              >
+              <button type="button" className="ess-btn" onClick={() => markAttendance(today)}>
                 Mark attendance
               </button>
             </>
@@ -76,70 +246,11 @@ export function EssHomePage() {
               </Link>
             </>
           )}
-          <Link to="/ess/documents" className="ess-btn">
-            Upload document
-          </Link>
-          <Link to="/ess/notifications" className="ess-btn">
-            Notifications{unreadCount > 0 ? ` (${unreadCount})` : ''}
-          </Link>
-          {isManager ? (
-            <Link to="/manager/inbox" className="ess-btn">
-              Approvals{teamInboxCount > 0 ? ` (${teamInboxCount})` : ''}
-            </Link>
-          ) : null}
         </div>
-      </div>
+      </section>
 
-      <div className="ess-grid-3">
-        <section className="ess-panel">
-          <div className="ess-panel-head">
-            <h2>Leave balances</h2>
-            <Link to="/ess/leave" className="ess-btn ess-btn-ghost">
-              View
-            </Link>
-          </div>
-          <div className="ess-stat-row">
-            {leaveBalances.map((b) => (
-              <div key={b.code} className="ess-stat-item">
-                <span>
-                  {b.type}
-                  {b.pending > 0 ? (
-                    <span className="ess-muted"> · {b.pending} pending</span>
-                  ) : null}
-                </span>
-                <strong>{b.available}</strong>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="ess-panel">
-          <div className="ess-panel-head">
-            <h2>Pending requests</h2>
-            <span className="ess-muted">{pendingLeaveCount}</span>
-          </div>
-          {pending.length === 0 ? (
-            <p className="ess-empty">No pending leave requests.</p>
-          ) : (
-            <ul className="ess-list">
-              {pending.map((r) => (
-                <li key={r.id}>
-                  <Link to="/ess/leave" className="ess-list-item">
-                    <strong>
-                      {r.type} · {r.days} day{r.days === 1 ? '' : 's'}
-                    </strong>
-                    <span className="ess-list-meta">
-                      {r.startDate}
-                      {r.endDate !== r.startDate ? ` → ${r.endDate}` : ''}
-                      <StatusChip status={r.status} />
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
+      <div className="ess-dash">
+        <div className="ess-dash-col">
         <section className="ess-panel">
           <div className="ess-panel-head">
             <h2>Notifications</h2>
@@ -151,93 +262,238 @@ export function EssHomePage() {
             <p className="ess-empty">You are all caught up.</p>
           ) : (
             <ul className="ess-list">
-              {unread.map((n) => (
-                <li key={n.id}>
-                  <Link to={n.href} className="ess-list-item is-unread">
-                    <strong>{n.title}</strong>
-                    <span className="ess-muted">{n.body}</span>
+              {unread.map((item) => (
+                <li key={item.id}>
+                  <Link to={item.href} className="ess-list-item is-unread">
+                    <strong>{item.title}</strong>
+                    <span className="ess-muted">{item.body}</span>
                   </Link>
                 </li>
               ))}
             </ul>
           )}
         </section>
-      </div>
 
-      {isManager ? (
         <section className="ess-panel">
           <div className="ess-panel-head">
-            <h2>Your team</h2>
-            <Link to="/manager" className="ess-btn ess-btn-ghost">
-              Overview
+            <h2>Pending requests</h2>
+            <span className="ess-muted">{pendingLeave.length + pendingCorrections.length}</span>
+          </div>
+          {pendingLeave.length + pendingCorrections.length === 0 ? (
+            <p className="ess-empty">No pending requests.</p>
+          ) : (
+            <ul className="ess-list">
+              {pendingLeave.slice(0, 2).map((request) => (
+                <li key={request.id}>
+                  <Link to="/ess/leave" className="ess-list-item">
+                    <strong>
+                      {request.type} · {request.days} day{request.days === 1 ? '' : 's'}
+                    </strong>
+                    <span className="ess-list-meta">
+                      {request.startDate}
+                      {request.endDate !== request.startDate ? ` → ${request.endDate}` : ''}
+                      <StatusChip status={request.status} />
+                    </span>
+                  </Link>
+                </li>
+              ))}
+              {pendingCorrections.slice(0, 1).map((correction) => (
+                <li key={correction.id}>
+                  <Link to="/ess/attendance" className="ess-list-item">
+                    <strong>Attendance correction</strong>
+                    <span className="ess-list-meta">
+                      {correction.date}
+                      <StatusChip status={correction.status} />
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        </div>
+
+        <div className="ess-dash-col">
+        <section className="ess-panel ess-pay-card">
+          <div className="ess-panel-head">
+            <h2>Payslip</h2>
+            <Link to="/ess/salary" className="ess-dash-arrow" aria-label="Open salary">
+              <ArrowRight size={16} />
             </Link>
           </div>
-          <div className="ess-grid-2">
-            <div className="ess-stat-row">
-              <div className="ess-stat-item">
-                <span>Approvals waiting</span>
-                <strong>{teamInboxCount}</strong>
+          {latestPayslip ? (
+            <>
+              <div className="ess-pay-top">
+                <div
+                  className={salaryHidden ? 'ess-donut is-masked' : 'ess-donut'}
+                  style={{ '--pay-slice': `${deductionShare}%` } as CSSProperties}
+                  role="img"
+                  aria-label={
+                    salaryHidden
+                      ? 'Salary hidden'
+                      : `Net pay ${showAmount(netPay(latestPayslip))}, deductions ${showAmount(latestDeductions)}`
+                  }
+                >
+                  <span className="ess-donut-hole" />
+                </div>
+                <div className="ess-pay-month">
+                  <p>{shortMonth(latestPayslip.month)}</p>
+                  <strong>{paidDays}</strong>
+                  <span>Paid days</span>
+                </div>
               </div>
-              <div className="ess-stat-item">
-                <span>On leave today</span>
-                <strong>{teamOnLeaveToday}</strong>
+              <dl className="ess-pay-lines">
+                <div>
+                  <dt>
+                    <i className="ess-swatch ess-swatch--gross" aria-hidden />
+                    Gross
+                  </dt>
+                  <dd>{showAmount(latestGross)}</dd>
+                </div>
+                <div>
+                  <dt>
+                    <i className="ess-swatch ess-swatch--deduction" aria-hidden />
+                    Deductions
+                  </dt>
+                  <dd>{showAmount(latestDeductions)}</dd>
+                </div>
+                <div>
+                  <dt>
+                    <i className="ess-swatch ess-swatch--net" aria-hidden />
+                    Net
+                  </dt>
+                  <dd>{showAmount(netPay(latestPayslip))}</dd>
+                </div>
+              </dl>
+              <div className="ess-pay-links">
+                <button
+                  type="button"
+                  className="ess-btn ess-btn-ghost"
+                  onClick={() => downloadPayslip(latestPayslip, latestGross, latestDeductions)}
+                >
+                  Download
+                </button>
+                <button
+                  type="button"
+                  className="ess-btn ess-btn-ghost"
+                  aria-pressed={salaryHidden}
+                  onClick={toggleSalaryHidden}
+                >
+                  {salaryHidden ? 'Show salary' : 'Hide salary'}
+                </button>
               </div>
-            </div>
-            <div className="ess-actions">
-              <Link to="/manager/inbox" className="ess-btn ess-btn-primary">
-                Open inbox
-              </Link>
-              <Link to="/manager/team-leave" className="ess-btn">
-                Team leave
-              </Link>
-              <Link to="/manager/team-attendance" className="ess-btn">
-                Team attendance
-              </Link>
-            </div>
-          </div>
-          <p className="ess-muted" style={{ marginTop: '0.75rem', marginBottom: 0 }}>
-            Team counts are illustrative until manager APIs are connected.
-          </p>
+            </>
+          ) : (
+            <p className="ess-empty">No payslip yet.</p>
+          )}
         </section>
-      ) : null}
 
-      {hasResponsibilities ? (
         <section className="ess-panel">
-          <h2>Your responsibilities</h2>
-          <div className="ess-actions">
-            {isHr ? (
-              <Link to="/hr" className="ess-btn">
-                HR overview
-              </Link>
-            ) : null}
-            {isHr ? (
-              <Link to="/hr/employees" className="ess-btn">
-                Employees
-              </Link>
-            ) : null}
-            {isAdmin ? (
-              <Link to="/admin" className="ess-btn">
-                Admin overview
-              </Link>
-            ) : null}
-            {isAdmin ? (
-              <Link to="/admin/roles" className="ess-btn">
-                Users &amp; Roles
-              </Link>
-            ) : null}
-            {isLeadership ? (
-              <Link to="/exec" className="ess-btn">
-                Leadership overview
-              </Link>
-            ) : null}
-            {isLeadership ? (
-              <Link to="/exec/reports" className="ess-btn">
-                Reports
-              </Link>
-            ) : null}
+          <div className="ess-panel-head">
+            <h2>Upcoming holidays</h2>
+            <Link to="/ess/leave" className="ess-dash-arrow" aria-label="Open leave calendar">
+              <ArrowRight size={16} />
+            </Link>
           </div>
+          {upcomingHolidays.length === 0 ? (
+            <p className="ess-empty">No upcoming holidays.</p>
+          ) : (
+            <ul className="ess-holiday-list">
+              {upcomingHolidays.map((holiday) => {
+                const when = holidayWhen(holiday.date);
+                return (
+                  <li key={holiday.date}>
+                    <p className="ess-holiday-when">
+                      <strong>
+                        {when.day} {when.month}
+                      </strong>
+                      <span>{when.weekday}</span>
+                    </p>
+                    <p className="ess-muted">{holiday.name}</p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+        </div>
+
+        <div className="ess-dash-col">
+        <section className="ess-panel">
+          <h2>This month</h2>
+          <div className="ess-track">
+            <Link to="/ess/attendance" className="ess-track-item">
+              <span>
+                <strong>{presentDays}</strong>
+                <span>Days present</span>
+              </span>
+              <Clock size={18} aria-hidden />
+            </Link>
+            <Link to="/ess/leave" className="ess-track-item">
+              <span>
+                <strong>{leaveAvailable}</strong>
+                <span>Leave left</span>
+              </span>
+              <CalendarDays size={18} aria-hidden />
+            </Link>
+          </div>
+        </section>
+
+        <section className="ess-panel">
+          <div className="ess-panel-head">
+            <h2>Leave balances</h2>
+            <Link to="/ess/leave" className="ess-btn ess-btn-ghost">
+              View
+            </Link>
+          </div>
+          <div className="ess-stat-row">
+            {leaveBalances.map((balance) => (
+              <div key={balance.code} className="ess-stat-item">
+                <span>
+                  {balance.type}
+                  {balance.pending > 0 ? (
+                    <span className="ess-muted"> · {balance.pending} pending</span>
+                  ) : null}
+                </span>
+                <strong>{balance.available}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+        </div>
+      </div>
+
+      {roleShortcuts.length > 0 ? (
+        <section>
+          <h2 className="ess-home-kicker">Your work</h2>
+          <div className="ess-home-tiles">
+            {roleShortcuts.map((item) => (
+              <ShortcutTile key={item.to} item={item} />
+            ))}
+          </div>
+          {isManager ? (
+            <p className="ess-muted ess-home-note">
+              Team counts are illustrative until manager APIs are connected.
+            </p>
+          ) : null}
         </section>
       ) : null}
     </div>
+  );
+}
+
+function ShortcutTile({ item }: { item: Shortcut }) {
+  const Icon = item.icon;
+  return (
+    <Link
+      to={item.to}
+      className={item.accent ? 'ess-home-tile ess-home-tile--accent' : 'ess-home-tile'}
+    >
+      <span className="ess-home-tile-icon" aria-hidden>
+        <Icon size={18} />
+      </span>
+      <span className="ess-home-tile-label">{item.label}</span>
+      {item.meta ? <span className="ess-home-tile-meta">{item.meta}</span> : null}
+    </Link>
   );
 }

@@ -48,11 +48,17 @@ async function main() {
   const password = process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!';
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const tenant = await prisma.tenant.upsert({
-    where: { code: 'default' },
-    update: { name: 'PeopleOS Internal' },
-    create: { code: 'default', name: 'PeopleOS Internal' },
-  });
+  const existing =
+    (await prisma.tenant.findUnique({ where: { code: 'BR' } })) ??
+    (await prisma.tenant.findUnique({ where: { code: 'default' } }));
+  const tenant = existing
+    ? await prisma.tenant.update({
+        where: { id: existing.id },
+        data: { code: 'BR', name: 'Brickred Systems' },
+      })
+    : await prisma.tenant.create({
+        data: { code: 'BR', name: 'Brickred Systems' },
+      });
 
   // Remove legacy role codes from default tenant
   await prisma.role.deleteMany({
@@ -121,7 +127,7 @@ async function main() {
   await upsertUser(adminEmail, ['SECURITY_ADMIN']);
   await upsertUser('employee@peopleos.local', ['EMPLOYEE']);
   await upsertUser('manager@peopleos.local', ['MANAGER', 'EMPLOYEE']);
-  await upsertUser('hr@peopleos.local', ['HR_EXEC', 'EMPLOYEE']);
+  await upsertUser('hr@peopleos.local', ['HR_EXEC', 'EMPLOYEE', 'LEADERSHIP_READ']);
 
   console.log(
     `Seeded tenant=${tenant.code} roles=${ROLE_CATALOG.length} users=4 admin=${adminEmail}`,

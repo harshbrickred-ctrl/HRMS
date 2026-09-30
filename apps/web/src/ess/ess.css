@@ -16,6 +16,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  animation: ui-rise var(--dur-base) var(--ease-out) backwards;
 }
 
 .ess-toast button {
@@ -49,15 +50,25 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 1.1rem 1.15rem;
+  box-shadow: var(--highlight), var(--shadow);
+  padding: 0.8rem 0.85rem;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease;
+}
+
+.ess-panel:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--silver-sand) 70%, var(--line));
+  box-shadow: var(--highlight), var(--shadow-hover);
 }
 
 .ess-panel h2,
 .ess-panel-title {
-  margin: 0 0 0.85rem;
+  margin: 0 0 0.65rem;
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: 0.92rem;
   letter-spacing: -0.02em;
 }
 
@@ -65,8 +76,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.85rem;
+  gap: 0.65rem;
+  margin-bottom: 0.65rem;
 }
 
 .ess-panel-head h2 {
@@ -88,7 +99,7 @@
   border: 1px solid var(--line);
   background: var(--surface);
   border-radius: 999px;
-  padding: 0.55rem 1rem;
+  padding: 0.4rem 0.8rem;
   font-weight: 650;
   cursor: pointer;
   text-decoration: none;
@@ -96,8 +107,25 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
-  font-size: 0.9rem;
+  gap: 0.35rem;
+  min-height: 34px;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow-press);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease;
+}
+
+.ess-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.ess-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
 }
 
 .ess-btn:hover {
@@ -110,6 +138,7 @@
   color: var(--cursed-black);
   font-family: var(--font-display);
   font-weight: 700;
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--cursed-black) 28%, transparent);
 }
 
 .ess-btn-primary:hover {
@@ -118,6 +147,7 @@
 
 .ess-btn-ghost {
   background: transparent;
+  box-shadow: none;
 }
 
 .ess-btn-danger {
@@ -135,22 +165,25 @@
   align-items: center;
   gap: 0.3rem;
   border-radius: 999px;
-  padding: 0.2rem 0.65rem;
-  font-size: 0.75rem;
+  padding: 0.12rem 0.5rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   border: 1px solid transparent;
   white-space: nowrap;
 }
 
-.ess-chip-pending {
+.ess-chip-pending,
+.ess-chip-inprogress,
+.ess-chip-open {
   background: var(--chip-pending-bg);
   color: var(--chip-pending-ink);
   border-color: var(--chip-pending-line);
 }
 
 .ess-chip-approved,
-.ess-chip-present {
+.ess-chip-present,
+.ess-chip-resolved {
   background: var(--chip-ok-bg);
   color: var(--chip-ok-ink);
   border-color: var(--chip-ok-line);
@@ -208,6 +241,10 @@
   font-weight: 650;
   color: var(--muted);
   cursor: pointer;
+  transition:
+    background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    color var(--dur-fast) ease;
 }
 
 .ess-tab:hover {
@@ -229,6 +266,14 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+}
+
+.ess-table tbody tr {
+  transition: background-color var(--dur-fast) ease;
+}
+
+.ess-table tbody tr:hover {
+  background: color-mix(in srgb, var(--iced-slate) 40%, transparent);
 }
 
 .ess-table th,
@@ -272,6 +317,24 @@
   background: var(--surface-elevated);
   color: var(--ink);
   width: 100%;
+  transition:
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease,
+    background-color var(--dur-fast) ease;
+}
+
+.ess-field input:hover:not(:disabled),
+.ess-field select:hover:not(:disabled),
+.ess-field textarea:hover:not(:disabled) {
+  border-color: var(--silver-sand);
+}
+
+.ess-field input:focus,
+.ess-field select:focus,
+.ess-field textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--key-lime) 55%, var(--iced-slate));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--key-lime) 45%, transparent);
 }
 
 .ess-field textarea {
@@ -346,15 +409,21 @@
 .ess-list-item {
   display: grid;
   gap: 0.25rem;
-  padding: 0.75rem 0.85rem;
+  padding: 0.55rem 0.7rem;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--iced-slate) 22%, var(--mix-wash));
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent);
   text-decoration: none;
   color: inherit;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) ease,
+    background-color var(--dur-fast) ease;
 }
 
 .ess-list-item:hover {
+  transform: translateY(-2px);
   border-color: var(--silver-sand);
 }
 
@@ -409,6 +478,11 @@
   cursor: pointer;
   padding: 0.2rem;
   min-height: 44px;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) ease,
+    background-color var(--dur-fast) ease,
+    outline-color var(--dur-fast) ease;
 }
 
 .ess-day:disabled {
@@ -419,6 +493,12 @@
 .ess-day.is-selected {
   outline: 2px solid var(--cursed-black);
   outline-offset: 1px;
+  transform: scale(1.02);
+}
+
+.ess-day:hover:not(:disabled) {
+  transform: scale(1.04);
+  border-color: var(--silver-sand);
 }
 
 .ess-day-num {
@@ -503,16 +583,22 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  padding: 1rem;
+  padding: 0.8rem 0.85rem;
   text-decoration: none;
   color: inherit;
   display: grid;
-  gap: 0.35rem;
-  box-shadow: var(--shadow);
+  gap: 0.3rem;
+  box-shadow: var(--highlight), var(--shadow);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease;
 }
 
 .ess-person-card:hover {
-  border-color: color-mix(in srgb, var(--key-lime) 55%, var(--iced-slate));
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--silver-sand) 70%, var(--line));
+  box-shadow: var(--highlight), var(--shadow-hover);
 }
 
 .ess-person-card h3 {
@@ -522,15 +608,72 @@
   letter-spacing: -0.02em;
 }
 
-.ess-person-avatar {
+.ess-employee-photo {
+  object-fit: cover;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--iced-slate) 55%, var(--surface));
+  flex-shrink: 0;
+}
+
+.ess-employee-photo--sm {
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--key-lime) 55%, var(--mix-wash));
+}
+
+.ess-employee-photo--md {
+  width: 3.25rem;
+  height: 3.25rem;
+}
+
+.ess-employee-photo--lg {
+  width: 5.5rem;
+  height: 5.5rem;
+}
+
+.ess-profile-hero,
+.ess-home-hero-person,
+.ess-team-manager {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.ess-team-manager div {
   display: grid;
-  place-items: center;
-  font-family: var(--font-display);
-  font-weight: 800;
+  gap: 0.12rem;
+}
+
+.ess-team-manager strong {
+  font-size: 1.05rem;
+}
+
+.ess-person-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ess-home-hero-person {
+  margin-bottom: 1rem;
+}
+
+.ess-profile-hero {
+  margin-bottom: 1rem;
+}
+
+.ess-profile-hero .ess-lead,
+.ess-home-hero-person .ess-lead,
+.ess-home-hero-person .ess-greeting {
+  margin: 0;
+}
+
+.ess-home-hero-person .ess-lead {
+  margin-top: 0.25rem;
+}
+
+.ess-person-card .ess-employee-photo {
   margin-bottom: 0.35rem;
 }
 
@@ -568,6 +711,7 @@
   display: grid;
   place-items: center;
   padding: 1rem;
+  animation: ui-fade var(--dur-base) var(--ease-out) backwards;
 }
 
 .ess-modal {
@@ -577,6 +721,7 @@
   box-shadow: var(--shadow);
   width: min(440px, 100%);
   padding: 1.15rem 1.2rem;
+  animation: ui-pop var(--dur-base) var(--ease-out) backwards;
 }
 
 .ess-modal h2 {
@@ -594,7 +739,31 @@
 
 .ess-section-stack {
   display: grid;
-  gap: 1rem;
+  gap: 1.15rem;
+}
+
+.ess-section-stack > * {
+  animation: ui-rise var(--dur-base) var(--ease-out) backwards;
+}
+
+.ess-section-stack > *:nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.ess-section-stack > *:nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.ess-section-stack > *:nth-child(4) {
+  animation-delay: 120ms;
+}
+
+.ess-section-stack > *:nth-child(5) {
+  animation-delay: 160ms;
+}
+
+.ess-section-stack > *:nth-child(n + 6) {
+  animation-delay: 200ms;
 }
 
 @media (max-width: 900px) {
@@ -643,5 +812,1104 @@
   .ess-day {
     min-height: 40px;
     font-size: 0.72rem;
+  }
+}
+
+/* Home bento — Design44 tints, scoped so other screens stay unchanged */
+
+.ess-home-kicker {
+  margin: 0 0 0.7rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.ess-home-hero {
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem 0.95rem;
+  border: 1px solid var(--line);
+  box-shadow: var(--highlight), var(--shadow);
+  color: var(--ink);
+  background:
+    linear-gradient(
+      120deg,
+      color-mix(in srgb, var(--key-lime) 58%, var(--surface)) 0%,
+      var(--surface) 48%
+    );
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) ease;
+}
+
+.ess-home-hero:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--highlight), var(--shadow-hover);
+}
+
+.ess-home-hero .ess-greeting {
+  font-size: 1.45rem;
+}
+
+.ess-home-hero .ess-lead {
+  margin-bottom: 1rem;
+}
+
+.ess-home-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 0.75rem;
+}
+
+.ess-home-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-height: 118px;
+  padding: 0.95rem 1rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--surface);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) ease,
+    background-color var(--dur-fast) ease;
+}
+
+.ess-home-tile:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--key-lime) 55%, var(--line));
+}
+
+.ess-home-tile-icon {
+  width: 2.05rem;
+  height: 2.05rem;
+  border-radius: 0.7rem;
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.45rem;
+  background: color-mix(in srgb, var(--key-lime) 55%, var(--mix-wash));
+  color: var(--accent-ink);
+}
+
+.ess-home-tile-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-size: 1rem;
+}
+
+.ess-home-tile-meta {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.ess-home-tile--accent {
+  background: color-mix(in srgb, var(--key-lime) 42%, var(--mix-wash));
+  border-color: color-mix(in srgb, var(--key-lime) 70%, var(--line));
+}
+
+.ess-home-tile--accent .ess-home-tile-icon {
+  background: var(--surface);
+}
+
+.ess-home-note {
+  margin: 0.75rem 0 0;
+}
+
+.ess-dash {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.15rem;
+  align-items: start;
+}
+
+.ess-dash-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  min-width: 0;
+}
+
+.ess-dash-arrow {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.ess-dash-arrow:hover {
+  background: color-mix(in srgb, var(--key-lime) 45%, var(--mix-wash));
+}
+
+.ess-holiday-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.ess-holiday-when {
+  display: flex;
+  gap: 0.45rem;
+  margin: 0;
+  font-weight: 750;
+}
+
+.ess-holiday-when span {
+  color: var(--muted);
+  font-weight: 550;
+}
+
+.ess-holiday-list .ess-muted {
+  margin: 0.1rem 0 0;
+}
+
+.ess-track {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.ess-track-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 3.4rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.ess-track-item span {
+  display: grid;
+}
+
+.ess-track-item strong {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.ess-track-item span span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.ess-pay-top {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.ess-donut {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(
+    var(--key-lime) 0 var(--pay-slice, 12%),
+    var(--ink) var(--pay-slice, 12%) 100%
+  );
+}
+
+.ess-donut.is-masked {
+  background: color-mix(in srgb, var(--silver-sand) 70%, var(--surface));
+}
+
+.ess-donut-hole {
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.ess-pay-month {
+  text-align: right;
+}
+
+.ess-pay-month p,
+.ess-pay-month span {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.ess-pay-month strong {
+  display: block;
+  margin: 0.15rem 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.ess-pay-lines {
+  margin: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.ess-pay-lines div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.ess-pay-lines dt,
+.ess-pay-lines dd {
+  margin: 0;
+}
+
+.ess-pay-lines dt {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+}
+
+.ess-pay-lines dd {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.ess-swatch {
+  width: 0.28rem;
+  height: 0.95rem;
+  border-radius: 99px;
+  display: inline-block;
+}
+
+.ess-swatch--gross {
+  background: var(--silver-sand);
+}
+
+.ess-swatch--deduction {
+  background: var(--key-lime);
+}
+
+.ess-swatch--net {
+  background: var(--ink);
+}
+
+.ess-pay-card {
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--key-lime) 34%, var(--surface)) 0%,
+      var(--surface) 52%
+    );
+}
+
+.ess-pay-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.95rem;
+}
+
+@media (max-width: 980px) {
+  .ess-dash {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .ess-home-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ess-home-hero {
+    padding: 0.9rem 0.85rem 0.8rem;
+  }
+}
+
+/* Leave — balance strip, apply summary, request cards */
+
+.ess-leave-balances {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+}
+
+.ess-leave-available {
+  margin: 0.15rem 0 0.75rem;
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.ess-leave-available span {
+  margin-left: 0.4rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.ess-leave-meter {
+  display: flex;
+  height: 0.45rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.ess-leave-meter-used,
+.ess-leave-meter-pending {
+  height: 100%;
+  transition: width var(--dur-base) var(--ease-out);
+}
+
+.ess-leave-meter-used {
+  background: var(--key-lime);
+}
+
+.ess-leave-meter-pending {
+  background: var(--iced-slate);
+}
+
+.ess-leave-balance-meta {
+  display: flex;
+  gap: 0.9rem;
+  margin: 0.8rem 0 0;
+}
+
+.ess-leave-balance-meta div {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.ess-leave-balance-meta dt {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ess-leave-balance-meta dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ess-leave-panel {
+  animation: ui-rise var(--dur-base) var(--ease-out) backwards;
+}
+
+.ess-leave-apply {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(220px, 0.75fr);
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.ess-leave-apply .ess-form {
+  max-width: none;
+}
+
+.ess-leave-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.ess-leave-summary-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.ess-leave-summary-stat strong {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.ess-leave-summary-note {
+  margin: 0.75rem 0 0;
+}
+
+.ess-leave-request-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.ess-leave-holiday {
+  gap: 0.2rem;
+}
+
+.ess-leave-months {
+  display: grid;
+  gap: 1rem;
+}
+
+.ess-leave-month {
+  margin: 0 0 0.55rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+/* Attendance — insights, month, day dossier, register */
+
+.ess-att-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--key-lime) 70%, var(--line));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--key-lime) 42%, var(--surface));
+  box-shadow: var(--highlight), var(--shadow);
+}
+
+.ess-att-alert p {
+  margin: 0;
+}
+
+.ess-att-insight-block {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.ess-att-insights,
+.ess-insights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.15rem;
+}
+
+.ess-att-stat .ess-muted,
+.ess-insight .ess-muted {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ess-att-stat-value,
+.ess-insight-value {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.ess-att-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1.15rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.ess-att-facts strong {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.ess-att-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
+  gap: 1.15rem;
+  align-items: start;
+}
+
+.ess-att-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.ess-att-toolbar h2 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.ess-att-toolbar .ess-tabs {
+  margin: 0;
+}
+
+.ess-att-monthnav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ess-att-nav {
+  min-height: 32px;
+  padding: 0.2rem 0.45rem;
+}
+
+.ess-att .ess-day {
+  aspect-ratio: auto;
+  min-height: 2.85rem;
+  gap: 0.1rem;
+}
+
+.ess-att .ess-day-present {
+  background: var(--chip-ok-bg);
+  border-color: var(--chip-ok-line);
+  color: var(--chip-ok-ink);
+}
+
+.ess-att .ess-day-absent {
+  background: var(--chip-danger-bg);
+  border-color: var(--chip-danger-line);
+  color: var(--chip-danger-ink);
+}
+
+.ess-att .ess-day-leave {
+  background: var(--chip-leave-bg);
+  border-color: var(--chip-leave-line);
+  color: var(--chip-leave-ink);
+}
+
+.ess-att .ess-day-holiday {
+  background: var(--chip-holiday-bg);
+  border-color: var(--chip-holiday-line);
+  color: var(--chip-holiday-ink);
+}
+
+.ess-att .ess-day-weekend {
+  background: var(--chip-neutral-bg);
+  border-color: var(--line);
+  color: var(--chip-neutral-ink);
+}
+
+.ess-att .ess-day-pendingcorrection {
+  background: var(--chip-warn-bg);
+  border-color: var(--chip-warn-line);
+  color: var(--chip-warn-ink);
+}
+
+.ess-att .ess-day.is-today {
+  box-shadow: inset 3px 0 0 var(--key-lime);
+}
+
+.ess-day-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.ess-legend .ess-day-mark {
+  padding: 0.12rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.ess-legend .ess-day-mark-present {
+  background: var(--chip-ok-bg);
+  border-color: var(--chip-ok-line);
+  color: var(--chip-ok-ink);
+}
+
+.ess-legend .ess-day-mark-absent {
+  background: var(--chip-danger-bg);
+  border-color: var(--chip-danger-line);
+  color: var(--chip-danger-ink);
+}
+
+.ess-legend .ess-day-mark-leave {
+  background: var(--chip-leave-bg);
+  border-color: var(--chip-leave-line);
+  color: var(--chip-leave-ink);
+}
+
+.ess-legend .ess-day-mark-holiday {
+  background: var(--chip-holiday-bg);
+  border-color: var(--chip-holiday-line);
+  color: var(--chip-holiday-ink);
+}
+
+.ess-legend .ess-day-mark-weekend {
+  background: var(--chip-neutral-bg);
+  border-color: var(--line);
+  color: var(--chip-neutral-ink);
+}
+
+.ess-legend .ess-day-mark-pendingcorrection {
+  background: var(--chip-warn-bg);
+  border-color: var(--chip-warn-line);
+  color: var(--chip-warn-ink);
+}
+
+.ess-legend-today {
+  width: 0.7rem;
+  border-left: 3px solid var(--key-lime);
+  border-radius: 2px;
+  align-self: stretch;
+}
+
+.ess-att-dossier-head.is-present {
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: var(--chip-ok-bg);
+}
+
+.ess-att-dossier-head.is-absent {
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: var(--chip-danger-bg);
+}
+
+.ess-att-dossier-head.is-leave {
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: var(--chip-leave-bg);
+}
+
+.ess-att-dossier-head.is-holiday {
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: var(--chip-holiday-bg);
+}
+
+.ess-att-dossier-head.is-weekend {
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: var(--chip-neutral-bg);
+}
+
+.ess-att-dossier-head.is-pendingcorrection {
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: var(--chip-warn-bg);
+}
+
+.ess-att-dossier-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.ess-att-dossier-head h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.ess-att-dow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ess-att-shift {
+  margin: 0.35rem 0 0.8rem;
+}
+
+.ess-att-dossier .ess-form {
+  max-width: none;
+}
+
+.ess-att-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.ess-att-metric {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-elevated);
+}
+
+.ess-att-metric span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.ess-att-metric strong {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ess-att-status,
+.ess-att-sessions {
+  margin-top: 0.85rem;
+}
+
+.ess-att-status h3,
+.ess-att-sessions h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ess-att-status p {
+  margin: 0;
+}
+
+.ess-att-register tbody tr {
+  cursor: pointer;
+}
+
+.ess-att-register tr.is-quiet {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--iced-slate) 35%, transparent);
+}
+
+.ess-att-register tfoot td {
+  font-weight: 700;
+  border-bottom: 0;
+}
+
+.ess-att-date {
+  display: grid;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.ess-att-date strong {
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+
+.ess-att-register tr.is-quiet .ess-att-date strong {
+  color: var(--muted);
+}
+
+.ess-legend-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ess-legend-dot--present {
+  background: #5a8a1f;
+}
+
+.ess-legend-dot--absent {
+  background: var(--danger);
+}
+
+.ess-legend-dot--holiday {
+  background: #3a5fbf;
+}
+
+.ess-legend-dot--leave {
+  background: #7a3fb0;
+}
+
+.ess-legend-dot--pending {
+  background: #c77700;
+}
+
+.ess-profile-panel {
+  animation: ui-rise var(--dur-base) var(--ease-out) backwards;
+}
+
+.ess-profile .ess-dl dd {
+  overflow-wrap: anywhere;
+}
+
+.ess-profile-note {
+  margin: 0;
+}
+
+.ess-profile-ids {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.ess-profile-id {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.ess-profile-id .ess-muted,
+.ess-profile-id-value {
+  margin: 0;
+}
+
+.ess-profile-id-value {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ess-profile-timeline {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
+.ess-salary-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.ess-salary-tools .ess-muted {
+  margin: 0;
+}
+
+.ess-salary-months {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ess-salary-months button {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 7.5rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--highlight), var(--shadow);
+}
+
+.ess-salary-months button span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.ess-salary-months button strong {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92rem;
+}
+
+.ess-salary-months button.is-selected {
+  border-color: color-mix(in srgb, var(--key-lime) 70%, var(--line));
+  background: color-mix(in srgb, var(--key-lime) 38%, var(--surface));
+}
+
+.ess-salary-sheet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: 1rem;
+  align-items: start;
+}
+
+.ess-salary-books {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+.ess-salary-book {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.ess-salary-book h3,
+.ess-salary-id h3 {
+  margin: 0;
+  padding: 0.7rem 0.8rem 0.15rem;
+  font-size: 0.92rem;
+}
+
+.ess-salary-book .ess-table th,
+.ess-salary-book .ess-table td {
+  padding: 0.55rem 0.8rem;
+}
+
+.ess-salary-book tfoot th,
+.ess-salary-book tfoot td,
+.ess-salary-ytd .is-total th,
+.ess-salary-ytd .is-total td,
+.ess-salary-pf tfoot th,
+.ess-salary-pf tfoot td {
+  font-weight: 750;
+  background: color-mix(in srgb, var(--key-lime) 34%, var(--surface));
+}
+
+.ess-salary-book .ess-table tbody th,
+.ess-salary-book .ess-table tfoot th,
+.ess-salary-ytd .ess-table tbody th,
+.ess-salary-pf .ess-table tbody th,
+.ess-salary-pf .ess-table tfoot th {
+  font-size: 0.9rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+}
+
+.ess-salary-ytd .is-group th {
+  padding-top: 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--iced-slate) 28%, transparent);
+}
+
+.ess-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ess-salary-netbar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  grid-column: 1 / -1;
+}
+
+.ess-salary-netbar div {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.ess-salary-netbar p {
+  margin: 0;
+}
+
+.ess-salary-netbar p:last-child {
+  margin-top: 0.25rem;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ess-salary-netbar .is-net {
+  border-color: color-mix(in srgb, var(--key-lime) 70%, var(--line));
+  background: color-mix(in srgb, var(--key-lime) 40%, var(--surface));
+}
+
+.ess-salary-id {
+  padding: 0.15rem 0.85rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--key-lime) 55%, var(--line));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--key-lime) 24%, var(--surface));
+}
+
+.ess-salary-id dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem 0.75rem;
+  margin: 0.7rem 0 0;
+}
+
+.ess-salary-id dt {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ess-salary-id dd {
+  margin: 0.12rem 0 0;
+  font-weight: 700;
+}
+
+.ess-salary-ctc {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0.9rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--key-lime) 45%, var(--line));
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ess-salary-pf .ess-att-facts {
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 1100px) {
+  .ess-salary-sheet {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 800px) {
+  .ess-leave-apply,
+  .ess-leave-dates,
+  .ess-att-split,
+  .ess-att-insights,
+  .ess-insights,
+  .ess-salary-sheet,
+  .ess-salary-books,
+  .ess-salary-netbar {
+    grid-template-columns: 1fr;
   }
 }

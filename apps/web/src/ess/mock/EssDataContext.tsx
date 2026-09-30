@@ -6,13 +6,18 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useAuth } from '../../auth/AuthContext';
+import { setApprovalStatus, submitApproval } from '../../workspace/workspaceMock';
 import {
+  approverFor,
   createInitialEssState,
+  personForLogin,
   workingDaysBetween,
-  type AttendanceStatus,
+  type AttendanceDay,
   type CorrectionRequest,
   type EssDocument,
   type EssState,
+  type HelpTicket,
   type LeaveRequest,
   type ProfileContacts,
 } from './essMock';
@@ -37,6 +42,11 @@ export type UploadDocumentInput = {
   category: string;
 };
 
+export type CreateTicketInput = {
+  subject: string;
+  category: string;
+};
+
 type EssDataContextValue = EssState & {
   applyLeave: (input: ApplyLeaveInput) => { ok: true } | { ok: false; error: string };
   withdrawLeave: (id: string) => void;
@@ -45,15 +55,38 @@ type EssDataContextValue = EssState & {
     input: ApplyCorrectionInput,
   ) => { ok: true } | { ok: false; error: string };
   uploadDocument: (input: UploadDocumentInput) => void;
+  createTicket: (input: CreateTicketInput) => void;
   updateContacts: (contacts: ProfileContacts) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   clearToast: () => void;
   unreadCount: number;
   pendingLeaveCount: number;
+  salaryHidden: boolean;
+  toggleSalaryHidden: () => void;
+  showAmount: (amount: number) => string;
 };
 
 const EssDataContext = createContext<EssDataContextValue | undefined>(undefined);
+
+export function formatInr(amount: number) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+const SALARY_MASK = '₹ ••••••';
+const SALARY_HIDDEN_KEY = 'peopleos-salary-hidden';
+
+function readSalaryHidden() {
+  try {
+    return sessionStorage.getItem(SALARY_HIDDEN_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
 
 function nextId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -74,8 +107,32 @@ function adjustBalance(
   });
 }
 
+function shortDate(iso: string) {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
 export function EssDataProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [state, setState] = useState<EssState>(() => createInitialEssState());
+  const [salaryHidden, setSalaryHidden] = useState(readSalaryHidden);
+  const toggleSalaryHidden = useCallback(() => {
+    setSalaryHidden((hidden) => {
+      const next = !hidden;
+      try {
+        sessionStorage.setItem(SALARY_HIDDEN_KEY, next ? '1' : '0');
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+  const showAmount = useCallback(
+    (amount: number) => (salaryHidden ? SALARY_MASK : formatInr(amount)),
+    [salaryHidden],
+  );
 
   const clearToast = useCallback(() => {
     setState((prev) => ({ ...prev, toast: null }));
@@ -105,13 +162,16 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
       if (days <= 0) {
         return { ok: false, error: 'Selected range has no working days.' };
       }
-      if (days > balance.available) {
+      const uncapped = balance.code === 'LOP';
+      if (!uncapped && days > balance.available) {
         return {
           ok: false,
           error: `Only ${balance.available} day(s) available for ${balance.type}.`,
         };
       }
 
+      const me = personForLogin(user?.email, state.people);
+      const approver = me ? approverFor(me, state.people) : undefined;
       const request: LeaveRequest = {
         id: nextId('lr'),
         type: balance.type,
@@ -124,17 +184,36 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
         reason: input.reason.trim(),
         status: 'Pending',
         submittedAt: new Date().toISOString(),
+        approverName: approver?.name,
       };
+      const dateLabel =
+        input.startDate === input.endDate
+          ? shortDate(input.startDate)
+          : `${shortDate(input.startDate)} – ${shortDate(input.endDate)}`;
+
+      if (me && approver) {
+        submitApproval({
+          id: request.id,
+          kind: 'Leave',
+          person: me.name,
+          personId: me.id,
+          approverId: approver.id,
+          approverName: approver.name,
+          summary: `${balance.type} · ${dateLabel} · ${input.reason.trim()}`,
+        });
+      }
 
       setState((prev) => ({
         ...prev,
         leaveRequests: [request, ...prev.leaveRequests],
-        leaveBalances: adjustBalance(prev.leaveBalances, balance.code, days),
+        leaveBalances: uncapped
+          ? prev.leaveBalances
+          : adjustBalance(prev.leaveBalances, balance.code, days),
         notifications: [
           {
             id: nextId('n'),
             title: 'Leave submitted',
-            body: `${balance.type} for ${input.startDate} → ${input.endDate} is pending approval.`,
+            body: `${balance.type} for ${input.startDate} → ${input.endDate} is with ${approver?.name ?? 'your manager'}.`,
             createdAt: new Date().toISOString(),
             read: false,
             href: '/ess/leave',
@@ -142,14 +221,15 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
           },
           ...prev.notifications,
         ],
-        toast: 'Leave request submitted.',
+        toast: `Leave request sent to ${approver?.name ?? 'your manager'}.`,
       }));
       return { ok: true };
     },
-    [state.holidays, state.leaveBalances],
+    [state.holidays, state.leaveBalances, state.people, user?.email],
   );
 
   const withdrawLeave = useCallback((id: string) => {
+    setApprovalStatus(id, 'Withdrawn');
     setState((prev) => {
       const req = prev.leaveRequests.find((r) => r.id === id);
       if (!req || req.status !== 'Pending') return prev;
@@ -158,7 +238,10 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
         leaveRequests: prev.leaveRequests.map((r) =>
           r.id === id ? { ...r, status: 'Withdrawn' as const } : r,
         ),
-        leaveBalances: adjustBalance(prev.leaveBalances, req.typeCode, -req.days),
+        leaveBalances:
+          req.typeCode === 'LOP'
+            ? prev.leaveBalances
+            : adjustBalance(prev.leaveBalances, req.typeCode, -req.days),
         toast: 'Leave request withdrawn.',
       };
     });
@@ -220,6 +303,8 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
         return { ok: false, error: 'A correction is already pending for this date.' };
       }
 
+      const me = personForLogin(user?.email, state.people);
+      const approver = me ? approverFor(me, state.people) : undefined;
       const correction: CorrectionRequest = {
         id: nextId('cr'),
         date: input.date,
@@ -227,37 +312,54 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
         reason: input.reason.trim(),
         status: 'Pending',
         submittedAt: new Date().toISOString(),
+        approverName: approver?.name,
       };
 
-      setState((prev) => ({
-        ...prev,
-        corrections: [correction, ...prev.corrections],
-        attendance: prev.attendance.map((d) =>
-          d.date === input.date
-            ? {
-                ...d,
-                status: 'PendingCorrection' as AttendanceStatus,
-                note: input.reason.trim(),
-              }
-            : d,
-        ),
-        notifications: [
-          {
-            id: nextId('n'),
-            title: 'Correction requested',
-            body: `Attendance correction for ${input.date} is pending review.`,
-            createdAt: new Date().toISOString(),
-            read: false,
-            href: '/ess/attendance',
-            type: 'attendance',
-          },
-          ...prev.notifications,
-        ],
-        toast: 'Correction request submitted.',
-      }));
+      if (me && approver) {
+        submitApproval({
+          id: correction.id,
+          kind: 'Attendance',
+          person: me.name,
+          personId: me.id,
+          approverId: approver.id,
+          approverName: approver.name,
+          summary: `Correction · ${shortDate(input.date)} · ${input.reason.trim()}`,
+        });
+      }
+
+      setState((prev) => {
+        const existing = prev.attendance.find((d) => d.date === input.date);
+        const updated: AttendanceDay = {
+          ...(existing ?? { date: input.date }),
+          status: 'PendingCorrection',
+          note: input.reason.trim(),
+        };
+        const attendance = existing
+          ? prev.attendance.map((d) => (d.date === input.date ? updated : d))
+          : [...prev.attendance, updated].sort((a, b) => a.date.localeCompare(b.date));
+
+        return {
+          ...prev,
+          corrections: [correction, ...prev.corrections],
+          attendance,
+          notifications: [
+            {
+              id: nextId('n'),
+              title: 'Correction requested',
+              body: `Attendance correction for ${input.date} is with ${approver?.name ?? 'your manager'}.`,
+              createdAt: new Date().toISOString(),
+              read: false,
+              href: '/ess/attendance',
+              type: 'attendance',
+            },
+            ...prev.notifications,
+          ],
+          toast: `Correction sent to ${approver?.name ?? 'your manager'}.`,
+        };
+      });
       return { ok: true };
     },
-    [state.corrections],
+    [state.corrections, state.people, user?.email],
   );
 
   const uploadDocument = useCallback((input: UploadDocumentInput) => {
@@ -285,6 +387,21 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
         ...prev.notifications,
       ],
       toast: 'Document uploaded (mock).',
+    }));
+  }, []);
+
+  const createTicket = useCallback((input: CreateTicketInput) => {
+    const ticket: HelpTicket = {
+      id: nextId('t'),
+      subject: input.subject.trim(),
+      category: input.category,
+      status: 'Open',
+      createdAt: new Date().toISOString().slice(0, 10),
+    };
+    setState((prev) => ({
+      ...prev,
+      tickets: [ticket, ...prev.tickets],
+      toast: 'Ticket submitted.',
     }));
   }, []);
 
@@ -326,12 +443,16 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
       markAttendance,
       requestCorrection,
       uploadDocument,
+      createTicket,
       updateContacts,
       markNotificationRead,
       markAllNotificationsRead,
       clearToast,
       unreadCount,
       pendingLeaveCount,
+      salaryHidden,
+      toggleSalaryHidden,
+      showAmount,
     }),
     [
       state,
@@ -340,12 +461,16 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
       markAttendance,
       requestCorrection,
       uploadDocument,
+      createTicket,
       updateContacts,
       markNotificationRead,
       markAllNotificationsRead,
       clearToast,
       unreadCount,
       pendingLeaveCount,
+      salaryHidden,
+      toggleSalaryHidden,
+      showAmount,
     ],
   );
 

@@ -1,15 +1,18 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
-import { PlaceholderPage } from './components/PlaceholderPage';
 import { EssLayout } from './ess/components/EssLayout';
 import { EssAttendancePage } from './ess/pages/EssAttendancePage';
 import { EssDocumentsPage } from './ess/pages/EssDocumentsPage';
+import { EssHelpdeskPage } from './ess/pages/EssHelpdeskPage';
 import { EssHomePage } from './ess/pages/EssHomePage';
 import { EssLeavePage } from './ess/pages/EssLeavePage';
 import { EssNotificationsPage } from './ess/pages/EssNotificationsPage';
 import { EssPeoplePage, EssPersonDetailPage } from './ess/pages/EssPeoplePage';
 import { EssProfilePage } from './ess/pages/EssProfilePage';
+import { EssSalaryPage } from './ess/pages/EssSalaryPage';
+import { EssSettingsPage } from './ess/pages/EssSettingsPage';
+import { EssTeamPage } from './ess/pages/EssTeamPage';
 import { AppLayout } from './layout/AppLayout';
 import { AdminRolesPage } from './pages/AdminRolesPage';
 import { ForgotPasswordOtpPage } from './pages/ForgotPasswordOtpPage';
@@ -17,10 +20,29 @@ import { ForgotPasswordRequestPage } from './pages/ForgotPasswordRequestPage';
 import { ForgotPasswordResetPage } from './pages/ForgotPasswordResetPage';
 import { LoginPage } from './pages/LoginPage';
 import { MobilePreviewPage } from './pages/MobilePreviewPage';
-
-function ph(title: string, blurb: string, upcoming?: string[]) {
-  return <PlaceholderPage title={title} blurb={blurb} upcoming={upcoming} />;
-}
+import {
+  AdminAuditPage,
+  AdminJobsPage,
+  AdminMailPage,
+  AdminOverviewPage,
+  AdminSettingsPage,
+  HrAttendanceAdminPage,
+  HrDocumentsPage,
+  HrEmployeesPage,
+  HrLeaveAdminPage,
+  HrMigrationPage,
+  HrOrganizationPage,
+  HrOverviewPage,
+  HrReportsPage,
+  HrWorkflowsPage,
+  LeadershipOverviewPage,
+  LeadershipReportsPage,
+  ManagerInboxPage,
+  ManagerOverviewPage,
+  TeamAttendancePage,
+  TeamDirectoryPage,
+  TeamLeavePage,
+} from './workspace/RolePages';
 
 function RoleOutlet({ roles }: { roles: string[] }) {
   return (
@@ -54,119 +76,36 @@ export default function App() {
               <Route path="leave" element={<EssLeavePage />} />
               <Route path="attendance" element={<EssAttendancePage />} />
               <Route path="people" element={<EssPeoplePage />} />
+              <Route path="team" element={<EssTeamPage />} />
               <Route path="people/:id" element={<EssPersonDetailPage />} />
               <Route path="documents" element={<EssDocumentsPage />} />
               <Route path="profile" element={<EssProfilePage />} />
+              <Route path="salary" element={<EssSalaryPage />} />
               <Route path="notifications" element={<EssNotificationsPage />} />
+              <Route path="settings" element={<EssSettingsPage />} />
+              <Route path="helpdesk" element={<EssHelpdeskPage />} />
             </Route>
 
             <Route path="/mobile" element={<MobilePreviewPage />} />
 
             <Route path="/manager" element={<RoleOutlet roles={['MANAGER']} />}>
-              <Route
-                index
-                element={ph(
-                  'Team Overview',
-                  'Team signals at a glance: inbox count, who is on leave, and attendance exceptions.',
-                )}
-              />
-              <Route
-                path="inbox"
-                element={ph(
-                  'Approvals Inbox',
-                  'Pending leave and attendance corrections for your team will appear here.',
-                )}
-              />
-              <Route
-                path="team-leave"
-                element={ph(
-                  'Team Leave',
-                  'Calendar and list of leave across your direct reports.',
-                )}
-              />
-              <Route
-                path="team-attendance"
-                element={ph(
-                  'Team Attendance',
-                  'Month view and exceptions for your team.',
-                )}
-              />
-              <Route
-                path="directory"
-                element={ph(
-                  'Team Directory',
-                  'Direct reports and basic profile links.',
-                )}
-              />
+              <Route index element={<ManagerOverviewPage />} />
+              <Route path="inbox" element={<ManagerInboxPage />} />
+              <Route path="team-leave" element={<TeamLeavePage />} />
+              <Route path="team-attendance" element={<TeamAttendancePage />} />
+              <Route path="directory" element={<TeamDirectoryPage />} />
             </Route>
 
-            <Route
-              path="/hr"
-              element={<RoleOutlet roles={['HR_EXEC', 'HR_HEAD']} />}
-            >
-              <Route
-                index
-                element={ph(
-                  'HR Overview',
-                  'Queues for incomplete profiles, import errors, and escalations.',
-                )}
-              />
-              <Route
-                path="employees"
-                element={ph(
-                  'Employees',
-                  'Search, create, and bulk-import employee records.',
-                )}
-              />
-              <Route
-                path="organization"
-                element={ph(
-                  'Organization',
-                  'Departments, designations, and locations.',
-                )}
-              />
-              <Route
-                path="leave"
-                element={ph(
-                  'Leave Admin',
-                  'Leave types, policies, balances, and holidays.',
-                )}
-              />
-              <Route
-                path="attendance"
-                element={ph(
-                  'Attendance Admin',
-                  'CSV import, period locks, and shifts.',
-                )}
-              />
-              <Route
-                path="documents"
-                element={ph(
-                  'HR Documents',
-                  'Categories, company documents, and compliance packs.',
-                )}
-              />
-              <Route
-                path="workflows"
-                element={ph(
-                  'Workflows',
-                  'Workflow definitions and stuck instances.',
-                )}
-              />
-              <Route
-                path="reports"
-                element={ph(
-                  'HR Reports',
-                  'Headcount, leave utilization, attendance summary, and attrition.',
-                )}
-              />
-              <Route
-                path="migration"
-                element={ph(
-                  'Migration',
-                  'greytHR CSV/Excel import tools and reconciliation.',
-                )}
-              />
+            <Route path="/hr" element={<RoleOutlet roles={['HR_EXEC', 'HR_HEAD']} />}>
+              <Route index element={<HrOverviewPage />} />
+              <Route path="employees" element={<HrEmployeesPage />} />
+              <Route path="organization" element={<HrOrganizationPage />} />
+              <Route path="leave" element={<HrLeaveAdminPage />} />
+              <Route path="attendance" element={<HrAttendanceAdminPage />} />
+              <Route path="documents" element={<HrDocumentsPage />} />
+              <Route path="workflows" element={<HrWorkflowsPage />} />
+              <Route path="reports" element={<HrReportsPage />} />
+              <Route path="migration" element={<HrMigrationPage />} />
             </Route>
 
             <Route
@@ -175,13 +114,7 @@ export default function App() {
                 <RoleOutlet roles={['SECURITY_ADMIN', 'IT_ADMIN']} />
               }
             >
-              <Route
-                index
-                element={ph(
-                  'Admin Overview',
-                  'Identity, audit, notification health, and system configuration.',
-                )}
-              />
+              <Route index element={<AdminOverviewPage />} />
               <Route
                 path="roles"
                 element={
@@ -190,54 +123,18 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="audit"
-                element={ph(
-                  'Audit log',
-                  'Searchable trail of sensitive actions across the tenant.',
-                )}
-              />
-              <Route
-                path="notifications"
-                element={ph(
-                  'Notifications / Email health',
-                  'Delivery status and email provider health checks.',
-                )}
-              />
-              <Route
-                path="settings"
-                element={ph(
-                  'System settings',
-                  'SMTP, retention labels, and feature flags.',
-                )}
-              />
-              <Route
-                path="jobs"
-                element={ph(
-                  'Jobs',
-                  'Reminder and escalation job status.',
-                )}
-              />
+              <Route path="audit" element={<AdminAuditPage />} />
+              <Route path="notifications" element={<AdminMailPage />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
+              <Route path="jobs" element={<AdminJobsPage />} />
             </Route>
 
             <Route
               path="/exec"
               element={<RoleOutlet roles={['LEADERSHIP_READ']} />}
             >
-              <Route
-                index
-                element={ph(
-                  'Leadership Overview',
-                  'Headcount, joiners/exits, and exception rates at a glance.',
-                )}
-              />
-              <Route
-                path="reports"
-                element={ph(
-                  'Leadership Reports',
-                  'Org-wide report runner with read-only defaults.',
-                )}
-              />
+              <Route index element={<LeadershipOverviewPage />} />
+              <Route path="reports" element={<LeadershipReportsPage />} />
             </Route>
           </Route>
 

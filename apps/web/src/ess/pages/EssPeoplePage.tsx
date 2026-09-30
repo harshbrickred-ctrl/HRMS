@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthContext';
+import { EmployeePhoto } from '../components/EmployeePhoto';
 import { useEssData } from '../mock/EssDataContext';
+import { ORGANIZATION, personForLogin, teams } from '../mock/essMock';
 
-function initials(name: string) {
-  return name
-    .split(' ')
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+function teamName(teamId: string | undefined) {
+  if (!teamId) return '';
+  return teams.find((team) => team.id === teamId)?.name ?? '';
 }
 
 export function EssPeoplePage() {
+  const { user } = useAuth();
   const { people } = useEssData();
+  const me = personForLogin(user?.email, people);
   const [query, setQuery] = useState('');
   const [department, setDepartment] = useState('');
   const [location, setLocation] = useState('');
@@ -37,16 +38,29 @@ export function EssPeoplePage() {
         p.title.toLowerCase().includes(q) ||
         p.workEmail.toLowerCase().includes(q) ||
         p.employeeCode.toLowerCase().includes(q) ||
+        p.organizationId.toLowerCase().includes(q) ||
+        teamName(p.teamId).toLowerCase().includes(q) ||
         p.department.toLowerCase().includes(q)
       );
     });
   }, [people, query, department, location]);
 
   return (
-    <div>
-      <p className="ess-lead">
-        Company directory — search colleagues and view public work details.
-      </p>
+    <div className="ess-section-stack">
+      <div className="ess-insights">
+        <article className="ess-panel ess-insight">
+          <p className="ess-muted">People</p>
+          <p className="ess-insight-value">{people.length}</p>
+        </article>
+        <article className="ess-panel ess-insight">
+          <p className="ess-muted">Departments</p>
+          <p className="ess-insight-value">{departments.length}</p>
+        </article>
+        <article className="ess-panel ess-insight">
+          <p className="ess-muted">Locations</p>
+          <p className="ess-insight-value">{locations.length}</p>
+        </article>
+      </div>
 
       <div className="ess-filters">
         <input
@@ -96,14 +110,18 @@ export function EssPeoplePage() {
               to={`/ess/people/${p.id}`}
               className="ess-person-card"
             >
-              <div className="ess-person-avatar">{initials(p.name)}</div>
+              <EmployeePhoto src={p.photo} name={p.name} />
               <h3>
                 {p.name}
-                {p.isSelf ? (
+                {p.id === me?.id ? (
                   <span className="ess-muted"> · You</span>
                 ) : null}
               </h3>
               <span className="ess-muted">{p.title}</span>
+              <span className="ess-muted">
+                {p.employeeCode}
+                {teamName(p.teamId) ? ` · ${teamName(p.teamId)}` : ''}
+              </span>
               <span className="ess-muted">
                 {p.department} · {p.location}
               </span>
@@ -116,8 +134,10 @@ export function EssPeoplePage() {
 }
 
 export function EssPersonDetailPage() {
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const { people } = useEssData();
+  const me = personForLogin(user?.email, people);
   const navigate = useNavigate();
   const person = people.find((p) => p.id === id);
 
@@ -143,7 +163,7 @@ export function EssPersonDetailPage() {
         <Link to="/ess/people" className="ess-btn">
           ← People
         </Link>
-        {person.isSelf ? (
+        {person.id === me?.id ? (
           <Link to="/ess/profile" className="ess-btn ess-btn-primary">
             Open my profile
           </Link>
@@ -151,20 +171,34 @@ export function EssPersonDetailPage() {
       </div>
 
       <section className="ess-panel">
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div className="ess-person-avatar">{initials(person.name)}</div>
+        <div className="ess-person-head">
+          <EmployeePhoto src={person.photo} name={person.name} size="lg" />
           <div>
             <h2 style={{ margin: 0 }}>{person.name}</h2>
             <p className="ess-muted" style={{ margin: '0.2rem 0 0' }}>
-              {person.title} · {person.employeeCode}
+              {person.title} · {person.employeeCode} · {ORGANIZATION.name}
             </p>
           </div>
         </div>
 
         <dl className="ess-dl" style={{ marginTop: '1.15rem' }}>
           <div>
+            <dt>Employee id</dt>
+            <dd>{person.employeeCode}</dd>
+          </div>
+          <div>
+            <dt>Organization</dt>
+            <dd>
+              {ORGANIZATION.name} · {ORGANIZATION.code}
+            </dd>
+          </div>
+          <div>
             <dt>Department</dt>
             <dd>{person.department}</dd>
+          </div>
+          <div>
+            <dt>Team</dt>
+            <dd>{teamName(person.teamId) || '—'}</dd>
           </div>
           <div>
             <dt>Location</dt>

@@ -63,8 +63,8 @@ export function LoginPage() {
             <span> one calm place.</span>
           </h1>
           <p className="login-lede">
-            Sign in to leave, attendance, and team workflows for your
-            organization.
+            Sign in to leave, attendance, and team workflows for Brickred
+            Systems.
           </p>
         </section>
 

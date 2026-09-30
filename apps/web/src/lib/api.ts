@@ -177,6 +177,18 @@ export async function verifyPasswordResetOtp(email: string, otp: string) {
   );
 }
 
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+) {
+  const tokens = await apiFetch<Tokens>('/api/v1/auth/password/change', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  setTokens(tokens);
+  return tokens;
+}
+
 export async function confirmPasswordReset(
   resetToken: string,
   password: string,

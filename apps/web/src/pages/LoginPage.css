@@ -91,7 +91,7 @@
   font-family: var(--font-display);
   font-size: clamp(2.6rem, 6vw, 4rem);
   font-weight: 800;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.03em;
   line-height: 0.95;
   color: var(--cursed-black);
 }
@@ -102,7 +102,7 @@
   font-family: var(--font-display);
   font-size: clamp(1.85rem, 4vw, 2.75rem);
   font-weight: 650;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.02em;
   line-height: 1.1;
   color: var(--cursed-black);
 }

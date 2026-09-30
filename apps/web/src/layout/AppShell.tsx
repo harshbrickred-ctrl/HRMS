@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Bell, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { photoForEmail } from '../ess/mock/essMock';
 import { ThemeToggle } from '../theme/ThemeToggle';
 import {
   navSectionsForUser,
@@ -81,6 +82,7 @@ export function AppShell() {
           <ThemeToggle />
           <UserMenu
             email={user?.email ?? ''}
+            photo={photoForEmail(user?.email)}
             roles={user?.roles ?? []}
             onSignOut={() => void logout()}
           />
@@ -100,7 +102,10 @@ export function AppShell() {
         <aside className="app-shell-side" aria-label="Main navigation">
           <div className="app-shell-side-scroll">
             {sections.map((section) => (
-              <div key={section.id} className="app-shell-section">
+              <div
+                key={section.id}
+                className={`app-shell-section is-${section.emphasis}`}
+              >
                 <p className="app-shell-side-title">{section.label}</p>
                 <nav className="app-shell-side-nav">
                   {section.items.map((item) => (
@@ -147,7 +152,7 @@ export function AppShell() {
             <header className="app-shell-pagehead">
               <h1>{pageTitle}</h1>
             </header>
-            <div className="app-shell-content">
+            <div className="app-shell-content" key={location.pathname}>
               <Outlet />
             </div>
           </div>

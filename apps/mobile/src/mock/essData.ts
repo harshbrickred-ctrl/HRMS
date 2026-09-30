@@ -90,7 +90,7 @@ export type EssData = {
 
 export const essData: EssData = {
   profile: {
-    employeeCode: 'EMP-1042',
+    employeeCode: 'BR301',
     firstName: 'Asha',
     lastName: 'Verma',
     title: 'Software Engineer',
@@ -183,7 +183,7 @@ export const essData: EssData = {
   people: [
     {
       id: 'p-001',
-      employeeCode: 'EMP-1042',
+      employeeCode: 'BR301',
       name: 'Asha Verma',
       title: 'Software Engineer',
       department: 'Engineering',
@@ -193,7 +193,7 @@ export const essData: EssData = {
     },
     {
       id: 'p-002',
-      employeeCode: 'EMP-0881',
+      employeeCode: 'BR123',
       name: 'Rohit Mehta',
       title: 'Engineering Manager',
       department: 'Engineering',
@@ -202,7 +202,7 @@ export const essData: EssData = {
     },
     {
       id: 'p-003',
-      employeeCode: 'EMP-1108',
+      employeeCode: 'BR410',
       name: 'Priya Nair',
       title: 'Product Designer',
       department: 'Design',
@@ -211,7 +211,7 @@ export const essData: EssData = {
     },
     {
       id: 'p-004',
-      employeeCode: 'EMP-0920',
+      employeeCode: 'BR418',
       name: 'Kabir Shah',
       title: 'HR Executive',
       department: 'People',

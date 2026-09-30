@@ -11,8 +11,17 @@
   cursor: pointer;
   flex-shrink: 0;
   padding: 0;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
 }
 
 .theme-toggle:hover {
   background: color-mix(in srgb, var(--key-lime) 30%, var(--surface));
+  transform: translateY(-1px);
+}
+
+.theme-toggle:active {
+  transform: scale(0.96);
 }
