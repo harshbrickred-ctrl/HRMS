@@ -1,5 +1,6 @@
 {
   "buildCommand": "npm install --no-save typescript && npx prisma generate && npx nest build",
+  "outputDirectory": "dist",
   "installCommand": "npm install --legacy-peer-deps",
   "functions": {
     "api/[...path].js": {
