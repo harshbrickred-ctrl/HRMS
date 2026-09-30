@@ -1,15 +1,9 @@
 {
-  "version": 2,
   "buildCommand": "npx prisma generate && npx nest build",
   "installCommand": "npm install --legacy-peer-deps",
-  "builds": [
-    {
-      "src": "dist/main.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["prisma/**", "node_modules/.prisma/**", "node_modules/@prisma/client/**"]
-      }
+  "functions": {
+    "api/[...path].js": {
+      "includeFiles": "node_modules/.prisma/**"
     }
-  ],
-  "routes": [{ "src": "/(.*)", "dest": "dist/main.js" }]
+  }
 }
