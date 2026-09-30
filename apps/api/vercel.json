@@ -1,6 +1,6 @@
 {
-  "buildCommand": "npx prisma generate && npx nest build",
-  "installCommand": "npm install --legacy-peer-deps --include=dev",
+  "buildCommand": "npm install --no-save typescript && npx prisma generate && npx nest build",
+  "installCommand": "npm install --legacy-peer-deps",
   "functions": {
     "api/[...path].js": {
       "includeFiles": "node_modules/.prisma/**"
