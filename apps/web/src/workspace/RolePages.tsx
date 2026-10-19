@@ -107,7 +107,7 @@ export function ManagerInboxPage() {
     }>
   >([]);
   const [corrections, setCorrections] = useState<
-    Array<{ id: string; date: string; reason: string; status: string; person: { name: string } | null }>
+    Array<{ id: string; date: string; reason: string; status: string; person?: { name: string } | null }>
   >([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -269,7 +269,7 @@ export function TeamAttendancePage() {
     Array<{ date: string; status: string; person: { name: string } | null; checkIn: string | null; checkOut: string | null }>
   >([]);
   const [requests, setRequests] = useState<
-    Array<{ id: string; date: string; status: string; reason: string; person: { name: string } | null }>
+    Array<{ id: string; date: string; status: string; reason: string; person?: { name: string } | null }>
   >([]);
   const [error, setError] = useState<string | null>(null);
 

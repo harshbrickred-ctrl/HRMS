@@ -25,8 +25,6 @@ type View = 'month' | 'register';
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const SHIFT_START = 9 * 60;
-const SHIFT_END = 18 * 60;
-const BREAK_MINS = 60;
 
 type LiveDay = AttendanceDay & {
   lateMinutes: number | null;
@@ -150,38 +148,17 @@ function dayMath(day?: LiveDay): DayMath {
     desk: null,
     missingPunch: false,
   };
-  if (day && 'workMinutes' in day) {
-    const desk = day.workMinutes;
-    const breakMins = day.breakMinutes;
-    const gross =
-      desk != null && breakMins != null ? desk + breakMins : desk;
-    return {
-      late: day.lateMinutes,
-      early: day.earlyMinutes,
-      work: gross,
-      breakMins,
-      desk,
-      missingPunch: day.missingFlag || day.status === 'MissingPunch',
-    };
-  }
-  if (!day || (day.status !== 'Present' && day.status !== 'PendingCorrection')) return empty;
-
-  const late = day.checkIn ? Math.max(0, toMinutes(day.checkIn) - SHIFT_START) : null;
-  const early = day.checkOut ? Math.max(0, SHIFT_END - toMinutes(day.checkOut)) : null;
-  const missingPunch = !day.checkIn || !day.checkOut;
-  if (!day.checkIn || !day.checkOut) {
-    return { ...empty, late, early, missingPunch };
-  }
-
-  const span = toMinutes(day.checkOut) - toMinutes(day.checkIn);
-  if (span <= 0) return { ...empty, late, early, missingPunch };
+  if (!day) return empty;
+  const desk = day.workMinutes;
+  const breakMins = day.breakMinutes;
+  const gross = desk != null && breakMins != null ? desk + breakMins : desk;
   return {
-    late,
-    early,
-    work: span,
-    breakMins: BREAK_MINS,
-    desk: Math.max(0, span - BREAK_MINS),
-    missingPunch,
+    late: day.lateMinutes,
+    early: day.earlyMinutes,
+    work: gross,
+    breakMins,
+    desk,
+    missingPunch: day.missingFlag || day.status === 'MissingPunch',
   };
 }
 

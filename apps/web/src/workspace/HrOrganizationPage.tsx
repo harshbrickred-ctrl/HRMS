@@ -289,7 +289,7 @@ function DepartmentDetail({
   employees: HrEmployee[];
   teamCounts: Map<string, number>;
   busy: boolean;
-  run: (action: () => Promise<void>) => Promise<void>;
+  run: (action: () => Promise<void>) => Promise<boolean>;
   onRename: (name: string) => Promise<void>;
   onDelete: () => Promise<void>;
   onCreateTeam: (input: { name: string; managerId?: string }) => Promise<void>;
@@ -587,7 +587,7 @@ function LocationBoard({
   locations: HrNamed[];
   counts: Map<string, number>;
   busy: boolean;
-  run: (action: () => Promise<void>) => Promise<void>;
+  run: (action: () => Promise<void>) => Promise<boolean>;
   onCreate: (name: string) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;

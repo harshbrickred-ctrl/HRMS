@@ -428,7 +428,7 @@ export function HrDocumentsPage() {
           )}
         </section>
       </div>
-      {selectedId ? <PayslipUploadPanel employeeId={selectedId} /> : null}
+      {employeeId ? <PayslipUploadPanel employeeId={employeeId} /> : null}
     </div>
   );
 }

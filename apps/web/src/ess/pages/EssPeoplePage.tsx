@@ -13,7 +13,7 @@ function teamName(teamId: string | undefined) {
   return teams.find((team) => team.id === teamId)?.name ?? '';
 }
 
-function teamLabelOf(person: DirPerson) {
+function teamLabelOf(person: Person & { teamLabel?: string }) {
   return person.teamLabel || teamName(person.teamId);
 }
 
