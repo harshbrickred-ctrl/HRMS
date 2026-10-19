@@ -103,25 +103,29 @@ export class AttendanceService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const punches = await this.prisma.attendancePunch.findMany({
-      where: { employeeId: { not: null } },
-      select: { employeeId: true, businessDate: true, createdAt: true },
-    });
-    const latest = new Map<string, Date>();
-    for (const punch of punches) {
-      if (!punch.employeeId) continue;
-      const key = `${punch.employeeId}|${isoFromDateOnly(punch.businessDate)}`;
-      const current = latest.get(key);
-      if (!current || punch.createdAt > current) latest.set(key, punch.createdAt);
-    }
-    for (const [key, createdAt] of latest) {
-      const [employeeId, date] = key.split('|');
-      const day = await this.prisma.attendanceDay.findFirst({
-        where: { employeeId, attendanceDate: dateOnlyUtc(date) },
+    try {
+      const punches = await this.prisma.attendancePunch.findMany({
+        where: { employeeId: { not: null } },
+        select: { employeeId: true, businessDate: true, createdAt: true },
       });
-      if (!day || day.rebuiltAt < createdAt) {
-        await this.rebuild(employeeId, date);
+      const latest = new Map<string, Date>();
+      for (const punch of punches) {
+        if (!punch.employeeId) continue;
+        const key = `${punch.employeeId}|${isoFromDateOnly(punch.businessDate)}`;
+        const current = latest.get(key);
+        if (!current || punch.createdAt > current) latest.set(key, punch.createdAt);
       }
+      for (const [key, createdAt] of latest) {
+        const [employeeId, date] = key.split('|');
+        const day = await this.prisma.attendanceDay.findFirst({
+          where: { employeeId, attendanceDate: dateOnlyUtc(date) },
+        });
+        if (!day || day.rebuiltAt < createdAt) {
+          await this.rebuild(employeeId, date);
+        }
+      }
+    } catch {
+      // Startup rebuild is best-effort; missing tables or a cold DB must not block the API.
     }
   }
 
