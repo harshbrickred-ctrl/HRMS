@@ -3,30 +3,30 @@
 }
 
 .admin-roles-sub {
-  margin: 0 0 1rem;
-  color: var(--cool-ashes);
-  max-width: 42ch;
+  margin: 0 0 16px;
+  color: var(--muted);
+  max-width: 52ch;
 }
 
 .admin-roles-grid {
   display: grid;
   grid-template-columns: minmax(220px, 0.9fr) 1.2fr;
-  gap: 1rem;
+  gap: 16px;
   align-items: start;
 }
 
 .admin-roles-panel {
-  background: var(--surface);
+  background: var(--surface-elevated);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  padding: 12px;
   box-shadow: var(--highlight), var(--shadow);
-  padding: 0.8rem 0.85rem;
 }
 
 .admin-roles-panel h2 {
-  margin: 0 0 0.85rem;
-  font-family: var(--font-display);
-  font-size: 1.05rem;
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .admin-roles-users {
@@ -34,123 +34,117 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.45rem;
+  gap: 4px;
 }
 
 .admin-roles-user {
   width: 100%;
   text-align: left;
   border: 1px solid transparent;
-  background: color-mix(in srgb, var(--iced-slate) 35%, transparent);
+  background: transparent;
   border-radius: var(--radius-sm);
-  padding: 0.7rem 0.8rem;
+  padding: 8px 10px;
   cursor: pointer;
   display: grid;
-  gap: 0.15rem;
-  transition:
-    transform var(--dur-fast) var(--ease-out),
-    border-color var(--dur-fast) ease,
-    background-color var(--dur-fast) ease;
+  gap: 2px;
+  color: var(--ink);
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease;
 }
 
 .admin-roles-user:hover {
-  border-color: var(--silver-sand);
-  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--ink) 4%, var(--surface));
 }
 
 .admin-roles-user.is-active {
-  border-color: color-mix(in srgb, var(--key-lime) 70%, var(--iced-slate));
-  background: color-mix(in srgb, var(--key-lime) 35%, var(--mix-wash));
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: color-mix(in srgb, var(--key-lime) 36%, var(--surface));
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .admin-roles-user-email {
-  font-weight: 650;
-  font-size: 0.92rem;
+  font-weight: 500;
+  font-size: 13px;
 }
 
 .admin-roles-user-roles {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 12px;
 }
 
 .admin-roles-checks {
   display: grid;
-  gap: 0.45rem;
-  margin-bottom: 1rem;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 
 .admin-roles-check {
   display: flex;
-  gap: 0.65rem;
+  gap: 8px;
   align-items: flex-start;
-  padding: 0.55rem 0.6rem;
+  padding: 8px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   cursor: pointer;
+  background: var(--surface);
 }
 
 .admin-roles-check input {
-  margin-top: 0.2rem;
+  margin-top: 2px;
 }
 
 .admin-roles-check strong {
   display: block;
-  font-size: 0.88rem;
-  letter-spacing: 0.01em;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .admin-roles-check em {
   display: block;
   font-style: normal;
-  color: var(--cool-ashes);
-  font-size: 0.8rem;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .admin-roles-save {
-  border: 0;
-  border-radius: 999px;
-  padding: 0.75rem 1.2rem;
-  background: var(--key-lime);
-  color: var(--cursed-black);
-  font-family: var(--font-display);
-  font-weight: 700;
+  height: 32px;
+  border: 1px solid var(--accent-fill);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  font-weight: 500;
+  font-size: 13px;
   cursor: pointer;
-  transition:
-    transform var(--dur-fast) var(--ease-out),
-    background-color var(--dur-fast) ease,
-    box-shadow var(--dur-fast) ease;
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease;
 }
 
 .admin-roles-save:hover:not(:disabled) {
   background: var(--accent-hover);
-  transform: translateY(-1px);
-}
-
-.admin-roles-save:active:not(:disabled) {
-  transform: translateY(0) scale(0.98);
+  border-color: var(--accent-hover);
 }
 
 .admin-roles-save:disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .admin-roles-alert {
-  margin-bottom: 1rem;
+  margin-bottom: 12px;
   background: var(--danger-bg);
   color: var(--danger);
-  border: 1px solid color-mix(in srgb, var(--danger) 25%, var(--mix-wash));
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--line));
   border-radius: var(--radius-sm);
-  padding: 0.7rem 0.85rem;
+  padding: 8px 10px;
+  font-size: 13px;
 }
 
 .admin-roles-ok {
-  color: var(--ink);
-  font-weight: 600;
+  color: var(--chip-ok-ink);
+  font-weight: 500;
 }
 
 .admin-roles-muted {
-  color: var(--cool-ashes);
+  color: var(--muted);
 }
 
 @media (max-width: 760px) {

@@ -1,85 +1,83 @@
-/* Application frame */
 .app-shell {
-  --side-expanded: 240px;
-  --side-collapsed: 72px;
-  min-height: 100vh;
+  --side-expanded: 224px;
+  --side-collapsed: 64px;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(
-      ellipse 55% 35% at 100% 0%,
-      color-mix(in srgb, var(--key-lime) 18%, transparent),
-      transparent
-    ),
-    var(--bg);
+  overflow: hidden;
+  background: var(--canvas);
   color: var(--ink);
 }
 
-/* —— Top bar —— */
 .app-shell-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  min-height: 3.5rem;
-  padding: 0.55rem 1rem;
+  gap: 12px;
+  height: 48px;
+  min-height: 48px;
+  padding: 0 12px 0 16px;
   border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface) 94%, var(--mix-wash));
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--line) 60%, transparent);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: 0 8px 24px rgba(19, 20, 18, 0.04);
   position: sticky;
   top: 0;
   z-index: 20;
+  flex-shrink: 0;
 }
 
 .app-shell-top-left,
 .app-shell-top-right {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 4px;
   min-width: 0;
 }
 
+.app-shell-top-left {
+  gap: 8px;
+}
+
 .app-shell-brand {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.2rem;
-  letter-spacing: -0.02em;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: normal;
+  line-height: 1;
   color: var(--ink);
   text-decoration: none;
+}
+
+.app-shell-brand:hover {
+  color: var(--ink);
 }
 
 .app-shell-icon-hit {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
   border-radius: var(--radius-sm);
-  color: var(--ink);
+  color: var(--muted);
   cursor: pointer;
   flex-shrink: 0;
-  transition:
-    transform var(--dur-fast) var(--ease-out),
-    background-color var(--dur-fast) ease,
-    border-color var(--dur-fast) ease;
+  padding: 0;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .app-shell-icon-hit:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--key-lime) 30%, var(--surface));
-  transform: translateY(-1px);
-}
-
-.app-shell-icon-hit:active:not(:disabled) {
-  transform: scale(0.96);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  color: var(--ink);
 }
 
 .app-shell-icon-hit.is-disabled,
 .app-shell-icon-hit:disabled {
   color: var(--muted);
-  opacity: 0.55;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -89,129 +87,116 @@
 
 .app-shell-body {
   display: grid;
-  grid-template-columns: var(--side-expanded) 1fr;
+  grid-template-columns: var(--side-expanded) minmax(0, 1fr);
   flex: 1;
   min-height: 0;
-  padding: 0.75rem;
-  gap: 0.75rem;
-  transition: grid-template-columns var(--dur-base) var(--ease-out);
+  padding: 0;
+  gap: 0;
+  transition: grid-template-columns var(--dur-base) ease;
 }
 
 .app-shell.is-side-collapsed .app-shell-body {
-  grid-template-columns: var(--side-collapsed) 1fr;
+  grid-template-columns: var(--side-collapsed) minmax(0, 1fr);
 }
 
 .app-shell-side {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-right: 1px solid var(--line);
   background: var(--surface);
-  box-shadow: var(--shadow-float);
+  box-shadow: 8px 0 28px rgba(19, 20, 18, 0.04);
   min-height: 0;
   overflow: hidden;
-  transition: box-shadow var(--dur-base) var(--ease-out);
 }
 
 .app-shell-side-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 0.85rem 0.65rem 0.5rem;
+  padding: 12px 8px;
+}
+
+.app-shell-side-foot {
+  flex-shrink: 0;
+  border-top: 1px solid var(--line);
+  padding: 8px;
+}
+
+.app-shell-collapse {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0 8px;
+  color: var(--muted);
 }
 
 .app-shell-section.is-subtle {
-  padding-bottom: 0.35rem;
-}
-
-.app-shell-section.is-subtle + .app-shell-section.is-subtle {
-  margin-top: 0;
-  padding-top: 0.15rem;
-  border-top: 0;
-}
-
-.app-shell-section.is-subtle .app-shell-side-title {
-  margin: 0.1rem 0.65rem 0.2rem;
-  font-size: 0.62rem;
-  letter-spacing: 0.06em;
-  font-weight: 600;
-  color: color-mix(in srgb, var(--muted) 88%, transparent);
+  padding-bottom: 4px;
 }
 
 .app-shell-section.is-clear {
-  margin-top: 0.45rem;
-  padding: 0.85rem 0.15rem 0.7rem;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid var(--line);
 }
 
-.app-shell-section.is-clear .app-shell-side-title {
-  margin: 0 0.5rem 0.55rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-  color: var(--ink);
-}
-
 .app-shell-side-title {
-  text-transform: uppercase;
+  margin: 8px 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: none;
   white-space: nowrap;
   overflow: hidden;
 }
 
 .app-shell-side-nav {
   display: grid;
-  gap: 0.2rem;
+  gap: 2px;
 }
 
 .app-shell-nav-link {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 8px;
   text-decoration: none;
-  color: var(--ink);
-  padding: 0.55rem 0.65rem;
+  color: var(--muted);
+  padding: 0 8px;
   border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  font-weight: 550;
-  min-height: 40px;
-  border-left: 3px solid transparent;
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 32px;
   position: relative;
-  transition:
-    transform var(--dur-fast) var(--ease-out),
-    background-color var(--dur-fast) ease,
-    border-color var(--dur-fast) ease,
-    color var(--dur-fast) ease;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .app-shell-nav-icon {
   flex-shrink: 0;
   color: var(--muted);
-  transition:
-    color var(--dur-fast) ease,
-    transform var(--dur-fast) var(--ease-out);
 }
 
 .app-shell-nav-link:hover {
-  background: color-mix(in srgb, var(--iced-slate) 40%, transparent);
-  transform: translateX(3px);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  color: var(--ink);
 }
 
 .app-shell-nav-link:hover .app-shell-nav-icon {
   color: var(--ink);
-  transform: scale(1.08);
-}
-
-.app-shell-nav-link:active {
-  transform: translateX(1px) scale(0.98);
 }
 
 .app-shell-nav-link.is-active {
-  background: color-mix(in srgb, var(--key-lime) 42%, var(--mix-wash));
-  font-weight: 700;
-  border-left-color: color-mix(in srgb, var(--key-lime) 70%, var(--cursed-black));
+  background: color-mix(in srgb, var(--key-lime) 42%, var(--surface));
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .app-shell-nav-link.is-active .app-shell-nav-icon {
-  color: var(--accent-ink);
+  color: var(--accent);
+}
+
+.app-shell-nav-link:focus-visible {
+  outline-offset: -2px;
 }
 
 .app-shell-nav-label {
@@ -221,36 +206,6 @@
   white-space: nowrap;
 }
 
-.app-shell-side-collapse {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  margin: 0.35rem 0.65rem 0.75rem;
-  padding: 0.55rem 0.65rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  min-height: 40px;
-  transition:
-    transform var(--dur-fast) var(--ease-out),
-    background-color var(--dur-fast) ease,
-    border-color var(--dur-fast) ease;
-}
-
-.app-shell-side-collapse:hover {
-  background: color-mix(in srgb, var(--key-lime) 28%, var(--surface));
-  transform: translateY(-1px);
-}
-
-.app-shell-side-collapse:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* Collapsed rail */
 .app-shell.is-side-collapsed .app-shell-side-title {
   height: 0;
   margin: 0;
@@ -271,74 +226,56 @@
   border: 0;
 }
 
-.app-shell.is-side-collapsed .app-shell-nav-link {
+.app-shell.is-side-collapsed .app-shell-nav-link,
+.app-shell.is-side-collapsed .app-shell-collapse {
   justify-content: center;
-  padding: 0.55rem;
+  padding: 0;
   gap: 0;
 }
 
-.app-shell.is-side-collapsed .app-shell-nav-link:hover,
-.app-shell.is-side-collapsed .app-shell-nav-link:active {
-  transform: scale(1.06);
-}
-
-.app-shell.is-side-collapsed .app-shell-side-collapse {
-  justify-content: center;
-  padding: 0.55rem;
-}
-
 .app-shell.is-side-collapsed .app-shell-side-scroll {
-  padding-left: 0.45rem;
-  padding-right: 0.45rem;
-}
-
-.app-shell.is-side-collapsed .app-shell-section.is-subtle,
-.app-shell.is-side-collapsed .app-shell-section.is-subtle + .app-shell-section.is-subtle {
-  margin-top: 0;
-  padding-top: 0;
-  padding-bottom: 0.15rem;
-  border-top: 0;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .app-shell.is-side-collapsed .app-shell-section.is-clear {
-  margin-top: 0.4rem;
-  padding-top: 0.55rem;
-  padding-bottom: 0.35rem;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid var(--line);
 }
 
-/* —— Main application zone —— */
 .app-shell-main {
   min-width: 0;
-  padding: 0;
+  min-height: 0;
   overflow: auto;
+  background: transparent;
 }
 
 .app-shell-main-inner {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--highlight), var(--shadow);
-  min-height: calc(100% - 0.25rem);
-  padding: 1.5rem 1.75rem 1.75rem;
+  background: transparent;
+  min-height: 100%;
+  padding: 24px 28px;
+}
+
+.app-shell-content {
+  animation: ui-rise var(--dur-base) var(--ease-out) both;
 }
 
 .app-shell-pagehead {
-  margin-bottom: 1rem;
-  padding-bottom: 0.85rem;
-  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .app-shell-pagehead h1 {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  letter-spacing: -0.03em;
-}
-
-.app-shell-content {
-  max-width: 1100px;
-  animation: ui-rise var(--dur-base) var(--ease-out) backwards;
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: normal;
+  line-height: 1.3;
 }
 
 .app-shell-backdrop {
@@ -350,25 +287,18 @@
     display: inline-flex;
   }
 
-  .app-shell-side-collapse {
+  .app-shell-collapse {
     display: none;
   }
 
   .app-shell-body,
   .app-shell.is-side-collapsed .app-shell-body {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  /* Ignore collapsed rail on mobile — always show labels in drawer */
-  .app-shell.is-side-collapsed .app-shell-section.is-subtle .app-shell-side-title {
+  .app-shell.is-side-collapsed .app-shell-side-title {
     height: auto;
-    margin: 0.1rem 0.65rem 0.2rem;
-    opacity: 1;
-  }
-
-  .app-shell.is-side-collapsed .app-shell-section.is-clear .app-shell-side-title {
-    height: auto;
-    margin: 0 0.5rem 0.55rem;
+    margin: 8px 8px 4px;
     opacity: 1;
   }
 
@@ -383,34 +313,33 @@
 
   .app-shell.is-side-collapsed .app-shell-nav-link {
     justify-content: flex-start;
-    padding: 0.55rem 0.65rem;
-    gap: 0.65rem;
+    padding: 0 8px;
+    gap: 8px;
   }
 
-  .app-shell.is-side-collapsed .app-shell-nav-link:hover {
-    transform: translateX(3px);
-  }
-
-  .app-shell.is-side-collapsed .app-shell-nav-link:active {
-    transform: translateX(1px) scale(0.98);
+  .app-shell-nav-link {
+    min-height: 40px;
   }
 
   .app-shell-side {
     position: fixed;
-    top: 4.75rem;
+    top: 48px;
     right: auto;
-    bottom: 0.75rem;
-    left: 0.75rem;
+    bottom: 0;
+    left: 0;
     width: min(288px, 86vw);
     height: auto;
     z-index: 30;
-    transform: translateX(calc(-100% - 1.25rem));
-    transition: transform var(--dur-base) var(--ease-out);
-    box-shadow: var(--shadow-float);
+    border-right: 1px solid var(--line);
+    border-radius: 0;
+    transform: translateX(calc(-100% - 16px));
+    transition: transform var(--dur-base) ease;
+    box-shadow: none;
   }
 
   .app-shell.is-nav-open .app-shell-side {
     transform: translateX(0);
+    box-shadow: var(--shadow);
   }
 
   .app-shell-backdrop {
@@ -418,16 +347,12 @@
     position: fixed;
     inset: 0;
     border: 0;
-    background: rgba(19, 20, 18, 0.4);
+    background: rgba(15, 17, 20, 0.45);
     z-index: 25;
     cursor: pointer;
   }
 
-  .app-shell-main {
-    padding: 0;
-  }
-
   .app-shell-main-inner {
-    padding: 1.15rem;
+    padding: 16px;
   }
 }

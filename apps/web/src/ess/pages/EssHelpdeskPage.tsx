@@ -1,18 +1,39 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { createTicket, fetchMyTickets, type HelpdeskTicketDto } from '../../workspace/helpdeskApi';
 import { StatusChip } from '../components/StatusChip';
-import { useEssData } from '../mock/EssDataContext';
 
 export function EssHelpdeskPage() {
-  const { tickets, createTicket } = useEssData();
+  const [tickets, setTickets] = useState<HelpdeskTicketDto[]>([]);
   const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
   const [category, setCategory] = useState('Payroll');
-  const open = tickets.filter((ticket) => ticket.status !== 'Resolved').length;
+  const [error, setError] = useState<string | null>(null);
+  const open = tickets.filter((ticket) => ticket.status !== 'Resolved' && ticket.status !== 'Closed').length;
 
-  function onSubmit(event: FormEvent) {
+  function load() {
+    fetchMyTickets()
+      .then((rows) => {
+        setTickets(rows);
+        setError(null);
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load tickets.'));
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!subject.trim()) return;
-    createTicket({ subject, category });
-    setSubject('');
+    if (!subject.trim() || !body.trim()) return;
+    try {
+      await createTicket({ subject, category, body });
+      setSubject('');
+      setBody('');
+      load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not create the ticket.');
+    }
   }
 
   return (
@@ -31,6 +52,7 @@ export function EssHelpdeskPage() {
           <p className="ess-insight-value">{tickets.length - open}</p>
         </article>
       </div>
+      {error ? <p className="ess-alert">{error}</p> : null}
 
       <div className="ess-att-split">
         <section className="ess-panel">
@@ -47,8 +69,9 @@ export function EssHelpdeskPage() {
                   </div>
                   <span className="ess-list-meta">
                     <span>{ticket.category}</span>
-                    <span>{ticket.createdAt}</span>
+                    <span>{new Date(ticket.createdAt).toLocaleDateString('en-IN')}</span>
                   </span>
+                  <span className="ess-muted">{ticket.body}</span>
                 </li>
               ))}
             </ul>
@@ -57,7 +80,7 @@ export function EssHelpdeskPage() {
 
         <section className="ess-panel">
           <h2>New ticket</h2>
-          <form className="ess-form" onSubmit={onSubmit}>
+          <form className="ess-form" onSubmit={(event) => void onSubmit(event)}>
             <div className="ess-field">
               <label htmlFor="ticket-subject">Subject</label>
               <input
@@ -79,6 +102,15 @@ export function EssHelpdeskPage() {
                 <option>Attendance</option>
                 <option>Access</option>
               </select>
+            </div>
+            <div className="ess-field">
+              <label htmlFor="ticket-body">Details</label>
+              <textarea
+                id="ticket-body"
+                value={body}
+                onChange={(event) => setBody(event.target.value)}
+                required
+              />
             </div>
             <button type="submit" className="ess-btn ess-btn-primary">
               Submit ticket

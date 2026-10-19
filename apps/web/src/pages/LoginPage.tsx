@@ -1,22 +1,32 @@
-import { useState } from 'react';
-import type { FormEvent } from 'react';
-import { Smartphone } from 'lucide-react';
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../auth/AuthContext';
-import { MobileDemoModal } from '../mobile-demo/MobileDemoModal';
-import { ThemeToggle } from '../theme/ThemeToggle';
-import './LoginPage.css';
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import { ThemeToggle } from "../theme/ThemeToggle";
+import { enter, fadeTransition, loginEase } from "./login/motion";
+import "./LoginPage.css";
 
 export function LoginPage() {
   const { user, loading, login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const resetSuccess = searchParams.get('reset') === '1';
-  const [email, setEmail] = useState('admin@peopleos.local');
-  const [password, setPassword] = useState('');
+  const resetSuccess = searchParams.get("reset") === "1";
+  const reduce = useReducedMotion() === true;
+  const [email, setEmail] = useState("admin@peopleos.local");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [errorTick, setErrorTick] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const alertRef = useRef<HTMLDivElement>(null);
+
+  const busy = submitting || loading;
+
+  useEffect(() => {
+    if (!error) return;
+    alertRef.current?.focus();
+  }, [error, errorTick]);
 
   if (!loading && user) {
     return <Navigate to="/ess" replace />;
@@ -28,103 +38,169 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       await login(email.trim(), password);
-      navigate('/ess', { replace: true });
+      navigate("/ess", { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to sign in');
+      setError(err instanceof Error ? err.message : "Unable to sign in");
+      setErrorTick((tick) => tick + 1);
     } finally {
       setSubmitting(false);
     }
   }
 
+  const frame = enter(reduce, 0);
+  const submitArrive = enter(reduce, 6);
+
   return (
     <div className="login-page">
-      <div className="login-theme">
-        <button
-          type="button"
-          className="login-mobile-btn"
-          aria-label="Preview mobile app"
-          title="Preview mobile app"
-          onClick={() => setMobileOpen(true)}
-        >
-          <Smartphone size={18} strokeWidth={2} aria-hidden />
-        </button>
+      <div className="login-tools">
         <ThemeToggle />
       </div>
 
-      <MobileDemoModal open={mobileOpen} onClose={() => setMobileOpen(false)} />
-      <div className="login-glow login-glow--lime" aria-hidden="true" />
-      <div className="login-glow login-glow--slate" aria-hidden="true" />
-
-      <div className="login-stage" role="main">
-        <section className="login-brand">
-          <p className="login-mark">PeopleOS</p>
-          <h1 className="login-headline">
-            Workday rhythm,
-            <span> one calm place.</span>
-          </h1>
-          <p className="login-lede">
-            Sign in to leave, attendance, and team workflows for Brickred
-            Systems.
-          </p>
-        </section>
-
-        <section className="login-panel">
-          <header className="login-panel-head">
-            <h2>Sign in</h2>
-            <p>Use your work email and password.</p>
+      <motion.main
+        className="login-frame"
+        initial={frame.initial}
+        animate={frame.animate}
+        transition={frame.transition}
+      >
+        <div className="login-grid">
+          <header className="login-identity">
+            <motion.p className="login-eyebrow" {...enter(reduce, 1)}>
+              Internal workspace
+            </motion.p>
+            <motion.h1 className="login-name" {...enter(reduce, 1)}>
+              PeopleOS
+            </motion.h1>
+            <motion.p className="login-sentence" {...enter(reduce, 2)}>
+              Sign in with your work email to open your workspace.
+            </motion.p>
+            <motion.dl className="login-scope" {...enter(reduce, 3)}>
+              <div>
+                <dt>Attendance</dt>
+                <dd>Mark the day. Request a correction when it is wrong.</dd>
+              </div>
+              <div>
+                <dt>Leave</dt>
+                <dd>Apply, check balances, and see holidays.</dd>
+              </div>
+              <div>
+                <dt>Approvals</dt>
+                <dd>Managers decide from one inbox.</dd>
+              </div>
+            </motion.dl>
+            <motion.p className="login-note" {...enter(reduce, 3)}>
+              Your role adds the sections you are responsible for.
+            </motion.p>
           </header>
 
-          {resetSuccess ? (
-            <div className="login-success" role="status">
-              Password updated. Sign in with your new password.
-            </div>
-          ) : null}
+          <div className="login-rule" aria-hidden="true" />
 
-          <form className="login-form" onSubmit={onSubmit} noValidate>
-            {error ? (
-              <div className="login-alert" role="alert">
-                {error}
+          <form className="login-form" onSubmit={onSubmit}>
+            {resetSuccess ? (
+              <div className="login-status" role="status">
+                Password updated. Sign in with your new password.
               </div>
             ) : null}
 
-            <label className="field" htmlFor="login-email">
-              <span>Email</span>
-              <input
-                id="login-email"
-                type="email"
-                name="email"
-                autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={submitting || loading}
-              />
-            </label>
+            {error ? (
+              <motion.div
+                key={errorTick}
+                ref={alertRef}
+                className="login-alert"
+                role="alert"
+                tabIndex={-1}
+                initial={reduce ? { opacity: 1 } : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={fadeTransition(reduce, 0.2)}
+              >
+                {error}
+              </motion.div>
+            ) : null}
 
-            <div className="field">
-              <label htmlFor="login-password">Password</label>
-              <input
-                id="login-password"
-                type="password"
-                name="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                disabled={submitting || loading}
-              />
+            <motion.div className="login-field" {...enter(reduce, 4)}>
+              <label className="login-label" htmlFor="login-email">
+                Email
+              </label>
+              <div className="login-control">
+                <input
+                  id="login-email"
+                  type="email"
+                  name="email"
+                  autoComplete="username"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={busy}
+                />
+              </div>
+            </motion.div>
+
+            <motion.div className="login-field" {...enter(reduce, 5)}>
+              <label className="login-label" htmlFor="login-password">
+                Password
+              </label>
+              <div className="login-control">
+                <input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  disabled={busy}
+                />
+                <button
+                  type="button"
+                  className="login-reveal"
+                  onClick={() => setShowPassword((open) => !open)}
+                  disabled={busy}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  <span className="login-reveal-swap" aria-hidden="true">
+                    <motion.span
+                      animate={{ opacity: showPassword ? 0 : 1 }}
+                      transition={fadeTransition(reduce)}
+                    >
+                      Show
+                    </motion.span>
+                    <motion.span
+                      animate={{ opacity: showPassword ? 1 : 0 }}
+                      transition={fadeTransition(reduce)}
+                    >
+                      Hide
+                    </motion.span>
+                  </span>
+                </button>
+              </div>
               <p className="login-forgot">
                 <Link to="/forgot-password">Forgot password?</Link>
               </p>
-            </div>
+            </motion.div>
 
-            <button type="submit" disabled={submitting || loading}>
-              {submitting ? 'Signing in…' : 'Sign in'}
-            </button>
+            <motion.button
+              className="login-submit"
+              type="submit"
+              disabled={busy}
+              aria-busy={submitting}
+              initial={submitArrive.initial}
+              animate={submitArrive.animate}
+              transition={{
+                ...submitArrive.transition,
+                scale: {
+                  type: "tween",
+                  duration: reduce ? 0 : 0.12,
+                  ease: loginEase,
+                  delay: 0,
+                },
+              }}
+              whileTap={reduce || busy ? undefined : { scale: 0.985 }}
+            >
+              {submitting ? "Signing in…" : "Sign in"}
+            </motion.button>
           </form>
-        </section>
-      </div>
+        </div>
+      </motion.main>
     </div>
   );
 }

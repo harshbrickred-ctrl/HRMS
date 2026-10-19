@@ -1,18 +1,30 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { decideCorrection, fetchTeamAttendance } from './attendanceApi';
+import { decideLeaveRequest, fetchTeamLeave } from './leaveApi';
+import { fetchReportSummary } from './reportsApi';
 import { Link } from 'react-router-dom';
 import { EmployeePhoto } from '../ess/components/EmployeePhoto';
 import { StatusChip } from '../ess/components/StatusChip';
-import { departments, ORGANIZATION, teams } from '../ess/mock/essMock';
+import { teams } from '../ess/mock/essMock';
 import {
   auditLog,
-  companyDocs,
-  holidays,
   jobs,
-  leaveTypes,
   mailHealth,
   useWorkspace,
-  workflows,
 } from './workspaceMock';
+import { HrAttendanceAdminPage } from './HrAttendanceAdminPage';
+
+export { HrAttendanceAdminPage };
+export {
+  HrOverviewPage,
+  HrEmployeesPage,
+  HrOrganizationPage,
+  HrLeaveAdminPage,
+  HrDocumentsPage,
+  HrWorkflowsPage,
+  HrReportsPage,
+} from './HrPages';
+
 
 function Insights({ items }: { items: Array<[string, string | number]> }) {
   return (
@@ -28,13 +40,25 @@ function Insights({ items }: { items: Array<[string, string | number]> }) {
 }
 
 function useReportFigures() {
-  const workspace = useWorkspace();
-  return [
-    ['Headcount', workspace.headcount],
-    ['On leave', workspace.onLeave],
-    ['Exceptions', workspace.exceptions.length],
-    ['Awaiting approval', workspace.pending.length],
-  ] as Array<[string, number]>;
+  const [figures, setFigures] = useState<Array<[string, number]>>([
+    ['Headcount', 0],
+    ['On leave', 0],
+    ['Exceptions', 0],
+    ['Awaiting approval', 0],
+  ]);
+  useEffect(() => {
+    fetchReportSummary()
+      .then((data) => {
+        setFigures([
+          ['Headcount', data.headcount],
+          ['On leave', data.onLeave],
+          ['Exceptions', data.attendanceExceptions],
+          ['Awaiting approval', data.pendingLeave + data.pendingCorrections],
+        ]);
+      })
+      .catch(() => undefined);
+  }, []);
+  return figures;
 }
 
 export function ManagerOverviewPage() {
@@ -70,40 +94,109 @@ export function ManagerOverviewPage() {
 }
 
 export function ManagerInboxPage() {
-  const { myInbox, decide } = useWorkspace();
+  const [leaveItems, setLeaveItems] = useState<
+    Array<{
+      id: string;
+      type: string;
+      startDate: string;
+      endDate: string;
+      days: number;
+      reason: string;
+      status: string;
+      person?: { name: string } | null;
+    }>
+  >([]);
+  const [corrections, setCorrections] = useState<
+    Array<{ id: string; date: string; reason: string; status: string; person: { name: string } | null }>
+  >([]);
+  const [error, setError] = useState<string | null>(null);
+
+  function load() {
+    const now = new Date();
+    Promise.all([fetchTeamLeave(), fetchTeamAttendance(now.getFullYear(), now.getMonth() + 1)])
+      .then(([leave, attendance]) => {
+        setLeaveItems(leave.requests);
+        setCorrections(attendance.corrections);
+        setError(null);
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load inbox.'));
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function onLeave(id: string, status: 'Approved' | 'Rejected') {
+    try {
+      await decideLeaveRequest(id, status);
+      load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not decide leave.');
+    }
+  }
+
+  async function onCorrection(id: string, status: 'Approved' | 'Rejected') {
+    try {
+      await decideCorrection(id, status);
+      load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not decide correction.');
+    }
+  }
+
+  const pendingLeave = leaveItems.filter((item) => item.status === 'Pending');
+  const pendingCorrections = corrections.filter((item) => item.status === 'Pending');
+
   return (
     <div className="ess-section-stack">
+      {error ? <p className="ess-alert">{error}</p> : null}
       <section className="ess-panel">
         <h2>Approvals</h2>
-        {myInbox.length === 0 ? <p className="ess-empty">Nothing is waiting for you.</p> : null}
+        {pendingLeave.length === 0 && pendingCorrections.length === 0 ? (
+          <p className="ess-empty">Nothing is waiting for you.</p>
+        ) : null}
         <ul className="ess-list">
-          {myInbox.map((item) => (
-            <li key={item.id} className="ess-list-item">
+          {pendingLeave.map((item) => (
+            <li key={`leave-${item.id}`} className="ess-list-item">
               <div className="ess-leave-request-head">
                 <strong>
-                  {item.person} · {item.kind}
+                  {item.person?.name ?? 'Employee'} · Leave
                 </strong>
                 <StatusChip status={item.status} />
               </div>
-              <span className="ess-muted">{item.summary}</span>
-              {item.status === 'Pending' ? (
-                <div className="ess-actions">
-                  <button
-                    type="button"
-                    className="ess-btn ess-btn-primary"
-                    onClick={() => decide(item.id, 'Approved')}
-                  >
-                    Approve
-                  </button>
-                  <button
-                    type="button"
-                    className="ess-btn ess-btn-danger"
-                    onClick={() => decide(item.id, 'Rejected')}
-                  >
-                    Reject
-                  </button>
-                </div>
-              ) : null}
+              <span className="ess-muted">
+                {item.type} · {item.startDate}
+                {item.endDate !== item.startDate ? ` – ${item.endDate}` : ''} · {item.days} day(s) · {item.reason}
+              </span>
+              <div className="ess-actions">
+                <button type="button" className="ess-btn ess-btn-primary" onClick={() => void onLeave(item.id, 'Approved')}>
+                  Approve
+                </button>
+                <button type="button" className="ess-btn ess-btn-danger" onClick={() => void onLeave(item.id, 'Rejected')}>
+                  Reject
+                </button>
+              </div>
+            </li>
+          ))}
+          {pendingCorrections.map((item) => (
+            <li key={`att-${item.id}`} className="ess-list-item">
+              <div className="ess-leave-request-head">
+                <strong>
+                  {item.person?.name ?? 'Employee'} · Attendance
+                </strong>
+                <StatusChip status={item.status} />
+              </div>
+              <span className="ess-muted">
+                {item.date} · {item.reason}
+              </span>
+              <div className="ess-actions">
+                <button type="button" className="ess-btn ess-btn-primary" onClick={() => void onCorrection(item.id, 'Approved')}>
+                  Approve
+                </button>
+                <button type="button" className="ess-btn ess-btn-danger" onClick={() => void onCorrection(item.id, 'Rejected')}>
+                  Reject
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -113,8 +206,29 @@ export function ManagerInboxPage() {
 }
 
 export function TeamLeavePage() {
-  const { myInbox } = useWorkspace();
-  const requests = myInbox.filter((item) => item.kind === 'Leave');
+  const [requests, setRequests] = useState<
+    Array<{
+      id: string;
+      type: string;
+      startDate: string;
+      endDate: string;
+      days: number;
+      reason: string;
+      status: string;
+      person?: { name: string } | null;
+    }>
+  >([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchTeamLeave()
+      .then((data) => {
+        setRequests(data.requests);
+        setError(null);
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load team leave.'));
+  }, []);
+
   return (
     <div className="ess-section-stack">
       <Insights
@@ -124,6 +238,7 @@ export function TeamLeavePage() {
           ['Approved', requests.filter((item) => item.status === 'Approved').length],
         ]}
       />
+      {error ? <p className="ess-alert">{error}</p> : null}
       <section className="ess-panel">
         <h2>Team leave</h2>
         {requests.length === 0 ? <p className="ess-empty">No leave has been sent to you.</p> : null}
@@ -131,10 +246,13 @@ export function TeamLeavePage() {
           {requests.map((item) => (
             <li key={item.id} className="ess-list-item">
               <div className="ess-leave-request-head">
-                <strong>{item.person}</strong>
+                <strong>{item.person?.name ?? 'Employee'}</strong>
                 <StatusChip status={item.status} />
               </div>
-              <span className="ess-muted">{item.summary}</span>
+              <span className="ess-muted">
+                {item.type} · {item.startDate}
+                {item.endDate !== item.startDate ? ` – ${item.endDate}` : ''} · {item.reason}
+              </span>
             </li>
           ))}
         </ul>
@@ -144,17 +262,51 @@ export function TeamLeavePage() {
 }
 
 export function TeamAttendancePage() {
-  const { exceptions, myInbox } = useWorkspace();
-  const requests = myInbox.filter((item) => item.kind === 'Attendance');
+  const today = new Date();
+  const [year] = useState(today.getFullYear());
+  const [month] = useState(today.getMonth() + 1);
+  const [exceptions, setExceptions] = useState<
+    Array<{ date: string; status: string; person: { name: string } | null; checkIn: string | null; checkOut: string | null }>
+  >([]);
+  const [requests, setRequests] = useState<
+    Array<{ id: string; date: string; status: string; reason: string; person: { name: string } | null }>
+  >([]);
+  const [error, setError] = useState<string | null>(null);
+
+  function load() {
+    fetchTeamAttendance(year, month)
+      .then((data) => {
+        setExceptions(data.exceptions);
+        setRequests(data.corrections);
+        setError(null);
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load team attendance.'));
+  }
+
+  useEffect(() => {
+    load();
+  }, [month, year]);
+
+  async function onDecide(id: string, status: 'Approved' | 'Rejected') {
+    try {
+      await decideCorrection(id, status);
+      load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not decide this correction.');
+    }
+  }
+
+  const absences = exceptions.filter((item) => item.status === 'absent').length;
   return (
     <div className="ess-section-stack">
       <Insights
         items={[
           ['Exceptions', exceptions.length],
-          ['Corrections', requests.length],
-          ['Absences', exceptions.filter((item) => item.issue.includes('Absent')).length],
+          ['Corrections', requests.filter((item) => item.status === 'Pending').length],
+          ['Absences', absences],
         ]}
       />
+      {error ? <p className="ess-alert">{error}</p> : null}
       <section className="ess-panel">
         <h2>Team attendance</h2>
         {exceptions.length === 0 && requests.length === 0 ? (
@@ -164,18 +316,33 @@ export function TeamAttendancePage() {
           {requests.map((item) => (
             <li key={item.id} className="ess-list-item">
               <div className="ess-leave-request-head">
-                <strong>{item.person}</strong>
+                <strong>{item.person?.name ?? 'Employee'}</strong>
                 <StatusChip status={item.status} />
               </div>
-              <span className="ess-muted">{item.summary}</span>
+              <span className="ess-muted">
+                {item.date} · {item.reason}
+              </span>
+              {item.status === 'Pending' ? (
+                <div className="ess-actions">
+                  <button type="button" className="ess-btn ess-btn-primary" onClick={() => void onDecide(item.id, 'Approved')}>
+                    Approve
+                  </button>
+                  <button type="button" className="ess-btn" onClick={() => void onDecide(item.id, 'Rejected')}>
+                    Reject
+                  </button>
+                </div>
+              ) : null}
             </li>
           ))}
           {exceptions.map((item) => (
-            <li key={item.id} className="ess-list-item">
-              <strong>{item.person}</strong>
+            <li key={`${item.person?.name ?? 'x'}-${item.date}`} className="ess-list-item">
+              <strong>{item.person?.name ?? 'Employee'}</strong>
               <span className="ess-list-meta">
                 <span>{item.date}</span>
-                <span>{item.issue}</span>
+                <span>{item.status}</span>
+                <span>
+                  {item.checkIn ?? '—'} → {item.checkOut ?? '—'}
+                </span>
               </span>
             </li>
           ))}
@@ -209,375 +376,6 @@ export function TeamDirectoryPage() {
           </article>
         ))}
       </div>
-    </div>
-  );
-}
-
-export function HrOverviewPage() {
-  const { pending, employees, imports } = useWorkspace();
-  const incomplete = employees.filter((person) => !person.workPhone || person.workPhone === '—').length;
-  return (
-    <div className="ess-section-stack">
-      <Insights
-        items={[
-          ['Approvals waiting', pending.length],
-          ['Incomplete profiles', incomplete],
-          ['Import rows', imports.length],
-        ]}
-      />
-      <section className="ess-panel">
-        <h2>Queues</h2>
-        <ul className="ess-list">
-          <li className="ess-list-item">
-            <strong>Leave and attendance</strong>
-            <span className="ess-muted">{pending.length} items still with managers</span>
-          </li>
-          <li className="ess-list-item">
-            <strong>Profiles</strong>
-            <span className="ess-muted">{incomplete} people missing a work phone</span>
-          </li>
-          <li className="ess-list-item">
-            <strong>Imports</strong>
-            <span className="ess-muted">
-              {imports.length === 0 ? 'No files recorded yet' : `${imports.length} recorded`}
-            </span>
-          </li>
-        </ul>
-      </section>
-    </div>
-  );
-}
-
-export function HrEmployeesPage() {
-  const { employees, addEmployee } = useWorkspace();
-  const [query, setQuery] = useState('');
-  const [name, setName] = useState('');
-  const [department, setDepartment] = useState('Engineering');
-  const [location, setLocation] = useState('Noida');
-  const [title, setTitle] = useState('');
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return employees;
-    return employees.filter(
-      (person) =>
-        person.name.toLowerCase().includes(q) ||
-        person.department.toLowerCase().includes(q) ||
-        person.employeeCode.toLowerCase().includes(q),
-    );
-  }, [employees, query]);
-
-  function onAdd(event: FormEvent) {
-    event.preventDefault();
-    if (!name.trim()) return;
-    addEmployee({ name, department, location, title });
-    setName('');
-    setTitle('');
-  }
-
-  return (
-    <div className="ess-section-stack">
-      <Insights
-        items={[
-          ['Employees', employees.length],
-          ['Showing', filtered.length],
-          ['Departments', new Set(employees.map((person) => person.department)).size],
-        ]}
-      />
-      <div className="ess-att-split">
-        <section className="ess-panel">
-          <div className="ess-att-toolbar">
-            <h2>Directory</h2>
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search name or code"
-              aria-label="Search employees"
-            />
-          </div>
-          <div className="ess-table-wrap">
-            <table className="ess-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Employee id</th>
-                  <th>Department</th>
-                  <th>Location</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((person) => (
-                  <tr key={person.id}>
-                    <td>{person.name}</td>
-                    <td>{person.employeeCode}</td>
-                    <td>{person.department}</td>
-                    <td>{person.location}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-        <section className="ess-panel">
-          <h2>Add employee</h2>
-          <form className="ess-form" onSubmit={onAdd}>
-            <div className="ess-field">
-              <label htmlFor="hr-name">Name</label>
-              <input id="hr-name" value={name} onChange={(event) => setName(event.target.value)} required />
-            </div>
-            <div className="ess-field">
-              <label htmlFor="hr-title">Title</label>
-              <input id="hr-title" value={title} onChange={(event) => setTitle(event.target.value)} />
-            </div>
-            <div className="ess-field">
-              <label htmlFor="hr-dept">Department</label>
-              <input
-                id="hr-dept"
-                value={department}
-                onChange={(event) => setDepartment(event.target.value)}
-              />
-            </div>
-            <div className="ess-field">
-              <label htmlFor="hr-loc">Location</label>
-              <input id="hr-loc" value={location} onChange={(event) => setLocation(event.target.value)} />
-            </div>
-            <button type="submit" className="ess-btn ess-btn-primary">
-              Add to directory
-            </button>
-          </form>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-export function HrOrganizationPage() {
-  const { employees } = useWorkspace();
-  const locations = group(employees, (person) => person.location);
-  return (
-    <div className="ess-section-stack">
-      <Insights
-        items={[
-          ['Organization', ORGANIZATION.name],
-          ['Code', ORGANIZATION.code],
-          ['People', employees.length],
-        ]}
-      />
-      {departments.map((department) => {
-        const deptTeams = teams.filter((team) => team.departmentId === department.id);
-        return (
-          <section key={department.id} className="ess-panel">
-            <h2>{department.name}</h2>
-            {deptTeams.length === 0 ? (
-              <p className="ess-empty">No teams. Department leads report here.</p>
-            ) : (
-              <ul className="ess-list">
-                {deptTeams.map((team) => {
-                  const manager = employees.find((person) => person.id === team.managerId);
-                  const members = employees.filter((person) => person.teamId === team.id);
-                  return (
-                    <li key={team.id} className="ess-list-item">
-                      <div className="ess-leave-request-head">
-                        <strong>{team.name}</strong>
-                        <span>
-                          {members.length} {members.length === 1 ? 'person' : 'people'}
-                        </span>
-                      </div>
-                      <span className="ess-muted">Manager {manager?.name ?? '—'}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-        );
-      })}
-      <GroupCard title="Locations" groups={locations} />
-    </div>
-  );
-}
-
-function group<T>(items: T[], key: (item: T) => string) {
-  const map = new Map<string, number>();
-  for (const item of items) {
-    const name = key(item);
-    map.set(name, (map.get(name) ?? 0) + 1);
-  }
-  return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-}
-
-function GroupCard({ title, groups }: { title: string; groups: Array<[string, number]> }) {
-  return (
-    <section className="ess-panel">
-      <h2>{title}</h2>
-      <ul className="ess-list">
-        {groups.map(([name, count]) => (
-          <li key={name} className="ess-list-item">
-            <div className="ess-leave-request-head">
-              <strong>{name}</strong>
-              <span>{count}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-export function HrLeaveAdminPage() {
-  return (
-    <div className="ess-section-stack">
-      <Insights
-        items={[
-          ['Leave types', leaveTypes.length],
-          ['Holidays', holidays.length],
-          ['Capped types', leaveTypes.filter((item) => item.code !== 'LOP').length],
-        ]}
-      />
-      <div className="ess-att-split">
-        <section className="ess-panel">
-          <h2>Types</h2>
-          <ul className="ess-list">
-            {leaveTypes.map((item) => (
-              <li key={item.code} className="ess-list-item">
-                <div className="ess-leave-request-head">
-                  <strong>{item.type}</strong>
-                  <span>{item.code === 'LOP' ? 'No cap' : item.entitled}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-        <section className="ess-panel">
-          <h2>Holidays</h2>
-          <ul className="ess-list">
-            {holidays.map((holiday) => (
-              <li key={holiday.date} className="ess-list-item">
-                <strong>{holiday.name}</strong>
-                <span className="ess-muted">{holiday.date}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-export function HrAttendanceAdminPage() {
-  const { imports, addImport } = useWorkspace();
-  return (
-    <div className="ess-section-stack">
-      <Insights
-        items={[
-          ['Shift', 'General'],
-          ['Window', '09:00–18:00'],
-          ['Imports', imports.length],
-        ]}
-      />
-      <section className="ess-panel">
-        <h2>Record an import</h2>
-        <p className="ess-muted">This stores a row only. It does not read a file.</p>
-        <button type="button" className="ess-btn ess-btn-primary" onClick={() => addImport('attendance-september.csv')}>
-          Record September file
-        </button>
-        {imports.length > 0 ? (
-          <ul className="ess-list">
-            {imports.map((row) => (
-              <li key={row.id} className="ess-list-item">
-                <strong>{row.name}</strong>
-                <span className="ess-list-meta">
-                  <span>{row.rows} rows</span>
-                  <span>{row.at}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </section>
-    </div>
-  );
-}
-
-export function HrDocumentsPage() {
-  return (
-    <div className="ess-section-stack">
-      <Insights
-        items={[
-          ['Company files', companyDocs.length],
-          ['Categories', new Set(companyDocs.map((doc) => doc.category)).size],
-          ['Packs', 1],
-        ]}
-      />
-      <section className="ess-panel">
-        <h2>Company documents</h2>
-        <ul className="ess-list">
-          {companyDocs.map((doc) => (
-            <li key={doc.id} className="ess-list-item">
-              <div className="ess-leave-request-head">
-                <strong>{doc.name}</strong>
-                <span className="ess-muted">{doc.category}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
-  );
-}
-
-export function HrWorkflowsPage() {
-  const stuck = workflows.reduce((sum, item) => sum + item.stuck, 0);
-  return (
-    <div className="ess-section-stack">
-      <Insights
-        items={[
-          ['Definitions', workflows.length],
-          ['Stuck', stuck],
-          ['Clear', workflows.filter((item) => item.stuck === 0).length],
-        ]}
-      />
-      <section className="ess-panel">
-        <h2>Workflows</h2>
-        <ul className="ess-list">
-          {workflows.map((item) => (
-            <li key={item.name} className="ess-list-item">
-              <div className="ess-leave-request-head">
-                <strong>{item.name}</strong>
-                <span>{item.stuck} stuck</span>
-              </div>
-              <span className="ess-muted">{item.steps}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
-  );
-}
-
-export function HrReportsPage() {
-  const figures = useReportFigures();
-  return (
-    <div className="ess-section-stack">
-      <Insights items={figures.slice(0, 3)} />
-      <p className="ess-att-facts">
-        <span>
-          <strong>{figures[3][1]}</strong> awaiting approval
-        </span>
-      </p>
-      <section className="ess-panel">
-        <h2>This month</h2>
-        <ul className="ess-list">
-          {figures.map(([label, value]) => (
-            <li key={label} className="ess-list-item">
-              <div className="ess-leave-request-head">
-                <strong>{label}</strong>
-                <span>{value}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
     </div>
   );
 }

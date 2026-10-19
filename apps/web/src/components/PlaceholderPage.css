@@ -1,42 +1,41 @@
 .placeholder-page {
-  background: var(--surface);
+  background: var(--surface-elevated);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 1.35rem 1.4rem;
+  padding: 16px;
+  box-shadow: var(--highlight), var(--shadow);
   max-width: 40rem;
 }
 
 .placeholder-kicker {
-  margin: 0 0 0.35rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: color-mix(in srgb, var(--cool-ashes) 80%, var(--cursed-black));
+  margin: 0 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .placeholder-title {
-  margin: 0 0 0.5rem;
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: normal;
 }
 
 .placeholder-blurb {
   margin: 0;
-  color: var(--cool-ashes);
-  line-height: 1.55;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .placeholder-list {
-  margin: 1rem 0 0;
-  padding: 0 0 0 1.1rem;
+  margin: 12px 0 0;
+  padding: 0 0 0 18px;
   color: var(--ink);
   display: grid;
-  gap: 0.35rem;
+  gap: 4px;
 }
 
 .placeholder-list li {
-  color: var(--cool-ashes);
+  color: var(--muted);
 }

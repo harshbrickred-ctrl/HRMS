@@ -74,7 +74,7 @@ export async function apiFetch<T>(
   retry = true,
 ): Promise<T> {
   const headers = new Headers(init.headers);
-  if (!headers.has('Content-Type') && init.body) {
+  if (!headers.has('Content-Type') && init.body && !(init.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
   const access = getAccessToken();
@@ -187,6 +187,15 @@ export async function changePassword(
   });
   setTokens(tokens);
   return tokens;
+}
+
+export async function apiBlob(path: string): Promise<Blob> {
+  const headers = new Headers();
+  const access = getAccessToken();
+  if (access) headers.set('Authorization', `Bearer ${access}`);
+  const res = await fetch(path, { headers });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.blob();
 }
 
 export async function confirmPasswordReset(

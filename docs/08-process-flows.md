@@ -1,7 +1,7 @@
 # 08 — Process Flows
 
 **Product:** PeopleOS MVP  
-**Related:** [05-product-requirements-mvp](05-product-requirements-mvp.md) · [06-srs-functional](06-srs-functional.md) · [09-ux-ui-specification](09-ux-ui-specification.md)  
+**Related:** [05-product-requirements-mvp](05-product-requirements-mvp.md) · [06-srs-functional](06-srs-functional.md) · [09-ux-ui-specification](09-ux-ui-specification.md) · [33-implemented-workflow-catalog](33-implemented-workflow-catalog.md) (what the app does today; this file remains the spec)  
 **Notation:** Mermaid flowcharts / sequence diagrams  
 **Labels:** Happy path = solid; exceptions described in notes (**Assumption** where policy TBD)
 

@@ -53,6 +53,7 @@ Quick briefs for every blueprint document. Open a folder’s `brief.html` to sha
 | 30 — Engineering Governance | Delivery / Ops / QA | [md](30-engineering-governance/brief.md) · [html](30-engineering-governance/brief.html) |
 | PeopleOS — Management Overview | General | [md](31-management-overview/brief.md) · [html](31-management-overview/brief.html) |
 | PeopleOS — Manager Weekly Development Timeline | General | [md](32-manager-weekly-timeline/brief.md) · [html](32-manager-weekly-timeline/brief.html) |
+| 33 — Implemented workflow catalog | General | [md](33-implemented-workflow-catalog/brief.md) · [html](33-implemented-workflow-catalog/brief.html) |
 | Appendix — Capacity Sheet (4 × 12 Weeks) | Delivery / Ops / QA | [md](appendices/capacity-sheet/brief.md) · [html](appendices/capacity-sheet/brief.html) |
 | Appendix — Competitor Capability Matrix | CEO / Product | [md](appendices/competitor-matrix/brief.md) · [html](appendices/competitor-matrix/brief.html) |
 | Appendix — FR / NFR Catalog | Delivery / Ops / QA | [md](appendices/fr-catalog/brief.md) · [html](appendices/fr-catalog/brief.html) |

@@ -1,0 +1,384 @@
+.hr-master {
+  display: grid;
+  gap: 16px;
+}
+
+.hr-master-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+
+.hr-master-lead {
+  margin: 0;
+  max-width: 40rem;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.hr-master-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.hr-master-search,
+.hr-master-filters select {
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.hr-master-search {
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
+.hr-master-filters select {
+  min-width: 160px;
+}
+
+.hr-segment {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.hr-segment button {
+  height: 32px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  padding: 0 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.hr-segment button:last-child {
+  border-right: 0;
+}
+
+.hr-segment button[aria-pressed='true'] {
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+}
+
+.hr-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.hr-master-table .ess-table tbody tr {
+  cursor: pointer;
+}
+
+.hr-master-table .ess-table tbody tr:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.hr-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.hr-person-copy {
+  min-width: 0;
+}
+
+.hr-person-copy strong,
+.hr-person-copy span {
+  display: block;
+}
+
+.hr-person-copy span,
+.hr-muted-cell {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.hr-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hr-flow,
+.hr-record {
+  display: grid;
+  gap: 16px;
+}
+
+.hr-flow-head h2,
+.hr-record-head h2 {
+  margin: 8px 0 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.hr-flow-copy,
+.hr-record-meta {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.hr-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hr-step {
+  display: grid;
+  gap: 2px;
+  padding: 0 0 8px;
+  border: 0;
+  border-bottom: 2px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.hr-step:disabled {
+  cursor: default;
+}
+
+.hr-step-index {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hr-step-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.hr-step.is-current {
+  border-bottom-color: var(--ink);
+}
+
+.hr-step.is-done {
+  border-bottom-color: var(--accent);
+}
+
+.hr-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.hr-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.hr-grid .is-wide {
+  grid-column: 1 / -1;
+}
+
+.hr-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.hr-password {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.hr-master .hr-password input {
+  height: 30px;
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hr-master .hr-password input:focus,
+.hr-master .hr-password input:focus-visible {
+  outline: none;
+}
+
+.hr-password:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.hr-password-toggle {
+  flex: 0 0 auto;
+  height: 30px;
+  border: 0;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.hr-roles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.hr-roles legend {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.hr-role {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-elevated);
+  font-size: 14px;
+}
+
+.hr-role input {
+  margin-top: 2px;
+}
+
+.hr-review {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hr-review li {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 8px 16px;
+  align-items: baseline;
+}
+
+.hr-review span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hr-review strong {
+  font-weight: 600;
+}
+
+.hr-flow-actions,
+.hr-record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hr-flow-actions-end,
+.hr-record-actions-end {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hr-sections {
+  display: grid;
+  gap: 16px;
+}
+
+.hr-section h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hr-alert {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--chip-danger-line);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.hr-status-note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--chip-ok-line);
+  background: var(--chip-ok-bg);
+  color: var(--chip-ok-ink);
+  font-size: 14px;
+}
+
+.hr-empty {
+  margin: 0;
+  padding: 28px 8px;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 800px) {
+  .hr-steps,
+  .hr-grid,
+  .hr-review li {
+    grid-template-columns: 1fr;
+  }
+
+  .hr-grid .is-wide {
+    grid-column: auto;
+  }
+}

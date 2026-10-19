@@ -19,7 +19,6 @@ import { ForgotPasswordOtpPage } from './pages/ForgotPasswordOtpPage';
 import { ForgotPasswordRequestPage } from './pages/ForgotPasswordRequestPage';
 import { ForgotPasswordResetPage } from './pages/ForgotPasswordResetPage';
 import { LoginPage } from './pages/LoginPage';
-import { MobilePreviewPage } from './pages/MobilePreviewPage';
 import {
   AdminAuditPage,
   AdminJobsPage,
@@ -30,10 +29,8 @@ import {
   HrDocumentsPage,
   HrEmployeesPage,
   HrLeaveAdminPage,
-  HrMigrationPage,
   HrOrganizationPage,
   HrOverviewPage,
-  HrReportsPage,
   HrWorkflowsPage,
   LeadershipOverviewPage,
   LeadershipReportsPage,
@@ -86,8 +83,6 @@ export default function App() {
               <Route path="helpdesk" element={<EssHelpdeskPage />} />
             </Route>
 
-            <Route path="/mobile" element={<MobilePreviewPage />} />
-
             <Route path="/manager" element={<RoleOutlet roles={['MANAGER']} />}>
               <Route index element={<ManagerOverviewPage />} />
               <Route path="inbox" element={<ManagerInboxPage />} />
@@ -104,8 +99,6 @@ export default function App() {
               <Route path="attendance" element={<HrAttendanceAdminPage />} />
               <Route path="documents" element={<HrDocumentsPage />} />
               <Route path="workflows" element={<HrWorkflowsPage />} />
-              <Route path="reports" element={<HrReportsPage />} />
-              <Route path="migration" element={<HrMigrationPage />} />
             </Route>
 
             <Route

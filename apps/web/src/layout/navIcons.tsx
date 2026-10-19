@@ -23,7 +23,6 @@ import {
   Users,
   UsersRound,
   BarChart3,
-  Smartphone,
 } from 'lucide-react';
 import type { NavIconId } from './appNav';
 
@@ -58,7 +57,6 @@ export const NAV_ICONS: Record<NavIconId, LucideIcon> = {
   jobs: Briefcase,
   leadership: Shield,
   leadershipReports: BarChart3,
-  mobile: Smartphone,
 };
 
 type NavIconProps = {

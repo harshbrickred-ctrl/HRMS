@@ -2,18 +2,22 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react';
 import { useAuth } from '../../auth/AuthContext';
+import { adjustMyLeave, downloadMyDocument, fetchMyEmployee } from '../../workspace/hrApi';
 import { setApprovalStatus, submitApproval } from '../../workspace/workspaceMock';
 import {
   approverFor,
   createInitialEssState,
   personForLogin,
+  profileForPerson,
   workingDaysBetween,
   type AttendanceDay,
+  type AttendanceStatus,
   type CorrectionRequest,
   type EssDocument,
   type EssState,
@@ -38,9 +42,44 @@ export type ApplyCorrectionInput = {
 };
 
 export type UploadDocumentInput = {
-  name: string;
   category: string;
+  file: File;
 };
+
+const sessionFiles = new Map<string, File>();
+
+export function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) {
+    return `${kb >= 10 ? Math.round(kb) : kb.toFixed(1)} KB`;
+  }
+  const mb = kb / 1024;
+  return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)} MB`;
+}
+
+export function downloadEssDocument(doc: EssDocument) {
+  if (doc.remote) {
+    void downloadMyDocument(doc.id, doc.name);
+    return;
+  }
+  const stored = sessionFiles.get(doc.id);
+  const blob =
+    stored ??
+    new Blob(
+      [`${doc.name}\nCategory: ${doc.category}\nUploaded: ${doc.uploadedAt}\n`],
+      { type: 'text/plain;charset=utf-8' },
+    );
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  const stem = doc.name.replace(/\.[^.]+$/, '') || doc.name;
+  anchor.href = url;
+  anchor.download = stored ? stored.name : `${stem}.txt`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
 
 export type CreateTicketInput = {
   subject: string;
@@ -48,9 +87,12 @@ export type CreateTicketInput = {
 };
 
 type EssDataContextValue = EssState & {
-  applyLeave: (input: ApplyLeaveInput) => { ok: true } | { ok: false; error: string };
-  withdrawLeave: (id: string) => void;
-  markAttendance: (date: string) => void;
+  applyLeave: (
+    input: ApplyLeaveInput,
+  ) => Promise<{ ok: true } | { ok: false; error: string }>;
+  withdrawLeave: (id: string) => Promise<void>;
+  punchIn: (date: string) => void;
+  punchOut: (date: string) => void;
   requestCorrection: (
     input: ApplyCorrectionInput,
   ) => { ok: true } | { ok: false; error: string };
@@ -68,6 +110,30 @@ type EssDataContextValue = EssState & {
 };
 
 const EssDataContext = createContext<EssDataContextValue | undefined>(undefined);
+
+export function localToday() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function clockNow() {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
+const PUNCH_BLOCKED = new Set<AttendanceStatus>([
+  'Holiday',
+  'Weekend',
+  'Leave',
+  'PendingCorrection',
+]);
+
+function punchBlockMessage(status: AttendanceStatus, action: 'in' | 'out') {
+  const label = status === 'PendingCorrection' ? 'pending correction' : status.toLowerCase();
+  return `Cannot punch ${action} on a ${label} day.`;
+}
 
 export function formatInr(amount: number) {
   return new Intl.NumberFormat('en-IN', {
@@ -117,6 +183,41 @@ function shortDate(iso: string) {
 export function EssDataProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [state, setState] = useState<EssState>(() => createInitialEssState());
+  const [employment, setEmployment] = useState<Awaited<ReturnType<typeof fetchMyEmployee>> | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!user?.email) return;
+    let cancelled = false;
+    fetchMyEmployee()
+      .then((employee) => {
+        if (cancelled) return;
+        setEmployment(employee);
+        setState((prev) => ({
+          ...prev,
+          leaveBalances: employee.leaveBalances ?? prev.leaveBalances,
+          documents: [
+            ...prev.documents.filter((doc) => doc.owner === 'company'),
+            ...(employee.documents ?? []).map((doc) => ({
+              id: doc.id,
+              name: doc.fileName,
+              category: doc.category,
+              uploadedAt: doc.uploadedAt,
+              sizeLabel: '',
+              owner: 'mine' as const,
+              remote: true,
+            })),
+          ],
+        }));
+      })
+      .catch(() => {
+        if (!cancelled) setEmployment(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.email]);
   const [salaryHidden, setSalaryHidden] = useState(readSalaryHidden);
   const toggleSalaryHidden = useCallback(() => {
     setSalaryHidden((hidden) => {
@@ -139,7 +240,7 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const applyLeave = useCallback(
-    (input: ApplyLeaveInput): { ok: true } | { ok: false; error: string } => {
+    async (input: ApplyLeaveInput): Promise<{ ok: true } | { ok: false; error: string }> => {
       const balance = state.leaveBalances.find((b) => b.code === input.typeCode);
       if (!balance) return { ok: false, error: 'Unknown leave type.' };
       if (!input.startDate || !input.endDate) {
@@ -203,12 +304,25 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
         });
       }
 
+      let leaveBalances = uncapped
+        ? state.leaveBalances
+        : adjustBalance(state.leaveBalances, balance.code, days);
+      if (!uncapped) {
+        try {
+          const updated = await adjustMyLeave(balance.code, days, 'apply');
+          if (updated.leaveBalances) leaveBalances = updated.leaveBalances;
+        } catch (err) {
+          const text = err instanceof Error ? err.message : '';
+          if (!text.includes('No employee record')) {
+            return { ok: false, error: text || 'Could not update the leave balance.' };
+          }
+        }
+      }
+
       setState((prev) => ({
         ...prev,
         leaveRequests: [request, ...prev.leaveRequests],
-        leaveBalances: uncapped
-          ? prev.leaveBalances
-          : adjustBalance(prev.leaveBalances, balance.code, days),
+        leaveBalances,
         notifications: [
           {
             id: nextId('n'),
@@ -228,55 +342,53 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
     [state.holidays, state.leaveBalances, state.people, user?.email],
   );
 
-  const withdrawLeave = useCallback((id: string) => {
+  const withdrawLeave = useCallback(async (id: string) => {
+    const current = state.leaveRequests.find((request) => request.id === id);
+    if (!current || current.status !== 'Pending') return;
+    let leaveBalances = state.leaveBalances;
+    if (current.typeCode !== 'LOP') {
+      try {
+        const updated = await adjustMyLeave(current.typeCode, current.days, 'withdraw');
+        if (updated.leaveBalances) leaveBalances = updated.leaveBalances;
+      } catch (err) {
+        const text = err instanceof Error ? err.message : '';
+        if (!text.includes('No employee record')) {
+          setState((prev) => ({
+            ...prev,
+            toast: text || 'Could not update the leave balance.',
+          }));
+          return;
+        }
+        leaveBalances = adjustBalance(state.leaveBalances, current.typeCode, -current.days);
+      }
+    }
     setApprovalStatus(id, 'Withdrawn');
-    setState((prev) => {
-      const req = prev.leaveRequests.find((r) => r.id === id);
-      if (!req || req.status !== 'Pending') return prev;
-      return {
-        ...prev,
-        leaveRequests: prev.leaveRequests.map((r) =>
-          r.id === id ? { ...r, status: 'Withdrawn' as const } : r,
-        ),
-        leaveBalances:
-          req.typeCode === 'LOP'
-            ? prev.leaveBalances
-            : adjustBalance(prev.leaveBalances, req.typeCode, -req.days),
-        toast: 'Leave request withdrawn.',
-      };
-    });
-  }, []);
+    setState((prev) => ({
+      ...prev,
+      leaveRequests: prev.leaveRequests.map((request) =>
+        request.id === id ? { ...request, status: 'Withdrawn' as const } : request,
+      ),
+      leaveBalances,
+      toast: 'Leave request withdrawn.',
+    }));
+  }, [state.leaveBalances, state.leaveRequests]);
 
-  const markAttendance = useCallback((date: string) => {
+  const punchIn = useCallback((date: string) => {
     setState((prev) => {
       const existing = prev.attendance.find((d) => d.date === date);
-      if (existing && existing.status !== 'Absent' && existing.status) {
-        if (
-          existing.status === 'Present' ||
-          existing.status === 'Holiday' ||
-          existing.status === 'Weekend' ||
-          existing.status === 'Leave' ||
-          existing.status === 'PendingCorrection'
-        ) {
-          return {
-            ...prev,
-            toast:
-              existing.status === 'Present'
-                ? 'Already marked present for today.'
-                : `Cannot mark attendance on a ${existing.status.toLowerCase()} day.`,
-          };
-        }
+      if (existing && PUNCH_BLOCKED.has(existing.status)) {
+        return { ...prev, toast: punchBlockMessage(existing.status, 'in') };
+      }
+      if (existing?.checkIn) {
+        return { ...prev, toast: `Already punched in at ${existing.checkIn}.` };
       }
 
-      const now = new Date();
-      const checkIn = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      const day: (typeof prev.attendance)[number] = {
-        date,
+      const checkIn = clockNow();
+      const day: AttendanceDay = {
+        ...(existing ?? { date, status: 'Present' }),
         status: 'Present',
         checkIn,
-        checkOut: undefined,
       };
-
       const attendance = existing
         ? prev.attendance.map((d) => (d.date === date ? day : d))
         : [...prev.attendance, day].sort((a, b) => a.date.localeCompare(b.date));
@@ -284,7 +396,30 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
       return {
         ...prev,
         attendance,
-        toast: `Attendance marked at ${checkIn}.`,
+        toast: `Punched in at ${checkIn}.`,
+      };
+    });
+  }, []);
+
+  const punchOut = useCallback((date: string) => {
+    setState((prev) => {
+      const existing = prev.attendance.find((d) => d.date === date);
+      if (existing && PUNCH_BLOCKED.has(existing.status)) {
+        return { ...prev, toast: punchBlockMessage(existing.status, 'out') };
+      }
+      if (!existing?.checkIn) {
+        return { ...prev, toast: 'Punch in before punching out.' };
+      }
+      if (existing.checkOut) {
+        return { ...prev, toast: `Already punched out at ${existing.checkOut}.` };
+      }
+
+      const checkOut = clockNow();
+      const day: AttendanceDay = { ...existing, checkOut };
+      return {
+        ...prev,
+        attendance: prev.attendance.map((d) => (d.date === date ? day : d)),
+        toast: `Punched out at ${checkOut}.`,
       };
     });
   }, []);
@@ -363,12 +498,14 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
   );
 
   const uploadDocument = useCallback((input: UploadDocumentInput) => {
+    const id = nextId('doc');
+    sessionFiles.set(id, input.file);
     const doc: EssDocument = {
-      id: nextId('doc'),
-      name: input.name,
+      id,
+      name: input.file.name,
       category: input.category,
-      uploadedAt: new Date().toISOString().slice(0, 10),
-      sizeLabel: '—',
+      uploadedAt: localToday(),
+      sizeLabel: formatFileSize(input.file.size),
       owner: 'mine',
     };
     setState((prev) => ({
@@ -378,7 +515,7 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
         {
           id: nextId('n'),
           title: 'Document uploaded',
-          body: `${input.name} was added to My documents.`,
+          body: `${input.file.name} was added to My documents.`,
           createdAt: new Date().toISOString(),
           read: false,
           href: '/ess/documents',
@@ -386,7 +523,7 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
         },
         ...prev.notifications,
       ],
-      toast: 'Document uploaded (mock).',
+      toast: 'Document added to My documents.',
     }));
   }, []);
 
@@ -436,29 +573,53 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
   ).length;
 
   const value = useMemo<EssDataContextValue>(
-    () => ({
-      ...state,
-      applyLeave,
-      withdrawLeave,
-      markAttendance,
-      requestCorrection,
-      uploadDocument,
-      createTicket,
-      updateContacts,
-      markNotificationRead,
-      markAllNotificationsRead,
-      clearToast,
-      unreadCount,
-      pendingLeaveCount,
-      salaryHidden,
-      toggleSalaryHidden,
-      showAmount,
-    }),
+    () => {
+      const me = personForLogin(user?.email, state.people);
+      const base = me ? profileForPerson(me, state.profile) : state.profile;
+      const profile = employment
+        ? {
+            ...base,
+            photo: employment.photo || base.photo,
+            firstName: employment.firstName,
+            lastName: employment.lastName,
+            employeeCode: employment.employeeCode,
+            title: employment.designation || base.title,
+            department: employment.departmentName ?? '',
+            location: employment.locationName ?? '',
+            teamName: employment.teamName ?? '',
+            managerName: employment.managerName ?? '',
+            workEmail: employment.email,
+          }
+        : base;
+      return {
+        ...state,
+        profile,
+        applyLeave,
+        withdrawLeave,
+        punchIn,
+        punchOut,
+        requestCorrection,
+        uploadDocument,
+        createTicket,
+        updateContacts,
+        markNotificationRead,
+        markAllNotificationsRead,
+        clearToast,
+        unreadCount,
+        pendingLeaveCount,
+        salaryHidden,
+        toggleSalaryHidden,
+        showAmount,
+      };
+    },
     [
       state,
+      user,
+      employment,
       applyLeave,
       withdrawLeave,
-      markAttendance,
+      punchIn,
+      punchOut,
       requestCorrection,
       uploadDocument,
       createTicket,

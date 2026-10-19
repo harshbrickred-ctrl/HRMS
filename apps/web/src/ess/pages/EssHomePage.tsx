@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
-import { type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
+import { fetchMyAttendance, punchMe } from '../../workspace/attendanceApi';
 import {
   ArrowRight,
   BarChart3,
@@ -14,7 +15,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { EmployeePhoto } from '../components/EmployeePhoto';
 import { StatusChip } from '../components/StatusChip';
-import { useEssData } from '../mock/EssDataContext';
+import { localToday, useEssData } from '../mock/EssDataContext';
 import type { AttendanceDay, Payslip } from '../mock/essMock';
 
 function lineTotal(lines: { amount: number }[]) {
@@ -96,7 +97,6 @@ export function EssHomePage() {
     attendance,
     corrections,
     payslips,
-    markAttendance,
     salaryHidden,
     toggleSalaryHidden,
     showAmount,
@@ -105,9 +105,32 @@ export function EssHomePage() {
   const pendingLeave = leaveRequests.filter((r) => r.status === 'Pending');
   const pendingCorrections = corrections.filter((c) => c.status === 'Pending');
   const unread = notifications.filter((n) => !n.read).slice(0, 3);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const hour = new Date().getHours();
-  const primaryIsLeave = hour >= 12;
+  const [punchState, setPunchState] = useState({ enabled: false, checkIn: '', checkOut: '' });
+  const [punchError, setPunchError] = useState<string | null>(null);
+  useEffect(() => {
+    const [year, month] = today.split('-').map(Number);
+    let cancel = false;
+    fetchMyAttendance(year, month)
+      .then((monthData) => {
+        if (cancel) return;
+        const day = monthData.days.find((item) => item.date === today);
+        setPunchState({
+          enabled: monthData.webPunchEnabled,
+          checkIn: day?.checkIn ?? '',
+          checkOut: day?.checkOut ?? '',
+        });
+      })
+      .catch(() => {
+        if (!cancel) setPunchState({ enabled: false, checkIn: '', checkOut: '' });
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [today]);
+  const punchedIn = Boolean(punchState.checkIn);
+  const punchedOut = Boolean(punchState.checkOut);
   const leaveAvailable = leaveBalances.reduce(
     (sum, balance) => (balance.code === 'LOP' ? sum : sum + balance.available),
     0,
@@ -205,7 +228,7 @@ export function EssHomePage() {
 
   return (
     <div className="ess-home ess-section-stack">
-      <section className="ess-home-hero">
+      <header className="ess-home-hero">
         <div className="ess-home-hero-person">
           <EmployeePhoto
             src={profile.photo}
@@ -213,41 +236,78 @@ export function EssHomePage() {
             size="lg"
           />
           <div>
-            <p className="ess-greeting">
+            <h1 className="ess-greeting">
               Good {hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'},{' '}
               {profile.firstName}
-            </p>
+            </h1>
             <p className="ess-lead">
               {formatToday()} · {profile.title}
+            </p>
+            <p className="ess-home-meta">
+              {profile.employeeCode} · {profile.department} · {profile.location}
             </p>
           </div>
         </div>
         <div className="ess-actions">
-          {primaryIsLeave ? (
-            <>
-              <Link to="/ess/leave" className="ess-btn ess-btn-primary">
-                Apply leave
-              </Link>
-              <button type="button" className="ess-btn" onClick={() => markAttendance(today)}>
-                Mark attendance
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="ess-btn ess-btn-primary"
-                onClick={() => markAttendance(today)}
-              >
-                Mark attendance
-              </button>
-              <Link to="/ess/leave" className="ess-btn">
-                Apply leave
-              </Link>
-            </>
-          )}
+          <button
+            type="button"
+            className={punchedIn ? 'ess-btn' : 'ess-btn ess-btn-primary'}
+            disabled={!punchState.enabled || punchedIn}
+            onClick={() => {
+              void punchMe('IN')
+                .then(() => setPunchState((current) => ({ ...current, checkIn: 'now' })))
+                .then(() => {
+                  const [year, month] = today.split('-').map(Number);
+                  return fetchMyAttendance(year, month);
+                })
+                .then((monthData) => {
+                  const day = monthData.days.find((item) => item.date === today);
+                  setPunchState({
+                    enabled: monthData.webPunchEnabled,
+                    checkIn: day?.checkIn ?? '',
+                    checkOut: day?.checkOut ?? '',
+                  });
+                  setPunchError(null);
+                })
+                .catch((err: unknown) =>
+                  setPunchError(err instanceof Error ? err.message : 'Punch failed.'),
+                );
+            }}
+          >
+            Punch in
+          </button>
+          <button
+            type="button"
+            className={!punchedIn || punchedOut ? 'ess-btn' : 'ess-btn ess-btn-primary'}
+            disabled={!punchState.enabled || !punchedIn || punchedOut}
+            onClick={() => {
+              void punchMe('OUT')
+                .then(() => {
+                  const [year, month] = today.split('-').map(Number);
+                  return fetchMyAttendance(year, month);
+                })
+                .then((monthData) => {
+                  const day = monthData.days.find((item) => item.date === today);
+                  setPunchState({
+                    enabled: monthData.webPunchEnabled,
+                    checkIn: day?.checkIn ?? '',
+                    checkOut: day?.checkOut ?? '',
+                  });
+                  setPunchError(null);
+                })
+                .catch((err: unknown) =>
+                  setPunchError(err instanceof Error ? err.message : 'Punch failed.'),
+                );
+            }}
+          >
+            Punch out
+          </button>
+          <Link to="/ess/leave" className="ess-btn">
+            Apply leave
+          </Link>
+          {punchError ? <p className="ess-alert">{punchError}</p> : null}
         </div>
-      </section>
+      </header>
 
       <div className="ess-dash">
         <div className="ess-dash-col">

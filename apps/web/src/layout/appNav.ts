@@ -28,8 +28,7 @@ export type NavIconId =
   | 'settings'
   | 'jobs'
   | 'leadership'
-  | 'leadershipReports'
-  | 'mobile';
+  | 'leadershipReports';
 
 export type NavItem = {
   to: string;
@@ -51,7 +50,6 @@ export type NavSectionId =
   | 'hr-people'
   | 'hr-time'
   | 'hr-programs'
-  | 'hr-insight'
   | 'admin-access'
   | 'admin-platform'
   | 'leadership';
@@ -98,7 +96,7 @@ const NAV_SECTIONS: NavSection[] = [
     emphasis: 'subtle',
     roles: [],
     items: [
-      { to: '/ess/documents', label: 'Document Center', icon: 'documents' },
+      { to: '/ess/documents', label: 'My Document', icon: 'documents' },
       { to: '/ess/people', label: 'People', icon: 'people' },
       { to: '/ess/team', label: 'My Team', icon: 'myTeam' },
     ],
@@ -119,10 +117,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Support',
     emphasis: 'subtle',
     roles: [],
-    items: [
-      { to: '/ess/helpdesk', label: 'Helpdesk', icon: 'helpdesk' },
-      { to: '/mobile', label: 'Mobile', icon: 'mobile' },
-    ],
+    items: [{ to: '/ess/helpdesk', label: 'Helpdesk', icon: 'helpdesk' }],
   },
   {
     id: 'team-approvals',
@@ -192,18 +187,8 @@ const NAV_SECTIONS: NavSection[] = [
     emphasis: 'clear',
     roles: ['HR_EXEC', 'HR_HEAD'],
     items: [
-      { to: '/hr/documents', label: 'Documents', icon: 'hrDocuments' },
+      { to: '/hr/documents', label: 'Document Center', icon: 'hrDocuments' },
       { to: '/hr/workflows', label: 'Workflows', icon: 'workflows' },
-    ],
-  },
-  {
-    id: 'hr-insight',
-    label: 'Insight',
-    emphasis: 'clear',
-    roles: ['HR_EXEC', 'HR_HEAD'],
-    items: [
-      { to: '/hr/reports', label: 'Reports', icon: 'reports' },
-      { to: '/hr/migration', label: 'Migration', icon: 'migration' },
     ],
   },
   {

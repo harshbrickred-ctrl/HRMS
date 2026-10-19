@@ -5,7 +5,9 @@ export type AttendanceStatus =
   | 'Holiday'
   | 'Weekend'
   | 'Leave'
-  | 'PendingCorrection';
+  | 'PendingCorrection'
+  | 'HalfDay'
+  | 'MissingPunch';
 
 export type LeaveBalance = {
   type: string;
@@ -63,6 +65,7 @@ export type EssDocument = {
   uploadedAt: string;
   sizeLabel: string;
   owner: 'mine' | 'company';
+  remote?: boolean;
 };
 
 export type NotificationItem = {
@@ -591,27 +594,115 @@ export function createInitialEssState(): EssState {
     ],
     documents: [
       {
-        id: 'doc-1',
-        name: 'Aadhaar_card.pdf',
-        category: 'KYC',
-        uploadedAt: '2023-06-12',
-        sizeLabel: '240 KB',
-        owner: 'mine',
-      },
-      {
-        id: 'doc-2',
-        name: 'PAN_card.pdf',
-        category: 'KYC',
-        uploadedAt: '2023-06-12',
+        id: 'doc-br-1',
+        name: 'BR offer letter Acceptance',
+        category: 'Brickred Documents',
+        uploadedAt: '2025-11-26',
         sizeLabel: '180 KB',
         owner: 'mine',
       },
       {
-        id: 'doc-3',
-        name: 'Offer_letter.pdf',
-        category: 'Employment',
-        uploadedAt: '2023-06-01',
-        sizeLabel: '420 KB',
+        id: 'doc-br-2',
+        name: 'NDA Acceptance',
+        category: 'Brickred Documents',
+        uploadedAt: '2025-11-26',
+        sizeLabel: '96 KB',
+        owner: 'mine',
+      },
+      {
+        id: 'doc-br-3',
+        name: 'BR Letter of Appointment Acceptance',
+        category: 'Brickred Documents',
+        uploadedAt: '2025-11-26',
+        sizeLabel: '210 KB',
+        owner: 'mine',
+      },
+      {
+        id: 'doc-br-4',
+        name: 'BR Joining Report & Confidential Agreement',
+        category: 'Brickred Documents',
+        uploadedAt: '2025-11-26',
+        sizeLabel: '240 KB',
+        owner: 'mine',
+      },
+      {
+        id: 'doc-edu-1',
+        name: '12th Pass Certificate',
+        category: 'Educational Certificates',
+        uploadedAt: '2025-11-26',
+        sizeLabel: '320 KB',
+        owner: 'mine',
+      },
+      {
+        id: 'doc-edu-2',
+        name: '12th Marksheet',
+        category: 'Educational Certificates',
+        uploadedAt: '2025-11-26',
+        sizeLabel: '280 KB',
+        owner: 'mine',
+      },
+      {
+        id: 'doc-emp-1',
+        name: 'Voter ID',
+        category: 'Employee Documents',
+        uploadedAt: '2025-11-26',
+        sizeLabel: '140 KB',
+        owner: 'mine',
+      },
+      {
+        id: 'doc-emp-2',
+        name: '10th Pass Certificate',
+        category: 'Employee Documents',
+        uploadedAt: '2025-11-26',
+        sizeLabel: '300 KB',
+        owner: 'mine',
+      },
+      {
+        id: 'doc-emp-3',
+        name: 'Bank Passbook',
+        category: 'Employee Documents',
+        uploadedAt: '2025-11-26',
+        sizeLabel: '260 KB',
+        owner: 'mine',
+      },
+      {
+        id: 'doc-emp-4',
+        name: 'passport pic',
+        category: 'Employee Documents',
+        uploadedAt: '2025-11-26',
+        sizeLabel: '85 KB',
+        owner: 'mine',
+      },
+      {
+        id: 'doc-emp-5',
+        name: 'PAN',
+        category: 'Employee Documents',
+        uploadedAt: '2025-11-26',
+        sizeLabel: '120 KB',
+        owner: 'mine',
+      },
+      {
+        id: 'doc-emp-6',
+        name: 'Aadhar Card',
+        category: 'Employee Documents',
+        uploadedAt: '2025-11-26',
+        sizeLabel: '160 KB',
+        owner: 'mine',
+      },
+      {
+        id: 'doc-past-1',
+        name: 'Pay Slip Mar-May',
+        category: 'Past Employment Documents',
+        uploadedAt: '2025-11-26',
+        sizeLabel: '90 KB',
+        owner: 'mine',
+      },
+      {
+        id: 'doc-past-2',
+        name: 'Resignation Acceptance Redlinux Technologies',
+        category: 'Past Employment Documents',
+        uploadedAt: '2025-11-26',
+        sizeLabel: '150 KB',
         owner: 'mine',
       },
       {
@@ -983,6 +1074,83 @@ export function teamLedBy(personId: string) {
 
 export function teamOf(person: Person) {
   return teamLedBy(person.id) ?? teams.find((team) => team.id === person.teamId);
+}
+
+const EMPTY_CONTACTS: ProfileContacts = {
+  mobile: '',
+  personalEmail: '',
+  emergencyName: '',
+  emergencyPhone: '',
+  emergencyRelation: '',
+};
+
+const EMPTY_ADDRESS: ProfileAddress = {
+  lines: '',
+  name: '',
+  email: '',
+  phone1: '',
+  phone2: '',
+  mobile: '',
+  extension: '',
+  fax: '',
+};
+
+export function profileForPerson(person: Person, richProfile: EssProfile): EssProfile {
+  if (person.id === CURRENT_USER_ID || person.isSelf) return richProfile;
+
+  const [firstName, ...rest] = person.name.trim().split(/\s+/);
+  const team = teamOf(person);
+  return {
+    photo: person.photo,
+    employeeCode: person.employeeCode,
+    organizationId: person.organizationId,
+    teamName: team?.name ?? '',
+    firstName: firstName ?? '',
+    lastName: rest.join(' '),
+    dateOfBirth: '',
+    gender: '',
+    nationality: '',
+    title: person.title,
+    department: person.department,
+    location: person.location,
+    joinDate: '',
+    employmentType: '',
+    managerName: person.managerName ?? '',
+    workEmail: person.workEmail,
+    workPhone: person.workPhone,
+    contacts: EMPTY_CONTACTS,
+    extension: '',
+    bloodGroup: '',
+    maritalStatus: '',
+    marriageDate: '',
+    spouse: '',
+    placeOfBirth: '',
+    residentialStatus: '',
+    fatherName: '',
+    religion: '',
+    physicallyChallenged: '',
+    internationalEmployee: '',
+    height: '',
+    weight: '',
+    identificationMark: '',
+    address: EMPTY_ADDRESS,
+    education: [],
+    bankName: '',
+    bankAccountNumber: '',
+    bankBranch: '',
+    pfAccount: '',
+    statutoryIds: [],
+    family: [],
+    costCenter: '',
+    division: '',
+    grade: '',
+    shift: '',
+    webLogin: person.workEmail,
+    previousPositions: [],
+    accessCardNo: '',
+    accessCardValidity: '',
+    previousAssets: [],
+  };
 }
 
 export function departmentOf(person: Person) {

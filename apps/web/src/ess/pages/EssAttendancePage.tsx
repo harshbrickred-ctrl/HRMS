@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   CalendarOff,
   Check,
@@ -10,24 +10,46 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useWorkspace } from '../../workspace/workspaceMock';
-import { StatusChip } from '../components/StatusChip';
-import { useEssData } from '../mock/EssDataContext';
 import {
-  buildLightAttendanceMonth,
-  type AttendanceDay,
-  type AttendanceStatus,
-  type Holiday,
-} from '../mock/essMock';
+  fetchMyAttendance,
+  punchMe,
+  requestAttendanceCorrection,
+  uiStatus,
+  type AttendanceDayDto,
+} from '../../workspace/attendanceApi';
+import { StatusChip } from '../components/StatusChip';
+import { localToday } from '../mock/EssDataContext';
+import { type AttendanceDay, type AttendanceStatus } from '../mock/essMock';
 
 type View = 'month' | 'register';
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const DEMO_TODAY = '2026-09-29';
-const SHIFT_LABEL = 'General · 09:00–18:00';
 const SHIFT_START = 9 * 60;
 const SHIFT_END = 18 * 60;
 const BREAK_MINS = 60;
+
+type LiveDay = AttendanceDay & {
+  lateMinutes: number | null;
+  earlyMinutes: number | null;
+  workMinutes: number | null;
+  breakMinutes: number | null;
+  missingFlag: boolean;
+};
+
+function liveDay(day: AttendanceDayDto): LiveDay {
+  return {
+    date: day.date,
+    status: uiStatus(day.status),
+    checkIn: day.checkIn ?? undefined,
+    checkOut: day.checkOut ?? undefined,
+    note: day.note,
+    lateMinutes: day.lateMinutes,
+    earlyMinutes: day.earlyMinutes,
+    workMinutes: day.workMinutes,
+    breakMinutes: day.breakMinutes,
+    missingFlag: day.missingPunch,
+  };
+}
 
 const SESSIONS = [
   { name: 'Morning', window: '09:00–13:00', slot: 'in' as const },
@@ -89,6 +111,8 @@ function formatShort(isoDate: string) {
 
 function chipStatus(status: string) {
   if (status === 'PendingCorrection') return 'Pending correction';
+  if (status === 'HalfDay') return 'Half day';
+  if (status === 'MissingPunch') return 'Missing punch';
   return status;
 }
 
@@ -99,6 +123,8 @@ const STATUS_MARK: Record<AttendanceStatus, { label: string; icon: LucideIcon }>
   Holiday: { label: 'H', icon: Flag },
   Weekend: { label: 'Off', icon: Moon },
   PendingCorrection: { label: '!', icon: CircleAlert },
+  HalfDay: { label: '½', icon: CircleAlert },
+  MissingPunch: { label: '!', icon: CircleAlert },
 };
 
 function dayClass(status?: AttendanceStatus, selected = false, today = false) {
@@ -115,7 +141,7 @@ type DayMath = {
   missingPunch: boolean;
 };
 
-function dayMath(day?: AttendanceDay): DayMath {
+function dayMath(day?: LiveDay): DayMath {
   const empty: DayMath = {
     late: null,
     early: null,
@@ -124,6 +150,20 @@ function dayMath(day?: AttendanceDay): DayMath {
     desk: null,
     missingPunch: false,
   };
+  if (day && 'workMinutes' in day) {
+    const desk = day.workMinutes;
+    const breakMins = day.breakMinutes;
+    const gross =
+      desk != null && breakMins != null ? desk + breakMins : desk;
+    return {
+      late: day.lateMinutes,
+      early: day.earlyMinutes,
+      work: gross,
+      breakMins,
+      desk,
+      missingPunch: day.missingFlag || day.status === 'MissingPunch',
+    };
+  }
   if (!day || (day.status !== 'Present' && day.status !== 'PendingCorrection')) return empty;
 
   const late = day.checkIn ? Math.max(0, toMinutes(day.checkIn) - SHIFT_START) : null;
@@ -145,56 +185,85 @@ function dayMath(day?: AttendanceDay): DayMath {
   };
 }
 
-function isException(day: AttendanceDay) {
+function isException(day: LiveDay) {
   if (day.status === 'Weekend' || day.status === 'Holiday' || day.status === 'Leave') return false;
-  if (day.status === 'Absent' || day.status === 'PendingCorrection') return true;
+  if (
+    day.status === 'Absent' ||
+    day.status === 'PendingCorrection' ||
+    day.status === 'MissingPunch' ||
+    day.status === 'HalfDay'
+  ) {
+    return true;
+  }
   return day.status === 'Present' && (!day.checkIn || !day.checkOut);
 }
 
-function isOnTime(day: AttendanceDay) {
+function isOnTime(day: LiveDay) {
   if (!day.checkIn) return false;
   if (day.status !== 'Present' && day.status !== 'PendingCorrection') return false;
   return toMinutes(day.checkIn) <= SHIFT_START;
 }
 
-function monthCells(year: number, month: number, attendance: AttendanceDay[], holidays: Holiday[]) {
+function monthCells(year: number, month: number, attendance: LiveDay[]) {
   const prefix = `${year}-${String(month).padStart(2, '0')}`;
   const stored = new Map(
     attendance.filter((day) => day.date.startsWith(prefix)).map((day) => [day.date, day]),
   );
-  const light = new Map(
-    buildLightAttendanceMonth(year, month, holidays).map((day) => [day.date, day]),
-  );
   const last = new Date(year, month, 0).getDate();
-  const cells: Array<{ date: string; day: number; record?: AttendanceDay }> = [];
+  const cells: Array<{ date: string; day: number; record?: LiveDay }> = [];
   for (let day = 1; day <= last; day++) {
     const date = iso(year, month, day);
-    cells.push({ date, day, record: stored.get(date) ?? light.get(date) });
+    cells.push({ date, day, record: stored.get(date) });
   }
   return cells;
 }
 
 export function EssAttendancePage() {
-  const { attendance, corrections, holidays, markAttendance, requestCorrection } = useEssData();
-  const { inbox } = useWorkspace();
-  const correctionRows = corrections.map((item) => {
-    const stored = inbox.find((entry) => entry.id === item.id);
-    return stored
-      ? { ...item, status: stored.status, approverName: stored.approverName }
-      : item;
-  });
+  const today = localToday();
+  const [attendance, setAttendance] = useState<LiveDay[]>([]);
+  const [corrections, setCorrections] = useState<
+    Array<{ id: string; date: string; requestedStatus: string; reason: string; status: string }>
+  >([]);
+  const [webPunchEnabled, setWebPunchEnabled] = useState(false);
+  const [shiftLabel, setShiftLabel] = useState('General · 09:00–18:00');
   const [view, setView] = useState<View>('month');
-  const [cursor, setCursor] = useState({ year: 2026, month: 9 });
-  const [selectedDate, setSelectedDate] = useState(DEMO_TODAY);
+  const [cursor, setCursor] = useState(() => {
+    const [year, month] = today.split('-').map(Number);
+    return { year, month };
+  });
+  const [selectedDate, setSelectedDate] = useState(today);
   const [regularizing, setRegularizing] = useState(false);
-  const [corrDate, setCorrDate] = useState(DEMO_TODAY);
-  const [corrStatus, setCorrStatus] = useState<'Present' | 'Absent'>('Present');
+  const [corrDate, setCorrDate] = useState(today);
+  const [corrStatus, setCorrStatus] = useState<'present' | 'absent' | 'leave'>('present');
   const [corrReason, setCorrReason] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancel = false;
+    fetchMyAttendance(cursor.year, cursor.month)
+      .then((month) => {
+        if (cancel) return;
+        setAttendance(month.days.map(liveDay));
+        setCorrections(month.corrections);
+        setWebPunchEnabled(month.webPunchEnabled);
+        if (month.shift) {
+          setShiftLabel(
+            `${month.shift.name} · ${month.shift.startTime}–${month.shift.endTime}`,
+          );
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancel) setError(err instanceof Error ? err.message : 'Could not load attendance.');
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [cursor.month, cursor.year, reloadKey]);
 
   const cells = useMemo(
-    () => monthCells(cursor.year, cursor.month, attendance, holidays),
-    [attendance, cursor.month, cursor.year, holidays],
+    () => monthCells(cursor.year, cursor.month, attendance),
+    [attendance, cursor.month, cursor.year],
   );
   const recorded = cells.flatMap((cell) => (cell.record ? [cell.record] : []));
   const mathByDate = useMemo(() => {
@@ -230,26 +299,37 @@ export function EssAttendancePage() {
     setSelectedDate(date);
     setView('month');
     setCorrDate(date);
-    setCorrStatus('Present');
+    setCorrStatus('present');
     setCorrReason('');
     setError(null);
     setRegularizing(true);
   }
 
-  function onCorrection(event: FormEvent) {
+  async function onPunch(direction: 'IN' | 'OUT') {
+    setError(null);
+    try {
+      await punchMe(direction);
+      setReloadKey((value) => value + 1);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Punch failed.');
+    }
+  }
+
+  async function onCorrection(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    const result = requestCorrection({
-      date: corrDate,
-      requestedStatus: corrStatus,
-      reason: corrReason,
-    });
-    if (!result.ok) {
-      setError(result.error);
-      return;
+    try {
+      await requestAttendanceCorrection({
+        date: corrDate,
+        requestedStatus: corrStatus,
+        reason: corrReason,
+      });
+      setCorrReason('');
+      setRegularizing(false);
+      setReloadKey((value) => value + 1);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Correction failed.');
     }
-    setCorrReason('');
-    setRegularizing(false);
   }
 
   return (
@@ -365,7 +445,7 @@ export function EssAttendancePage() {
                     className={dayClass(
                       cell.record?.status,
                       selectedDate === cell.date,
-                      cell.date === DEMO_TODAY,
+                      cell.date === today,
                     )}
                     onClick={() => {
                       setSelectedDate(cell.date);
@@ -489,19 +569,27 @@ export function EssAttendancePage() {
               setRegularizing(false);
               setError(null);
             }}
-            onMark={() => markAttendance(DEMO_TODAY)}
-            canMark={selectedDate === DEMO_TODAY && selected?.record?.status !== 'Present'}
+            shiftLabel={shiftLabel}
+            onPunchIn={() => void onPunch('IN')}
+            onPunchOut={() => void onPunch('OUT')}
+            canPunchIn={webPunchEnabled && selectedDate === today && !selected?.record?.checkIn}
+            canPunchOut={
+              webPunchEnabled &&
+              selectedDate === today &&
+              Boolean(selected?.record?.checkIn) &&
+              !selected?.record?.checkOut
+            }
           />
         ) : null}
       </div>
 
       <section id="ess-att-requests" className="ess-panel">
         <h2>Your requests</h2>
-        {correctionRows.length === 0 ? (
+        {corrections.length === 0 ? (
           <p className="ess-empty">No regularization requests.</p>
         ) : (
           <ul className="ess-list">
-            {correctionRows.map((item) => (
+            {corrections.map((item) => (
               <li key={item.id} className="ess-list-item">
                 <div className="ess-leave-request-head">
                   <strong>{formatDay(item.date)}</strong>
@@ -509,9 +597,6 @@ export function EssAttendancePage() {
                 </div>
                 <span className="ess-list-meta">Requested {item.requestedStatus}</span>
                 <span className="ess-muted">{item.reason}</span>
-                {item.status === 'Pending' && item.approverName ? (
-                  <span className="ess-muted">With {item.approverName}</span>
-                ) : null}
               </li>
             ))}
           </ul>
@@ -523,6 +608,7 @@ export function EssAttendancePage() {
 
 function DayDossier({
   date,
+  shiftLabel,
   day,
   math,
   regularizing,
@@ -536,25 +622,30 @@ function DayDossier({
   onSubmit,
   onRegularize,
   onCancel,
-  onMark,
-  canMark,
+  onPunchIn,
+  onPunchOut,
+  canPunchIn,
+  canPunchOut,
 }: {
   date: string;
-  day?: AttendanceDay;
+  shiftLabel: string;
+  day?: LiveDay;
   math?: DayMath;
   regularizing: boolean;
   corrDate: string;
-  corrStatus: 'Present' | 'Absent';
+  corrStatus: 'present' | 'absent' | 'leave';
   corrReason: string;
   error: string | null;
   onCorrDate: (value: string) => void;
-  onCorrStatus: (value: 'Present' | 'Absent') => void;
+  onCorrStatus: (value: 'present' | 'absent' | 'leave') => void;
   onCorrReason: (value: string) => void;
   onSubmit: (event: FormEvent) => void;
   onRegularize: () => void;
   onCancel: () => void;
-  onMark: () => void;
-  canMark: boolean;
+  onPunchIn: () => void;
+  onPunchOut: () => void;
+  canPunchIn: boolean;
+  canPunchOut: boolean;
 }) {
   const short = formatShort(date);
 
@@ -567,7 +658,7 @@ function DayDossier({
         </div>
         {day ? <StatusChip status={chipStatus(day.status)} /> : <span className="ess-muted">Not marked</span>}
       </div>
-      <p className="ess-muted ess-att-shift">{SHIFT_LABEL}</p>
+      <p className="ess-muted ess-att-shift">{shiftLabel}</p>
 
       {regularizing ? (
         <form className="ess-form" onSubmit={onSubmit}>
@@ -587,10 +678,13 @@ function DayDossier({
             <select
               id="corr-status"
               value={corrStatus}
-              onChange={(event) => onCorrStatus(event.target.value as 'Present' | 'Absent')}
+              onChange={(event) =>
+                onCorrStatus(event.target.value as 'present' | 'absent' | 'leave')
+              }
             >
-              <option value="Present">Present</option>
-              <option value="Absent">Absent</option>
+              <option value="present">Present</option>
+              <option value="absent">Absent</option>
+              <option value="leave">Leave</option>
             </select>
           </div>
           <div className="ess-field">
@@ -653,11 +747,22 @@ function DayDossier({
           </div>
 
           <div className="ess-actions">
-            {canMark ? (
-              <button type="button" className="ess-btn ess-btn-primary" onClick={onMark}>
-                Mark present
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className={canPunchIn ? 'ess-btn ess-btn-primary' : 'ess-btn'}
+              disabled={!canPunchIn}
+              onClick={onPunchIn}
+            >
+              Punch in
+            </button>
+            <button
+              type="button"
+              className={canPunchOut ? 'ess-btn ess-btn-primary' : 'ess-btn'}
+              disabled={!canPunchOut}
+              onClick={onPunchOut}
+            >
+              Punch out
+            </button>
             <button type="button" className="ess-btn" onClick={onRegularize}>
               Regularize
             </button>

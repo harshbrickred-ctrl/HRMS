@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Bell, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { EssDataProvider } from '../ess/mock/EssDataContext';
 import { photoForEmail } from '../ess/mock/essMock';
 import { ThemeToggle } from '../theme/ThemeToggle';
 import {
@@ -43,6 +44,7 @@ export function AppShell() {
     .join(' ');
 
   return (
+    <EssDataProvider>
     <div className={shellClass}>
       <header className="app-shell-top" role="banner">
         <div className="app-shell-top-left">
@@ -130,28 +132,32 @@ export function AppShell() {
               </div>
             ))}
           </div>
-          <button
-            type="button"
-            className="app-shell-side-collapse"
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            onClick={toggleCollapsed}
-          >
-            {collapsed ? (
-              <PanelLeftOpen size={18} aria-hidden />
-            ) : (
-              <PanelLeftClose size={18} aria-hidden />
-            )}
-            <span className="app-shell-nav-label">
-              {collapsed ? 'Expand' : 'Collapse'}
-            </span>
-          </button>
+          <div className="app-shell-side-foot">
+            <button
+              type="button"
+              className="app-shell-icon-hit app-shell-collapse"
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              onClick={toggleCollapsed}
+            >
+              {collapsed ? (
+                <PanelLeftOpen size={18} aria-hidden />
+              ) : (
+                <PanelLeftClose size={18} aria-hidden />
+              )}
+              <span className="app-shell-nav-label">
+                {collapsed ? 'Expand' : 'Collapse'}
+              </span>
+            </button>
+          </div>
         </aside>
 
         <main className="app-shell-main" role="main">
           <div className="app-shell-main-inner">
-            <header className="app-shell-pagehead">
-              <h1>{pageTitle}</h1>
-            </header>
+            {location.pathname === '/ess' ? null : (
+              <header className="app-shell-pagehead">
+                <h1>{pageTitle}</h1>
+              </header>
+            )}
             <div className="app-shell-content" key={location.pathname}>
               <Outlet />
             </div>
@@ -159,5 +165,6 @@ export function AppShell() {
         </main>
       </div>
     </div>
+    </EssDataProvider>
   );
 }

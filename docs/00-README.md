@@ -57,8 +57,9 @@ For 1–2 minute topic cards (meetings / email / onboarding), use the mirrored p
 3. [05-product-requirements-mvp.md](05-product-requirements-mvp.md)
 4. [06-srs-functional.md](06-srs-functional.md)
 5. [07-user-stories.md](07-user-stories.md)
-6. [08-process-flows.md](08-process-flows.md)
-7. [09-ux-ui-specification.md](09-ux-ui-specification.md)
+6. [08-process-flows.md](08-process-flows.md) — intended process (spec)
+7. [33-implemented-workflow-catalog.md](33-implemented-workflow-catalog.md) — workflows present in the app today
+8. [09-ux-ui-specification.md](09-ux-ui-specification.md)
 
 ### For Engineering / Architecture / Security
 

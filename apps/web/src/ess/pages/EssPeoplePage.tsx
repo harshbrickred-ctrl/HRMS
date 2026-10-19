@@ -1,24 +1,105 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { fetchDirectory } from '../../workspace/hrApi';
 import { EmployeePhoto } from '../components/EmployeePhoto';
 import { useEssData } from '../mock/EssDataContext';
-import { ORGANIZATION, personForLogin, teams } from '../mock/essMock';
+import { departments, ORGANIZATION, personForLogin, teams, type Person } from '../mock/essMock';
+
+type DirPerson = Person & { teamLabel: string };
 
 function teamName(teamId: string | undefined) {
   if (!teamId) return '';
   return teams.find((team) => team.id === teamId)?.name ?? '';
 }
 
-export function EssPeoplePage() {
+function teamLabelOf(person: DirPerson) {
+  return person.teamLabel || teamName(person.teamId);
+}
+
+function useDirectoryPeople() {
   const { user } = useAuth();
-  const { people } = useEssData();
-  const me = personForLogin(user?.email, people);
+  const { people: mockPeople } = useEssData();
+  const [directory, setDirectory] = useState<DirPerson[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchDirectory()
+      .then((rows) => {
+        if (cancelled) return;
+        setDirectory(
+          rows.map((row) => ({
+            id: row.id,
+            photo: row.photo,
+            employeeCode: row.employeeCode,
+            organizationId: ORGANIZATION.code,
+            name: `${row.firstName} ${row.lastName}`.trim(),
+            title: row.designation,
+            department: row.departmentName ?? 'Unassigned',
+            location: row.locationName ?? '',
+            workEmail: row.email,
+            workPhone: '',
+            teamId: row.teamId ?? undefined,
+            managerId: row.managerId ?? undefined,
+            managerName: row.managerName ?? undefined,
+            teamLabel: row.teamName ?? '',
+          })),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setDirectory(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.email]);
+
+  const people: DirPerson[] =
+    directory ??
+    mockPeople.map((person) => ({ ...person, teamLabel: teamName(person.teamId) }));
+  const me =
+    people.find((person) => person.workEmail.toLowerCase() === user?.email?.toLowerCase()) ??
+    personForLogin(user?.email, people);
+  return { user, people, me: me as DirPerson | undefined };
+}
+
+function reportsTo(person: Person, people: Person[]) {
+  return people
+    .filter((candidate) => candidate.managerId === person.id && candidate.id !== person.id)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function peersOf(person: Person, people: Person[]) {
+  if (!person.teamId) return [];
+  return people
+    .filter(
+      (candidate) =>
+        candidate.teamId === person.teamId &&
+        candidate.id !== person.id &&
+        candidate.managerId !== person.id,
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function PersonLink({ person }: { person: Person }) {
+  return (
+    <Link to={`/ess/people/${person.id}`} className="ess-report-person">
+      <EmployeePhoto src={person.photo} name={person.name} />
+      <span>
+        <strong>{person.name}</strong>
+        <span className="ess-muted">{person.title}</span>
+      </span>
+    </Link>
+  );
+}
+
+export function EssPeoplePage() {
+  const { people, me } = useDirectoryPeople();
   const [query, setQuery] = useState('');
   const [department, setDepartment] = useState('');
   const [location, setLocation] = useState('');
 
-  const departments = useMemo(
+  const departmentNames = useMemo(
     () => [...new Set(people.map((p) => p.department))].sort(),
     [people],
   );
@@ -39,93 +120,142 @@ export function EssPeoplePage() {
         p.workEmail.toLowerCase().includes(q) ||
         p.employeeCode.toLowerCase().includes(q) ||
         p.organizationId.toLowerCase().includes(q) ||
-        teamName(p.teamId).toLowerCase().includes(q) ||
-        p.department.toLowerCase().includes(q)
+        teamLabelOf(p).toLowerCase().includes(q) ||
+        p.department.toLowerCase().includes(q) ||
+        p.location.toLowerCase().includes(q)
       );
     });
   }, [people, query, department, location]);
 
+  const groups = useMemo(() => {
+    const order = new Map(departments.map((item, index) => [item.name, index]));
+    const byDepartment = new Map<string, Person[]>();
+    for (const person of filtered) {
+      const list = byDepartment.get(person.department) ?? [];
+      list.push(person);
+      byDepartment.set(person.department, list);
+    }
+    return [...byDepartment.entries()]
+      .sort(([a], [b]) => (order.get(a) ?? 99) - (order.get(b) ?? 99) || a.localeCompare(b))
+      .map(([name, members]) => ({
+        name,
+        members: [...members].sort((a, b) => {
+          if (a.id === me?.id) return -1;
+          if (b.id === me?.id) return 1;
+          return a.name.localeCompare(b.name);
+        }),
+      }));
+  }, [filtered, me?.id]);
+
+  const filtersOn = Boolean(query.trim() || department || location);
+
   return (
     <div className="ess-section-stack">
-      <div className="ess-insights">
-        <article className="ess-panel ess-insight">
-          <p className="ess-muted">People</p>
-          <p className="ess-insight-value">{people.length}</p>
-        </article>
-        <article className="ess-panel ess-insight">
-          <p className="ess-muted">Departments</p>
-          <p className="ess-insight-value">{departments.length}</p>
-        </article>
-        <article className="ess-panel ess-insight">
-          <p className="ess-muted">Locations</p>
-          <p className="ess-insight-value">{locations.length}</p>
-        </article>
-      </div>
-
-      <div className="ess-filters">
-        <input
-          type="search"
-          placeholder="Search name, title, email…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search people"
-        />
-        <select
-          value={department}
-          onChange={(e) => setDepartment(e.target.value)}
-          aria-label="Filter by department"
-        >
-          <option value="">All departments</option>
-          {departments.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-        <select
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          aria-label="Filter by location"
-        >
-          <option value="">All locations</option>
-          {locations.map((l) => (
-            <option key={l} value={l}>
-              {l}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <p className="ess-muted" style={{ marginBottom: '0.85rem' }}>
-        Showing {filtered.length} of {people.length}
+      <p className="ess-page-lead">
+        Work details for everyone at {ORGANIZATION.name}. Personal records stay on your profile.
       </p>
 
-      {filtered.length === 0 ? (
-        <p className="ess-empty">No people match your filters.</p>
+      <div className="ess-filters">
+        <label className="ess-filter-field ess-filter-search">
+          Search
+          <input
+            type="search"
+            placeholder="Name, role, team, or email"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+        <label className="ess-filter-field">
+          Department
+          <select value={department} onChange={(e) => setDepartment(e.target.value)}>
+            <option value="">All</option>
+            {departmentNames.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="ess-filter-field">
+          Location
+          <select value={location} onChange={(e) => setLocation(e.target.value)}>
+            <option value="">All</option>
+            {locations.map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </label>
+        {filtersOn ? (
+          <button
+            type="button"
+            className="ess-btn ess-btn-ghost"
+            onClick={() => {
+              setQuery('');
+              setDepartment('');
+              setLocation('');
+            }}
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
+
+      <p className="ess-result-count">
+        {filtersOn
+          ? `${filtered.length} of ${people.length} people`
+          : `${people.length} people`}
+      </p>
+
+      {groups.length === 0 ? (
+        <p className="ess-empty">No one matches this search.</p>
       ) : (
-        <div className="ess-person-grid">
-          {filtered.map((p) => (
-            <Link
-              key={p.id}
-              to={`/ess/people/${p.id}`}
-              className="ess-person-card"
-            >
-              <EmployeePhoto src={p.photo} name={p.name} />
-              <h3>
-                {p.name}
-                {p.id === me?.id ? (
-                  <span className="ess-muted"> · You</span>
-                ) : null}
-              </h3>
-              <span className="ess-muted">{p.title}</span>
-              <span className="ess-muted">
-                {p.employeeCode}
-                {teamName(p.teamId) ? ` · ${teamName(p.teamId)}` : ''}
-              </span>
-              <span className="ess-muted">
-                {p.department} · {p.location}
-              </span>
-            </Link>
+        <div className="ess-dir">
+          {groups.map((group) => (
+            <section key={group.name} className="ess-dir-group">
+              <h2>
+                {group.name}
+                <span>{group.members.length}</span>
+              </h2>
+              <div className="ess-dir-cols" aria-hidden="true">
+                <span className="ess-dir-head">
+                  <span>Person</span>
+                  <span>Role</span>
+                  <span>Team and location</span>
+                </span>
+                <span>Contact</span>
+              </div>
+              <ul>
+                {group.members.map((p) => {
+                  const team = teamLabelOf(p);
+                  return (
+                    <li key={p.id} className="ess-dir-row">
+                      <Link to={`/ess/people/${p.id}`} className="ess-dir-main">
+                        <span className="ess-dir-person">
+                          <EmployeePhoto src={p.photo} name={p.name} />
+                          <span>
+                            <strong>
+                              {p.name}
+                              {p.id === me?.id ? <span className="ess-you">You</span> : null}
+                            </strong>
+                            <span className="ess-dir-meta">{p.employeeCode}</span>
+                          </span>
+                        </span>
+                        <span className="ess-dir-role">{p.title}</span>
+                        <span className="ess-dir-place">
+                          {team ? `${team} · ${p.location}` : p.location}
+                        </span>
+                      </Link>
+                      <span className="ess-dir-contact">
+                        <a href={`mailto:${p.workEmail}`}>{p.workEmail}</a>
+                        <a href={`tel:${p.workPhone}`}>{p.workPhone}</a>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
           ))}
         </div>
       )}
@@ -134,23 +264,23 @@ export function EssPeoplePage() {
 }
 
 export function EssPersonDetailPage() {
-  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
-  const { people } = useEssData();
-  const me = personForLogin(user?.email, people);
+  const { people, me } = useDirectoryPeople();
   const navigate = useNavigate();
   const person = people.find((p) => p.id === id);
+  const manager = person?.managerId
+    ? people.find((candidate) => candidate.id === person.managerId)
+    : undefined;
+  const reports = person ? reportsTo(person, people) : [];
+  const peers = person ? peersOf(person, people) : [];
+  const team = person ? teamLabelOf(person) : '';
 
   if (!person) {
     return (
       <section className="ess-panel">
         <h2>Person not found</h2>
         <p className="ess-empty">This directory entry does not exist.</p>
-        <button
-          type="button"
-          className="ess-btn"
-          onClick={() => navigate('/ess/people')}
-        >
+        <button type="button" className="ess-btn" onClick={() => navigate('/ess/people')}>
           Back to People
         </button>
       </section>
@@ -161,7 +291,7 @@ export function EssPersonDetailPage() {
     <div className="ess-section-stack">
       <div className="ess-actions">
         <Link to="/ess/people" className="ess-btn">
-          ← People
+          People
         </Link>
         {person.id === me?.id ? (
           <Link to="/ess/profile" className="ess-btn ess-btn-primary">
@@ -170,63 +300,109 @@ export function EssPersonDetailPage() {
         ) : null}
       </div>
 
-      <section className="ess-panel">
-        <div className="ess-person-head">
+      <section className="ess-panel ess-dir-profile">
+        <header className="ess-dir-identity">
           <EmployeePhoto src={person.photo} name={person.name} size="lg" />
           <div>
-            <h2 style={{ margin: 0 }}>{person.name}</h2>
-            <p className="ess-muted" style={{ margin: '0.2rem 0 0' }}>
-              {person.title} · {person.employeeCode} · {ORGANIZATION.name}
+            <h2>
+              {person.name}
+              {person.id === me?.id ? <span className="ess-you">You</span> : null}
+            </h2>
+            <p>{person.title}</p>
+            <p className="ess-muted">
+              {person.employeeCode} · {ORGANIZATION.name}
             </p>
           </div>
-        </div>
+        </header>
 
-        <dl className="ess-dl" style={{ marginTop: '1.15rem' }}>
+        <div className="ess-dir-facts">
           <div>
-            <dt>Employee id</dt>
-            <dd>{person.employeeCode}</dd>
+            <h3>Work</h3>
+            <dl className="ess-dl">
+              <div>
+                <dt>Department</dt>
+                <dd>{person.department}</dd>
+              </div>
+              <div>
+                <dt>Team</dt>
+                <dd>{team || '—'}</dd>
+              </div>
+              <div>
+                <dt>Location</dt>
+                <dd>{person.location}</dd>
+              </div>
+              <div>
+                <dt>Manager</dt>
+                <dd>
+                  {manager ? (
+                    <Link to={`/ess/people/${manager.id}`}>{manager.name}</Link>
+                  ) : (
+                    '—'
+                  )}
+                </dd>
+              </div>
+            </dl>
           </div>
           <div>
-            <dt>Organization</dt>
-            <dd>
-              {ORGANIZATION.name} · {ORGANIZATION.code}
-            </dd>
+            <h3>Contact</h3>
+            <dl className="ess-dl">
+              <div>
+                <dt>Work email</dt>
+                <dd>
+                  <a href={`mailto:${person.workEmail}`}>{person.workEmail}</a>
+                </dd>
+              </div>
+              <div>
+                <dt>Work phone</dt>
+                <dd>
+                  <a href={`tel:${person.workPhone}`}>{person.workPhone}</a>
+                </dd>
+              </div>
+            </dl>
           </div>
-          <div>
-            <dt>Department</dt>
-            <dd>{person.department}</dd>
-          </div>
-          <div>
-            <dt>Team</dt>
-            <dd>{teamName(person.teamId) || '—'}</dd>
-          </div>
-          <div>
-            <dt>Location</dt>
-            <dd>{person.location}</dd>
-          </div>
-          <div>
-            <dt>Work email</dt>
-            <dd>
-              <a href={`mailto:${person.workEmail}`}>{person.workEmail}</a>
-            </dd>
-          </div>
-          <div>
-            <dt>Work phone</dt>
-            <dd>{person.workPhone}</dd>
-          </div>
-          <div>
-            <dt>Manager</dt>
-            <dd>
-              {person.managerId ? (
-                <Link to={`/ess/people/${person.managerId}`}>
-                  {person.managerName}
-                </Link>
-              ) : (
-                person.managerName ?? '—'
-              )}
-            </dd>
-          </div>
-        </dl>
+        </div>
+      </section>
+
+      <section className="ess-panel">
+        <h2>Reporting line</h2>
+        <ol className="ess-report-line">
+          {manager ? (
+            <li>
+              <span className="ess-report-role">Manager</span>
+              <PersonLink person={manager} />
+            </li>
+          ) : null}
+          <li>
+            <span className="ess-report-role">{person.id === me?.id ? 'You' : 'This person'}</span>
+            <span className="ess-report-person">
+              <EmployeePhoto src={person.photo} name={person.name} />
+              <span>
+                <strong>{person.name}</strong>
+                <span className="ess-muted">{person.title}</span>
+              </span>
+            </span>
+          </li>
+          {reports.map((report) => (
+            <li key={report.id}>
+              <span className="ess-report-role">Reports</span>
+              <PersonLink person={report} />
+            </li>
+          ))}
+        </ol>
+
+        {team && peers.length > 0 ? (
+          <>
+            <h3 className="ess-subhead">Also on {team}</h3>
+            <ol className="ess-report-line">
+              {peers.map((peer) => (
+                <li key={peer.id}>
+                  <span className="ess-report-role">Teammate</span>
+                  <PersonLink person={peer} />
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : null}
       </section>
     </div>
   );

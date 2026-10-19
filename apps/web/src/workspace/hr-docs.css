@@ -1,0 +1,376 @@
+.hr-docs {
+  display: grid;
+  gap: 16px;
+}
+
+.hr-docs-lead,
+.hr-docs-empty,
+.hr-docs-person p,
+.hr-docs-file-copy span {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.hr-docs-lead {
+  max-width: 46rem;
+  font-size: 14px;
+}
+
+.hr-docs-alert {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--chip-danger-line);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.hr-docs-person p.is-error {
+  color: var(--danger);
+}
+
+.hr-docs-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.hr-docs-stats div,
+.hr-docs-rail,
+.hr-docs-detail {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.hr-docs-stats div {
+  padding: 12px 14px;
+  box-shadow: none;
+}
+
+.hr-docs-stats dt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hr-docs-stats dd {
+  margin: 4px 0 0;
+  font-size: 1.35rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.hr-docs-workspace {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.hr-docs-rail,
+.hr-docs-detail {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+  min-width: 0;
+}
+
+.hr-docs-rail {
+  position: sticky;
+  top: 12px;
+}
+
+.hr-docs-rail-head,
+.hr-docs-person {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.hr-docs-rail-head {
+  justify-content: space-between;
+}
+
+.hr-docs-rail-head h2,
+.hr-docs-person h2,
+.hr-docs-groups h3 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.hr-docs-person h2 {
+  font-size: 1.25rem;
+}
+
+.hr-docs-person > div {
+  min-width: 0;
+}
+
+.hr-docs-rail-head span,
+.hr-docs-groups h3 {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.hr-docs-groups h3 {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hr-docs-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-elevated);
+  color: var(--muted);
+}
+
+.hr-docs-search input,
+.hr-docs-upload select {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.hr-docs-search input:focus,
+.hr-docs-upload select:focus,
+.hr-docs-file input:focus {
+  outline: none;
+}
+
+.hr-docs-search:focus-within,
+.hr-docs-upload select:focus-visible,
+.hr-docs-file-control:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.hr-docs-people,
+.hr-docs-groups ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hr-docs-people {
+  max-height: 520px;
+  overflow: auto;
+}
+
+.hr-docs-people button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.hr-docs-people button:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+.hr-docs-people button.is-selected {
+  border-left-color: var(--ink);
+  background: color-mix(in srgb, var(--accent-fill) 62%, var(--surface));
+}
+
+.hr-docs-people strong,
+.hr-docs-people button > span > span,
+.hr-docs-file-copy strong,
+.hr-docs-file-copy span {
+  display: block;
+}
+
+.hr-docs-people strong,
+.hr-docs-file-copy strong {
+  font-weight: 600;
+}
+
+.hr-docs-people button > span > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.hr-docs-upload {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-elevated);
+}
+
+.hr-docs-upload label,
+.hr-docs-file {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hr-docs-upload label > span,
+.hr-docs-file > span:first-child {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hr-docs-upload select,
+.hr-docs-file-control {
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.hr-docs-upload select {
+  padding: 0 10px;
+}
+
+.hr-docs-file-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 4px 0 10px;
+}
+
+.hr-docs-file-control span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hr-docs-file input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.hr-docs-file-control button {
+  flex: 0 0 auto;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.hr-docs-file-control button:hover {
+  background: color-mix(in srgb, var(--ink) 4%, var(--surface));
+}
+
+.hr-docs-groups {
+  display: grid;
+  gap: 16px;
+}
+
+.hr-docs-groups section {
+  display: grid;
+  gap: 8px;
+}
+
+.hr-docs-groups li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-elevated);
+}
+
+.hr-docs-ext {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent-fill) 70%, var(--surface));
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.hr-docs-file-copy {
+  min-width: 0;
+}
+
+.hr-docs-file-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hr-docs-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 860px) {
+  .hr-docs-stats,
+  .hr-docs-workspace,
+  .hr-docs-upload,
+  .hr-docs-groups li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hr-docs-rail {
+    position: static;
+  }
+
+  .hr-docs-people {
+    max-height: 240px;
+  }
+
+  .hr-docs-upload .ess-btn {
+    width: 100%;
+  }
+}

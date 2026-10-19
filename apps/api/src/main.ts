@@ -10,6 +10,7 @@ async function bootstrapServer(): Promise<Express> {
   if (cachedServer) return cachedServer;
 
   const expressApp = express();
+  expressApp.use('/api/v1/iclock', express.text({ type: () => true, limit: '5mb' }));
   const app = await NestFactory.create(
     AppModule,
     new ExpressAdapter(expressApp),

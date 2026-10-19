@@ -1,6 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useEssData } from '../mock/EssDataContext';
+import {
+  fetchNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  type NotificationDto,
+} from '../../workspace/notificationsApi';
 
 function formatWhen(iso: string) {
   try {
@@ -16,9 +21,24 @@ function formatWhen(iso: string) {
 }
 
 export function EssNotificationsPage() {
-  const { notifications, unreadCount, markNotificationRead, markAllNotificationsRead } =
-    useEssData();
+  const [notifications, setNotifications] = useState<NotificationDto[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [error, setError] = useState<string | null>(null);
+
+  function load() {
+    fetchNotifications()
+      .then((rows) => {
+        setNotifications(rows);
+        setError(null);
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load notifications.'));
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const unreadCount = notifications.filter((item) => !item.read).length;
   const visible =
     filter === 'unread' ? notifications.filter((item) => !item.read) : notifications;
 
@@ -38,6 +58,7 @@ export function EssNotificationsPage() {
           <p className="ess-insight-value">{notifications.length - unreadCount}</p>
         </article>
       </div>
+      {error ? <p className="ess-alert">{error}</p> : null}
 
       <section className="ess-panel">
         <div className="ess-att-toolbar">
@@ -66,8 +87,10 @@ export function EssNotificationsPage() {
             <button
               type="button"
               className="ess-btn"
-              onClick={markAllNotificationsRead}
               disabled={unreadCount === 0}
+              onClick={() => {
+                void markAllNotificationsRead().then(load);
+              }}
             >
               Mark all read
             </button>
@@ -78,19 +101,30 @@ export function EssNotificationsPage() {
         ) : (
           <ul className="ess-list">
             {visible.map((item) => (
-              <li key={item.id}>
-                <Link
-                  to={item.href}
-                  className={`ess-list-item${item.read ? '' : ' is-unread'}`}
-                  onClick={() => markNotificationRead(item.id)}
-                >
+              <li key={item.id} className="ess-list-item">
+                <div className="ess-leave-request-head">
                   <strong>{item.title}</strong>
-                  <span>{item.body}</span>
-                  <span className="ess-list-meta">
-                    {formatWhen(item.createdAt)}
-                    <span>· {item.type}</span>
-                  </span>
-                </Link>
+                  <span className="ess-muted">{formatWhen(item.createdAt)}</span>
+                </div>
+                <span className="ess-muted">{item.body}</span>
+                <div className="ess-actions">
+                  {item.href ? (
+                    <Link to={item.href} className="ess-btn ess-btn-ghost">
+                      Open
+                    </Link>
+                  ) : null}
+                  {!item.read ? (
+                    <button
+                      type="button"
+                      className="ess-btn"
+                      onClick={() => {
+                        void markNotificationRead(item.id).then(load);
+                      }}
+                    >
+                      Mark read
+                    </button>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>
