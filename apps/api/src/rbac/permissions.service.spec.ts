@@ -48,4 +48,26 @@ describe('PermissionsService', () => {
       service.userHasAllPermissions('u1', ['rbac.read', 'rbac.assign']),
     ).resolves.toBe(false);
   });
+
+  it('grants the role matrix when the database links are empty', async () => {
+    const prisma = {
+      userRole: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            role: {
+              code: 'EMPLOYEE',
+              permissions: [],
+            },
+          },
+        ]),
+      },
+    };
+    const service = new PermissionsService(prisma as never);
+    await expect(service.getEffectivePermissions('u1')).resolves.toEqual([
+      'attendance.self',
+      'helpdesk.self',
+      'leave.self',
+      'payslip.self',
+    ]);
+  });
 });

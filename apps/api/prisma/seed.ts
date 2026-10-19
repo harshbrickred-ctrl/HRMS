@@ -1,105 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { HARSH_LEAVE, LEAVE_CATALOG } from '../src/hr/leave-catalog';
+import {
+  PERMISSIONS,
+  ROLE_CATALOG,
+  ROLE_PERMISSION_MATRIX,
+} from '../src/rbac/role-matrix';
 
 const prisma = new PrismaClient();
-
-const ROLE_CATALOG: { code: string; name: string }[] = [
-  { code: 'EMPLOYEE', name: 'Employee' },
-  { code: 'MANAGER', name: 'Manager' },
-  { code: 'HR_EXEC', name: 'HR Executive' },
-  { code: 'HR_HEAD', name: 'HR Head' },
-  { code: 'FINANCE_READ', name: 'Finance Read' },
-  { code: 'IT_ADMIN', name: 'IT Admin' },
-  { code: 'SECURITY_ADMIN', name: 'Security Admin' },
-  { code: 'LEADERSHIP_READ', name: 'Leadership Read' },
-];
-
-const PERMISSIONS: { code: string; description: string }[] = [
-  { code: 'rbac.assign', description: 'Assign and revoke user roles' },
-  { code: 'rbac.read', description: 'Read role catalog and user role assignments' },
-  { code: 'identity.manage', description: 'Manage identity settings' },
-  { code: 'audit.read', description: 'Read audit events' },
-  { code: 'reports.read', description: 'Read operational reports' },
-  { code: 'hr.manage', description: 'Manage employees, org structure, documents, and leave balances' },
-  { code: 'attendance.self', description: 'View and punch own attendance and request a correction' },
-  { code: 'attendance.team.read', description: 'View team attendance and exceptions' },
-  { code: 'attendance.approve', description: 'Approve or reject attendance corrections' },
-  { code: 'attendance.manage', description: 'Manage shifts, holidays, policies, and the attendance register' },
-  { code: 'attendance.override', description: 'Correct an attendance day with a reason' },
-  { code: 'attendance.period.lock', description: 'Lock an attendance month' },
-  { code: 'attendance.device.manage', description: 'Register biometric devices and enroll employee PINs' },
-  { code: 'leave.self', description: 'Apply and withdraw own leave requests' },
-  { code: 'leave.team.read', description: 'View team leave requests' },
-  { code: 'leave.approve', description: 'Approve or reject leave requests' },
-  { code: 'leave.manage', description: 'Manage leave balances and company leave' },
-  { code: 'helpdesk.self', description: 'Create and view own helpdesk tickets' },
-  { code: 'helpdesk.manage', description: 'Manage helpdesk tickets across the company' },
-  { code: 'payslip.self', description: 'View and download own payslips' },
-  { code: 'payslip.manage', description: 'Upload and manage employee payslips' },
-];
-
-/** role code → permission codes */
-const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
-  SECURITY_ADMIN: [
-    'rbac.assign',
-    'rbac.read',
-    'identity.manage',
-    'audit.read',
-  ],
-  IT_ADMIN: ['rbac.assign', 'rbac.read', 'identity.manage', 'attendance.device.manage'],
-  HR_HEAD: [
-    'rbac.read',
-    'audit.read',
-    'reports.read',
-    'hr.manage',
-    'attendance.self',
-    'attendance.manage',
-    'attendance.override',
-    'attendance.period.lock',
-    'attendance.device.manage',
-    'leave.self',
-    'leave.manage',
-    'helpdesk.manage',
-    'helpdesk.self',
-    'payslip.manage',
-    'payslip.self',
-  ],
-  LEADERSHIP_READ: ['audit.read', 'reports.read'],
-  FINANCE_READ: ['reports.read', 'payslip.self'],
-  MANAGER: [
-    'reports.read',
-    'attendance.self',
-    'attendance.team.read',
-    'attendance.approve',
-    'leave.self',
-    'leave.team.read',
-    'leave.approve',
-    'helpdesk.self',
-    'payslip.self',
-  ],
-  HR_EXEC: [
-    'hr.manage',
-    'reports.read',
-    'attendance.self',
-    'attendance.manage',
-    'attendance.override',
-    'attendance.period.lock',
-    'attendance.device.manage',
-    'leave.self',
-    'leave.manage',
-    'helpdesk.manage',
-    'helpdesk.self',
-    'payslip.manage',
-    'payslip.self',
-  ],
-  EMPLOYEE: [
-    'attendance.self',
-    'leave.self',
-    'helpdesk.self',
-    'payslip.self',
-  ],
-};
 
 const LEGACY_ROLE_CODES = ['Admin', 'Employee'];
 
