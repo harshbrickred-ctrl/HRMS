@@ -97,7 +97,7 @@ export function viewEssDocument(doc: EssDocument) {
     void viewMyDocument(doc.id, doc.name);
     return;
   }
-  const { blob, fileName } = localEssBlob(doc);
+  const { blob } = localEssBlob(doc);
   const url = URL.createObjectURL(blob);
   const opened = window.open(url, '_blank', 'noopener,noreferrer');
   if (!opened) {
