@@ -222,6 +222,11 @@ export async function downloadHrDocument(employeeId: string, documentId: string,
   saveBlob(blob, fileName);
 }
 
+export async function viewHrDocument(employeeId: string, documentId: string, fileName: string) {
+  const blob = await apiBlob(`/api/v1/hr/employees/${employeeId}/documents/${documentId}`);
+  openBlob(blob, fileName);
+}
+
 export function fetchMyEmployee() {
   return apiFetch<HrEmployee>('/api/v1/hr/me');
 }
@@ -242,8 +247,31 @@ export async function downloadMyDocument(documentId: string, fileName: string) {
   saveBlob(blob, fileName);
 }
 
+export async function viewMyDocument(documentId: string, fileName: string) {
+  const blob = await apiBlob(`/api/v1/hr/me/documents/${documentId}`);
+  openBlob(blob, fileName);
+}
+
+function mimeFor(fileName: string) {
+  const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+  if (ext === 'pdf') return 'application/pdf';
+  if (ext === 'png') return 'image/png';
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'doc') return 'application/msword';
+  if (ext === 'docx') {
+    return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  }
+  if (ext === 'txt') return 'text/plain;charset=utf-8';
+  return 'application/octet-stream';
+}
+
+function typedBlob(blob: Blob, fileName: string) {
+  const type = mimeFor(fileName);
+  return blob.type && blob.type !== 'application/octet-stream' ? blob : new Blob([blob], { type });
+}
+
 function saveBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(typedBlob(blob, fileName));
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = fileName;
@@ -251,4 +279,15 @@ function saveBlob(blob: Blob, fileName: string) {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+function openBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(typedBlob(blob, fileName));
+  const opened = window.open(url, '_blank', 'noopener,noreferrer');
+  if (!opened) {
+    saveBlob(blob, fileName);
+    URL.revokeObjectURL(url);
+    return;
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

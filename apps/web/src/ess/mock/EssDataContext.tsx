@@ -8,7 +8,12 @@ import {
   type ReactNode,
 } from 'react';
 import { useAuth } from '../../auth/AuthContext';
-import { adjustMyLeave, downloadMyDocument, fetchMyEmployee } from '../../workspace/hrApi';
+import {
+  adjustMyLeave,
+  downloadMyDocument,
+  fetchMyEmployee,
+  viewMyDocument,
+} from '../../workspace/hrApi';
 import { setApprovalStatus, submitApproval } from '../../workspace/workspaceMock';
 import {
   approverFor,
@@ -58,27 +63,49 @@ export function formatFileSize(bytes: number) {
   return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)} MB`;
 }
 
+function localEssBlob(doc: EssDocument) {
+  const stored = sessionFiles.get(doc.id);
+  if (stored) return { blob: stored as Blob, fileName: stored.name };
+  const stem = doc.name.replace(/\.[^.]+$/, '') || doc.name;
+  return {
+    blob: new Blob(
+      [`${doc.name}\nCategory: ${doc.category}\nUploaded: ${doc.uploadedAt}\n`],
+      { type: 'text/plain;charset=utf-8' },
+    ),
+    fileName: `${stem}.txt`,
+  };
+}
+
 export function downloadEssDocument(doc: EssDocument) {
   if (doc.remote) {
     void downloadMyDocument(doc.id, doc.name);
     return;
   }
-  const stored = sessionFiles.get(doc.id);
-  const blob =
-    stored ??
-    new Blob(
-      [`${doc.name}\nCategory: ${doc.category}\nUploaded: ${doc.uploadedAt}\n`],
-      { type: 'text/plain;charset=utf-8' },
-    );
+  const { blob, fileName } = localEssBlob(doc);
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
-  const stem = doc.name.replace(/\.[^.]+$/, '') || doc.name;
   anchor.href = url;
-  anchor.download = stored ? stored.name : `${stem}.txt`;
+  anchor.download = fileName;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+export function viewEssDocument(doc: EssDocument) {
+  if (doc.remote) {
+    void viewMyDocument(doc.id, doc.name);
+    return;
+  }
+  const { blob, fileName } = localEssBlob(doc);
+  const url = URL.createObjectURL(blob);
+  const opened = window.open(url, '_blank', 'noopener,noreferrer');
+  if (!opened) {
+    downloadEssDocument(doc);
+    URL.revokeObjectURL(url);
+    return;
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 export type CreateTicketInput = {

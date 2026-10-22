@@ -1,3 +1,6 @@
+import { randomUUID } from 'crypto';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { HARSH_LEAVE, LEAVE_CATALOG } from '../src/hr/leave-catalog';
@@ -8,6 +11,51 @@ import {
 } from '../src/rbac/role-matrix';
 
 const prisma = new PrismaClient();
+const UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
+
+const HARSH_DOCUMENTS: Array<{ fileName: string; category: string }> = [
+  { fileName: 'BR_offer_letter_Acceptance.pdf', category: 'Brickred Documents' },
+  { fileName: 'NDA_Acceptance.pdf', category: 'Brickred Documents' },
+  { fileName: 'BR_Letter_of_Appointment_Acceptance.pdf', category: 'Brickred Documents' },
+  { fileName: 'BR_Joining_Report_Confidential_Agreement.pdf', category: 'Brickred Documents' },
+  { fileName: '12th_Pass_Certificate.pdf', category: 'Educational Certificates' },
+  { fileName: '12th_Marksheet.pdf', category: 'Educational Certificates' },
+  { fileName: 'Voter_ID.pdf', category: 'Employee Documents' },
+  { fileName: '10th_Pass_Certificate.pdf', category: 'Employee Documents' },
+  { fileName: 'Bank_Passbook.pdf', category: 'Employee Documents' },
+  { fileName: 'passport_pic.pdf', category: 'Employee Documents' },
+  { fileName: 'PAN.pdf', category: 'Employee Documents' },
+  { fileName: 'Aadhar_Card.pdf', category: 'Employee Documents' },
+  { fileName: 'Pay_Slip_Mar-May.pdf', category: 'Past Employment Documents' },
+  { fileName: 'Resignation_Acceptance_Redlinux_Technologies.pdf', category: 'Past Employment Documents' },
+];
+
+function placeholderPdf(title: string) {
+  const safe = title.replace(/[()\\]/g, ' ').slice(0, 80);
+  const stream = `BT /F1 12 Tf 72 720 Td (${safe}) Tj ET`;
+  const objects = [
+    '1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj',
+    '2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj',
+    '3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>endobj',
+    `4 0 obj<< /Length ${Buffer.byteLength(stream)} >>stream\n${stream}\nendstream\nendobj`,
+    '5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj',
+  ];
+  let body = '%PDF-1.4\n';
+  const offsets = [0];
+  for (const object of objects) {
+    offsets.push(Buffer.byteLength(body));
+    body += `${object}\n`;
+  }
+  const xref = offsets.length;
+  const startxref = Buffer.byteLength(body);
+  body += `xref\n0 ${xref}\n`;
+  body += '0000000000 65535 f \n';
+  for (let i = 1; i < offsets.length; i += 1) {
+    body += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+  }
+  body += `trailer<< /Size ${xref} /Root 1 0 R >>\nstartxref\n${startxref}\n%%EOF\n`;
+  return Buffer.from(body);
+}
 
 const LEGACY_ROLE_CODES = ['Admin', 'Employee'];
 
@@ -336,8 +384,29 @@ async function main() {
     });
   }
 
+  for (const doc of HARSH_DOCUMENTS) {
+    const existing = await prisma.employeeDocument.findFirst({
+      where: { employeeId: harsh.id, fileName: doc.fileName },
+    });
+    if (existing) continue;
+    const id = randomUUID();
+    const relative = path.join(tenant.id, harsh.id, `${id}-${doc.fileName}`);
+    const absolute = path.join(UPLOAD_ROOT, relative);
+    await fs.mkdir(path.dirname(absolute), { recursive: true });
+    await fs.writeFile(absolute, placeholderPdf(doc.fileName.replace(/\.pdf$/i, '')));
+    await prisma.employeeDocument.create({
+      data: {
+        id,
+        employeeId: harsh.id,
+        fileName: doc.fileName,
+        category: doc.category,
+        storagePath: relative.replace(/\\/g, '/'),
+      },
+    });
+  }
+
   console.log(
-    `Seeded tenant=${tenant.code} roles=${ROLE_CATALOG.length} users=4 admin=${adminEmail}`,
+    `Seeded tenant=${tenant.code} roles=${ROLE_CATALOG.length} users=4 admin=${adminEmail} harshDocs=${HARSH_DOCUMENTS.length}`,
   );
 }
 

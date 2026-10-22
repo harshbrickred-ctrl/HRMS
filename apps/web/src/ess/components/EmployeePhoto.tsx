@@ -1,7 +1,7 @@
 type EmployeePhotoProps = {
   src: string;
   name: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 };
 
 function initials(name: string) {

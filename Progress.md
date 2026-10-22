@@ -1,12 +1,12 @@
 # Progress
 
 **Product:** PeopleOS (internal HRMS)  
-**Last updated:** 2026-09-30  
+**Last updated:** 2026-10-19  
 
 **Rule:** Set **Status** to **Completed** only when the feature is implemented and demoable (not when merely documented).  
-**Related:** [Decision.md](Decision.md) · [docs/05-product-requirements-mvp.md](docs/05-product-requirements-mvp.md) · [docs/32-manager-weekly-timeline.md](docs/32-manager-weekly-timeline.md)
+**Related:** [Decision.md](Decision.md) · [docs/05-product-requirements-mvp.md](docs/05-product-requirements-mvp.md) · [docs/34-feature-catalog.md](docs/34-feature-catalog.md) · [docs/32-manager-weekly-timeline.md](docs/32-manager-weekly-timeline.md)
 
-The database still holds tenants, users, roles, permissions, refresh tokens, password-reset OTPs, and audit events. There is no employee, leave, or attendance table. Those screens run from browser mock data (`apps/web/src/ess/mock`, `apps/web/src/workspace`). A leave or attendance request reaches the team manager only in the same browser session; a reload clears it. Users & Roles is the one workspace page backed by the API.
+**Authoritative feature status:** use [docs/34-feature-catalog.md](docs/34-feature-catalog.md) for Live / Partial / Planned. Rows below that still say “Demo mock” for leave, attendance, helpdesk, notifications, reports, Core HR, etc. are **stale** — those modules are largely live in Postgres as of Oct 2026.
 
 | ID | Feature | Status | Notes |
 |----|---------|--------|-------|

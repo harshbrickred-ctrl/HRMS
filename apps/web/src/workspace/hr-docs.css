@@ -350,8 +350,42 @@
 .hr-docs-row-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   justify-content: flex-end;
+}
+
+.hr-docs-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-elevated);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hr-docs-icon-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent-fill) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent-fill) 22%, var(--surface));
+}
+
+.hr-docs-icon-btn.is-danger {
+  color: var(--danger);
+}
+
+.hr-docs-icon-btn.is-danger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+  background: var(--danger-bg);
+}
+
+.hr-docs-icon-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 @media (max-width: 860px) {

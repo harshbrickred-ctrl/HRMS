@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { Search } from 'lucide-react';
+import { Download, Eye, Search, Trash2 } from 'lucide-react';
 import { EmployeePhoto } from '../ess/components/EmployeePhoto';
 import {
   deleteHrDocument,
@@ -7,6 +7,7 @@ import {
   fetchHrEmployee,
   fetchHrEmployees,
   uploadHrDocument,
+  viewHrDocument,
   type HrDocument,
   type HrEmployee,
 } from './hrApi';
@@ -195,6 +196,19 @@ export function HrDocumentsPage() {
       setError(messageOf(err));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function onView(document: HrDocument) {
+    if (!detail) return;
+    setWorkingId(document.id);
+    setError(null);
+    try {
+      await viewHrDocument(detail.id, document.id, document.fileName);
+    } catch (err) {
+      setError(messageOf(err));
+    } finally {
+      setWorkingId(null);
     }
   }
 
@@ -402,19 +416,36 @@ export function HrDocumentsPage() {
                             <span className="hr-docs-row-actions">
                               <button
                                 type="button"
-                                className="ess-btn"
+                                className="hr-docs-icon-btn"
+                                aria-label={`View ${document.fileName}`}
+                                title="View"
                                 disabled={workingId === document.id}
-                                onClick={() => void onDownload(document)}
+                                onClick={() => void onView(document)}
                               >
-                                Download
+                                <Eye size={16} aria-hidden />
+                                <span>View</span>
                               </button>
                               <button
                                 type="button"
-                                className="ess-btn ess-btn-danger"
+                                className="hr-docs-icon-btn"
+                                aria-label={`Download ${document.fileName}`}
+                                title="Download"
+                                disabled={workingId === document.id}
+                                onClick={() => void onDownload(document)}
+                              >
+                                <Download size={16} aria-hidden />
+                                <span>Download</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="hr-docs-icon-btn is-danger"
+                                aria-label={`Remove ${document.fileName}`}
+                                title="Remove"
                                 disabled={workingId === document.id}
                                 onClick={() => void onRemove(document)}
                               >
-                                Remove
+                                <Trash2 size={16} aria-hidden />
+                                <span>Remove</span>
                               </button>
                             </span>
                           </li>

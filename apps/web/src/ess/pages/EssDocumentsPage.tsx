@@ -1,6 +1,6 @@
-import { ChevronRight } from 'lucide-react';
+import { Download, Eye } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { downloadEssDocument, useEssData } from '../mock/EssDataContext';
+import { downloadEssDocument, useEssData, viewEssDocument } from '../mock/EssDataContext';
 import type { EssDocument } from '../mock/essMock';
 
 const DOCUMENT_GROUPS = [
@@ -22,17 +22,33 @@ function DocumentRows({ docs }: { docs: EssDocument[] }) {
   return (
     <ul className="ess-doc-rows">
       {docs.map((doc) => (
-        <li key={doc.id}>
-          <button
-            type="button"
-            className="ess-doc-row"
-            aria-label={`Download ${doc.name}`}
-            onClick={() => downloadEssDocument(doc)}
-          >
-            <ChevronRight size={16} aria-hidden />
+        <li key={doc.id} className="ess-doc-row">
+          <div className="ess-doc-row-main">
             <span className="ess-doc-row-name">{doc.name}</span>
             <span className="ess-doc-row-date">{lastUpdatedLabel(doc.uploadedAt)}</span>
-          </button>
+          </div>
+          <div className="ess-doc-row-actions">
+            <button
+              type="button"
+              className="ess-doc-action"
+              aria-label={`View ${doc.name}`}
+              title="View"
+              onClick={() => viewEssDocument(doc)}
+            >
+              <Eye size={16} aria-hidden />
+              <span>View</span>
+            </button>
+            <button
+              type="button"
+              className="ess-doc-action"
+              aria-label={`Download ${doc.name}`}
+              title="Download"
+              onClick={() => downloadEssDocument(doc)}
+            >
+              <Download size={16} aria-hidden />
+              <span>Download</span>
+            </button>
+          </div>
         </li>
       ))}
     </ul>
