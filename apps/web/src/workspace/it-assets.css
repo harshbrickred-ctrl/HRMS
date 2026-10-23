@@ -1,0 +1,151 @@
+.it-assets {
+  display: grid;
+  gap: 16px;
+}
+
+.it-assets header h1 {
+  margin: 0 0 4px;
+  font-size: 1.4rem;
+  letter-spacing: -0.03em;
+}
+
+.it-assets header p,
+.it-assets-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.it-assets-create,
+.it-assets-actions,
+.it-assets-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+
+.it-assets-create label,
+.it-assets-filter {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.it-assets input,
+.it-assets select {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.it-assets-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.it-assets-list > li {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-elevated);
+}
+
+.it-assets-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.it-assets-head strong {
+  display: block;
+}
+
+.it-assets-head span,
+.it-assets-list p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.it-assets-status {
+  text-transform: capitalize;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.it-assets-history {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0 0;
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid var(--line);
+}
+
+.it-assets-history li {
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.ess-asset-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.ess-asset-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.ess-asset-card p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ess-asset-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.ess-asset-card dt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ess-asset-card dd {
+  margin: 2px 0 0;
+  font-weight: 650;
+}
+
+@media (max-width: 700px) {
+  .ess-asset-card dl {
+    grid-template-columns: 1fr;
+  }
+}

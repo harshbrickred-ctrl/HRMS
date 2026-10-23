@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom
 import { AuthProvider } from './auth/AuthContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { EssLayout } from './ess/components/EssLayout';
+import { EssAssetsPage } from './ess/pages/EssAssetsPage';
 import { EssAttendancePage } from './ess/pages/EssAttendancePage';
 import { EssDocumentsPage } from './ess/pages/EssDocumentsPage';
 import { EssHelpdeskPage } from './ess/pages/EssHelpdeskPage';
@@ -40,6 +41,8 @@ import {
   TeamDirectoryPage,
   TeamLeavePage,
 } from './workspace/RolePages';
+import { ItAssetsPage } from './workspace/ItAssetsPage';
+import { ItAssetTicketsPage } from './workspace/ItAssetTicketsPage';
 
 function RoleOutlet({ roles }: { roles: string[] }) {
   return (
@@ -81,6 +84,7 @@ export default function App() {
               <Route path="notifications" element={<EssNotificationsPage />} />
               <Route path="settings" element={<EssSettingsPage />} />
               <Route path="helpdesk" element={<EssHelpdeskPage />} />
+              <Route path="assets" element={<EssAssetsPage />} />
             </Route>
 
             <Route path="/manager" element={<RoleOutlet roles={['MANAGER']} />}>
@@ -120,6 +124,12 @@ export default function App() {
               <Route path="notifications" element={<AdminMailPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
               <Route path="jobs" element={<AdminJobsPage />} />
+            </Route>
+
+            <Route path="/it" element={<RoleOutlet roles={['IT_ADMIN']} />}>
+              <Route index element={<Navigate to="assets" replace />} />
+              <Route path="assets" element={<ItAssetsPage />} />
+              <Route path="tickets" element={<ItAssetTicketsPage />} />
             </Route>
 
             <Route

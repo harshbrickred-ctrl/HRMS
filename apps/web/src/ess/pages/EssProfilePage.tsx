@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   BadgeCheck,
   Briefcase,
@@ -14,6 +15,7 @@ import {
 import { EmployeePhoto } from '../components/EmployeePhoto';
 import { useEssData } from '../mock/EssDataContext';
 import { ORGANIZATION, type EssProfile, type ProfileFamilyMember } from '../mock/essMock';
+import { categoryLabel, fetchMyAssets, type MyAsset } from '../../workspace/assetsApi';
 
 type Section = 'overview' | 'personal' | 'accounts' | 'family' | 'employment' | 'assets';
 
@@ -158,7 +160,7 @@ export function EssProfilePage() {
           onToggleTimeline={() => setTimelineOpen((value) => !value)}
         />
       ) : null}
-      {section === 'assets' ? <AssetsSection profile={profile} /> : null}
+      {section === 'assets' ? <AssetsSection /> : null}
     </div>
   );
 }
@@ -499,28 +501,68 @@ function EmploymentSection({
   );
 }
 
-function AssetsSection({ profile }: { profile: EssProfile }) {
+function AssetsSection() {
+  const [assets, setAssets] = useState<MyAsset[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchMyAssets()
+      .then((rows) => {
+        setAssets(rows);
+        setError(null);
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load assets.'));
+  }, []);
+
   return (
     <div className="ess-profile-stack">
       <SectionCard title="Access card" subtitle="Building / campus access">
-        <FieldGrid
-          rows={[
-            ['Card no.', profile.accessCardNo],
-            ['Validity', profile.accessCardValidity],
-          ]}
-        />
+        <ProfileAccessCard />
       </SectionCard>
-      <SectionCard title="Previous assets">
-        {profile.previousAssets.length === 0 ? (
-          <EmptyNote label="No previous assets on record." />
-        ) : (
-          <ul className="ess-profile-list">
-            {profile.previousAssets.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        )}
+      <SectionCard
+        title="Currently assigned"
+        subtitle="Past holders stay with IT. You only see what you have now."
+        action={
+          <Link to="/ess/assets" className="ess-btn">
+            Manage with IT
+          </Link>
+        }
+      >
+        {error ? <p className="ess-alert">{error}</p> : null}
+        {assets.length === 0 ? <EmptyNote label="Nothing is assigned to you right now." /> : null}
+        <ul className="ess-asset-list">
+          {assets.map((asset) => (
+            <li key={asset.assetId} className="ess-asset-card">
+              <div>
+                <strong>{asset.assetTag}</strong>
+                <p>{asset.makeModel || categoryLabel(asset.category)}</p>
+              </div>
+              <dl>
+                <div>
+                  <dt>Serial</dt>
+                  <dd>{asset.serialNo || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Since</dt>
+                  <dd>{asset.assignedOn}</dd>
+                </div>
+              </dl>
+            </li>
+          ))}
+        </ul>
       </SectionCard>
     </div>
+  );
+}
+
+function ProfileAccessCard() {
+  const { profile } = useEssData();
+  return (
+    <FieldGrid
+      rows={[
+        ['Card no.', profile.accessCardNo],
+        ['Validity', profile.accessCardValidity],
+      ]}
+    />
   );
 }

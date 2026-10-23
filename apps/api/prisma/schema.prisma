@@ -39,6 +39,9 @@ model Tenant {
   notifications        Notification[]
   helpdeskTickets      HelpdeskTicket[]
   payslips             Payslip[]
+  assets               Asset[]
+  assetAssignments     AssetAssignment[]
+  assetTickets         AssetTicket[]
 }
 
 model User {
@@ -227,6 +230,8 @@ model Employee {
   enrollments  DeviceEnrollment[]
   helpdeskTickets HelpdeskTicket[]
   payslips     Payslip[]
+  assetAssignments AssetAssignment[]
+  assetTickets AssetTicket[]
 
   @@unique([tenantId, employeeCode])
   @@index([tenantId])
@@ -637,4 +642,102 @@ model AttendancePeriod {
   tenant     Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, year, month])
+}
+
+enum AssetCategory {
+  laptop
+  monitor
+  phone
+  access_card
+  other
+}
+
+enum AssetStatus {
+  in_stock
+  assigned
+  repair
+  retired
+  lost
+}
+
+enum AssetTicketType {
+  Issue
+  Query
+  Request
+}
+
+enum AssetTicketStatus {
+  Open
+  InProgress
+  Resolved
+  Closed
+}
+
+model Asset {
+  id           String             @id @default(cuid())
+  tenantId     String
+  assetTag     String
+  category     AssetCategory
+  makeModel    String             @default("")
+  serialNo     String             @default("")
+  status       AssetStatus        @default(in_stock)
+  purchasedOn  DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignments  AssetAssignment[]
+  tickets      AssetTicket[]
+
+  @@unique([tenantId, assetTag])
+  @@index([tenantId, status])
+}
+
+model AssetAssignment {
+  id             String    @id @default(cuid())
+  tenantId       String
+  assetId        String
+  employeeId     String
+  assignedOn     DateTime  @default(now())
+  returnedOn     DateTime?
+  conditionNotes String    @default("")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  asset          Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, employeeId, returnedOn])
+  @@index([assetId, returnedOn])
+}
+
+model AssetTicket {
+  id         String            @id @default(cuid())
+  tenantId   String
+  employeeId String
+  assetId    String?
+  type       AssetTicketType
+  category   String            @default("")
+  subject    String
+  body       String
+  status     AssetTicketStatus @default(Open)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee   Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  asset      Asset?            @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  comments   AssetTicketComment[]
+
+  @@index([tenantId, employeeId, status])
+  @@index([tenantId, status])
+}
+
+model AssetTicketComment {
+  id        String      @id @default(cuid())
+  ticketId  String
+  authorId  String
+  body      String
+  createdAt DateTime    @default(now())
+  ticket    AssetTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
 }

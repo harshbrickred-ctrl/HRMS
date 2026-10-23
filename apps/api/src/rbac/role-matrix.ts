@@ -31,12 +31,23 @@ export const PERMISSIONS: { code: string; description: string }[] = [
   { code: 'helpdesk.manage', description: 'Manage helpdesk tickets across the company' },
   { code: 'payslip.self', description: 'View and download own payslips' },
   { code: 'payslip.manage', description: 'Upload and manage employee payslips' },
+  { code: 'assets.self', description: 'View currently assigned assets and raise asset tickets' },
+  { code: 'assets.manage', description: 'Manage the IT asset register, assignments, and history' },
+  { code: 'assets.tickets.manage', description: 'Handle asset issues, queries, and new-asset requests' },
 ];
 
 /** role code → permission codes */
 export const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
   SECURITY_ADMIN: ['rbac.assign', 'rbac.read', 'identity.manage', 'audit.read'],
-  IT_ADMIN: ['rbac.assign', 'rbac.read', 'identity.manage', 'attendance.device.manage'],
+  IT_ADMIN: [
+    'rbac.assign',
+    'rbac.read',
+    'identity.manage',
+    'attendance.device.manage',
+    'assets.self',
+    'assets.manage',
+    'assets.tickets.manage',
+  ],
   HR_HEAD: [
     'rbac.read',
     'audit.read',
@@ -82,5 +93,5 @@ export const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
     'payslip.manage',
     'payslip.self',
   ],
-  EMPLOYEE: ['attendance.self', 'leave.self', 'helpdesk.self', 'payslip.self'],
+  EMPLOYEE: ['attendance.self', 'leave.self', 'helpdesk.self', 'payslip.self', 'assets.self'],
 };

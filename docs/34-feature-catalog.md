@@ -115,6 +115,7 @@
 | ------------------- | -------- | ----------------------------------------- |
 | Upload PDF          | HR       | Per employee + month (Document Center)    |
 | List + download PDF | Employee | ESS Salary — **not** a payroll calculator |
+| YTD, IT statement, declaration, loans, reimbursement, proofs, revision | Employee | Sample FY 2026-27 figures on the Salary page. Not calculated and not stored |
 
 
 
@@ -137,6 +138,18 @@
 | ------------------------ | -------- | -------------------- |
 | Login                    | Employee | Against API          |
 | Attendance month + punch | Employee | Same self API as web |
+
+
+### IT assets
+
+| Feature | Who | What you get |
+|---------|-----|----------------|
+| Current assignments | Employee | Tag, category, model, serial, assigned date. Past owners are hidden |
+| Issue, query, or new request | Employee | Sent to IT, separate from HR Helpdesk |
+| Register, assign, return, history | IT Admin | Full inventory and assignment trail |
+| Ticket inbox | IT Admin | Status updates and notes back to the employee |
+
+HR does not manage assets.
 
 
 ---
@@ -197,7 +210,6 @@
 | Delegation                    | Manager out of office                                                 |
 | Light ATS                     | Requisition → candidate → status                                      |
 | Onboarding checklists         | New joiner tasks                                                      |
-| IT asset assignment           | Laptops etc.                                                          |
 
 
 ---
@@ -228,7 +240,8 @@
 
 | Role           | Main live areas                                                                                                                   |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Employee**   | Home, leave, attendance (punch/correct), documents, people, notifications, helpdesk, payslip PDFs, settings                       |
+| **Employee**   | Home, leave, attendance, documents, people, notifications, helpdesk, current assets, payslip PDFs, settings |
+| **IT Admin**   | Asset register, assignment history, and asset tickets. Not an HR function |
 | **Manager**    | Same + inbox (leave + attendance corrections), team leave, team attendance                                                        |
 | **HR**         | Employees, org, leave balances, attendance admin (devices, lock, register), documents + payslip upload, workflows queues, reports |
 | **Admin**      | Users & Roles; settings/jobs/audit still thin                                                                                     |
@@ -241,7 +254,7 @@
 
 ## 7. One-page summary
 
-**Built and durable:** Auth/RBAC, HR master + docs, leave apply/approve, attendance (web + eSSL + lock/register), in-app notifications, helpdesk, payslip PDFs, live report/queue KPIs, mobile attendance.
+**Built and durable:** Auth/RBAC, HR master + docs, leave apply/approve, attendance (web + eSSL + lock/register), in-app notifications, helpdesk, IT asset register, payslip PDFs, live report/queue KPIs, mobile attendance.
 
 **Next useful work:** Production migrate/seed, audit UI, CI/OpenAPI, email on approvals, mobile leave/notifications, then real workflow engine / onboarding if needed.
 

@@ -143,6 +143,7 @@ async function main() {
   }
 
   await upsertUser(adminEmail, ['SECURITY_ADMIN']);
+  const itUser = await upsertUser('it@peopleos.local', ['IT_ADMIN', 'EMPLOYEE']);
   const employeeUser = await upsertUser('employee@peopleos.local', ['EMPLOYEE']);
   const managerUser = await upsertUser('manager@peopleos.local', ['MANAGER', 'EMPLOYEE']);
   const hrUser = await upsertUser('hr@peopleos.local', ['HR_EXEC', 'EMPLOYEE']);
@@ -405,8 +406,74 @@ async function main() {
     });
   }
 
+  const itEmployee = await ensureEmployee({
+    userId: itUser.id,
+    employeeCode: 'BR900',
+    firstName: 'Isha',
+    lastName: 'Kapoor',
+    designation: 'IT Administrator',
+    photo: '',
+    departmentId: engineering.id,
+    locationId: noida.id,
+  });
+
+  async function ensureAsset(input: {
+    assetTag: string;
+    category: 'laptop' | 'monitor' | 'phone' | 'access_card' | 'other';
+    makeModel: string;
+    serialNo: string;
+    status: 'in_stock' | 'assigned' | 'repair' | 'retired' | 'lost';
+  }) {
+    return prisma.asset.upsert({
+      where: { tenantId_assetTag: { tenantId: tenant.id, assetTag: input.assetTag } },
+      update: {
+        category: input.category,
+        makeModel: input.makeModel,
+        serialNo: input.serialNo,
+      },
+      create: {
+        tenantId: tenant.id,
+        ...input,
+      },
+    });
+  }
+
+  const harshLaptop = await ensureAsset({
+    assetTag: 'LAP-266',
+    category: 'laptop',
+    makeModel: 'Dell Latitude 5440',
+    serialNo: 'DL5440-BR266',
+    status: 'assigned',
+  });
+  await ensureAsset({
+    assetTag: 'MON-014',
+    category: 'monitor',
+    makeModel: 'Dell P2422H',
+    serialNo: 'MON-P2422H-014',
+    status: 'in_stock',
+  });
+  const openLaptop = await prisma.assetAssignment.findFirst({
+    where: { assetId: harshLaptop.id, returnedOn: null },
+  });
+  if (!openLaptop) {
+    await prisma.assetAssignment.create({
+      data: {
+        tenantId: tenant.id,
+        assetId: harshLaptop.id,
+        employeeId: harsh.id,
+        assignedOn: new Date('2026-01-06T00:00:00.000Z'),
+        conditionNotes: 'Issued on joining',
+      },
+    });
+    await prisma.asset.update({
+      where: { id: harshLaptop.id },
+      data: { status: 'assigned' },
+    });
+  }
+  void itEmployee;
+
   console.log(
-    `Seeded tenant=${tenant.code} roles=${ROLE_CATALOG.length} users=4 admin=${adminEmail} harshDocs=${HARSH_DOCUMENTS.length}`,
+    `Seeded tenant=${tenant.code} roles=${ROLE_CATALOG.length} users=5 admin=${adminEmail} harshDocs=${HARSH_DOCUMENTS.length}`,
   );
 }
 

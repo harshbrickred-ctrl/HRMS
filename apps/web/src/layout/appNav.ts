@@ -9,6 +9,7 @@ export type NavIconId =
   | 'salary'
   | 'notifications'
   | 'helpdesk'
+  | 'assets'
   | 'overview'
   | 'inbox'
   | 'teamLeave'
@@ -44,6 +45,7 @@ export type NavSectionId =
   | 'workplace'
   | 'account'
   | 'support'
+  | 'it-assets'
   | 'team-approvals'
   | 'team-time'
   | 'team-directory'
@@ -97,6 +99,7 @@ const NAV_SECTIONS: NavSection[] = [
     roles: [],
     items: [
       { to: '/ess/documents', label: 'My Document', icon: 'documents' },
+      { to: '/ess/assets', label: 'My Assets', icon: 'assets' },
       { to: '/ess/people', label: 'People', icon: 'people' },
       { to: '/ess/team', label: 'My Team', icon: 'myTeam' },
     ],
@@ -215,6 +218,16 @@ const NAV_SECTIONS: NavSection[] = [
       },
       { to: '/admin/settings', label: 'System settings', icon: 'settings' },
       { to: '/admin/jobs', label: 'Jobs', icon: 'jobs' },
+    ],
+  },
+  {
+    id: 'it-assets',
+    label: 'IT assets',
+    emphasis: 'clear',
+    roles: ['IT_ADMIN'],
+    items: [
+      { to: '/it/assets', label: 'Asset register', icon: 'assets' },
+      { to: '/it/tickets', label: 'Asset tickets', icon: 'inbox' },
     ],
   },
   {
