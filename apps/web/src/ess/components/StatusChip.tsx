@@ -1,5 +1,6 @@
 type StatusChipProps = {
   status: string;
+  label?: string;
 };
 
 function chipClass(status: string) {
@@ -7,6 +8,6 @@ function chipClass(status: string) {
   return `ess-chip ess-chip-${key}`;
 }
 
-export function StatusChip({ status }: StatusChipProps) {
-  return <span className={chipClass(status)}>{status}</span>;
+export function StatusChip({ status, label }: StatusChipProps) {
+  return <span className={chipClass(status)}>{label ?? status}</span>;
 }

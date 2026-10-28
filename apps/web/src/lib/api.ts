@@ -17,20 +17,37 @@ export type AuthUser = {
   mfaEnabled: boolean;
 };
 
+function readToken(key: string) {
+  const fromLocal = localStorage.getItem(key);
+  if (fromLocal) return fromLocal;
+  // Older builds kept tokens in sessionStorage (one tab only).
+  const fromSession = sessionStorage.getItem(key);
+  if (fromSession) {
+    localStorage.setItem(key, fromSession);
+    sessionStorage.removeItem(key);
+    return fromSession;
+  }
+  return null;
+}
+
 export function getAccessToken() {
-  return sessionStorage.getItem(ACCESS_KEY);
+  return readToken(ACCESS_KEY);
 }
 
 export function getRefreshToken() {
-  return sessionStorage.getItem(REFRESH_KEY);
+  return readToken(REFRESH_KEY);
 }
 
 export function setTokens(tokens: Tokens) {
-  sessionStorage.setItem(ACCESS_KEY, tokens.accessToken);
-  sessionStorage.setItem(REFRESH_KEY, tokens.refreshToken);
+  localStorage.setItem(ACCESS_KEY, tokens.accessToken);
+  localStorage.setItem(REFRESH_KEY, tokens.refreshToken);
+  sessionStorage.removeItem(ACCESS_KEY);
+  sessionStorage.removeItem(REFRESH_KEY);
 }
 
 export function clearTokens() {
+  localStorage.removeItem(ACCESS_KEY);
+  localStorage.removeItem(REFRESH_KEY);
   sessionStorage.removeItem(ACCESS_KEY);
   sessionStorage.removeItem(REFRESH_KEY);
 }

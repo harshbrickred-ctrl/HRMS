@@ -9,6 +9,7 @@ import {
   type HrEmployee,
   type HrLeaveBalance,
 } from './hrApi';
+import { LeaveApprovalsPanel } from './LeaveApprovalsPanel';
 import './hr-leave.css';
 
 const TYPE_ORDER = ['CL', 'SL', 'EL', 'CO', 'WFH', 'OBH', 'LOP'];
@@ -241,6 +242,7 @@ export function HrLeaveAdminPage() {
           {error}
         </p>
       ) : null}
+      <LeaveApprovalsPanel />
       <div className="hr-leave-workspace">
         <aside className="hr-leave-rail" aria-label="Employees">
           <div className="hr-leave-rail-head">

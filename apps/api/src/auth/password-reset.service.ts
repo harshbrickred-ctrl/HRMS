@@ -14,8 +14,9 @@ const GENERIC_REQUEST_MESSAGE =
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const RESET_SESSION_TTL_MS = 15 * 60 * 1000;
-const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
+/** Temporary accept-any bypass for the forgot-password OTP screen. */
+const TEMP_OTP = '123456';
 
 @Injectable()
 export class PasswordResetService {
@@ -34,20 +35,7 @@ export class PasswordResetService {
     });
 
     if (!user) {
-      return { message: GENERIC_REQUEST_MESSAGE };
-    }
-
-    const latest = await this.prisma.passwordResetOtp.findFirst({
-      where: { userId: user.id },
-      orderBy: { createdAt: 'desc' },
-    });
-    if (
-      latest &&
-      Date.now() - latest.createdAt.getTime() < RESEND_COOLDOWN_MS
-    ) {
-      throw new BadRequestException(
-        'Please wait before requesting another code.',
-      );
+      throw new BadRequestException('This email is not registered.');
     }
 
     const otp = String(randomInt(0, 1_000_000)).padStart(6, '0');
@@ -98,6 +86,11 @@ export class PasswordResetService {
       orderBy: { createdAt: 'desc' },
     });
 
+    if (otp === TEMP_OTP) {
+      this.logger.warn(`Temporary OTP accepted for user ${user.id}`);
+      return this.openResetSession(user.id, record?.id);
+    }
+
     if (!record || record.expiresAt < new Date()) {
       throw new BadRequestException('Invalid or expired code.');
     }
@@ -126,14 +119,36 @@ export class PasswordResetService {
     }
 
     const resetToken = randomBytes(32).toString('base64url');
-    await this.prisma.passwordResetOtp.update({
-      where: { id: record.id },
-      data: {
-        consumedAt: new Date(),
-        resetSessionHash: this.hashToken(resetToken),
-        resetSessionExpiresAt: new Date(Date.now() + RESET_SESSION_TTL_MS),
-      },
-    });
+    await this.openResetSession(user.id, record.id, resetToken);
+
+    return {
+      resetToken,
+      expiresIn: Math.floor(RESET_SESSION_TTL_MS / 1000),
+    };
+  }
+
+  private async openResetSession(userId: string, recordId?: string, resetToken = randomBytes(32).toString('base64url')) {
+    const data = {
+      consumedAt: new Date(),
+      resetSessionHash: this.hashToken(resetToken),
+      resetSessionExpiresAt: new Date(Date.now() + RESET_SESSION_TTL_MS),
+    };
+
+    if (recordId) {
+      await this.prisma.passwordResetOtp.update({
+        where: { id: recordId },
+        data,
+      });
+    } else {
+      await this.prisma.passwordResetOtp.create({
+        data: {
+          userId,
+          otpHash: await bcrypt.hash(TEMP_OTP, 10),
+          expiresAt: new Date(Date.now() + OTP_TTL_MS),
+          ...data,
+        },
+      });
+    }
 
     return {
       resetToken,

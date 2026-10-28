@@ -7,13 +7,28 @@ import { ThemeToggle } from "../theme/ThemeToggle";
 import { enter, fadeTransition, loginEase } from "./login/motion";
 import "./LoginPage.css";
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function emailError(value: string) {
+  const email = value.trim();
+  if (!email) return null;
+  if (!EMAIL_PATTERN.test(email)) return "Email is invalid";
+  return null;
+}
+
+function passwordError(value: string) {
+  if (!value) return null;
+  if (!value.trim() || value.trim().length < 8) return "Password is invalid";
+  return null;
+}
+
 export function LoginPage() {
   const { user, loading, login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const resetSuccess = searchParams.get("reset") === "1";
   const reduce = useReducedMotion() === true;
-  const [email, setEmail] = useState("admin@peopleos.local");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [errorTick, setErrorTick] = useState(0);
@@ -21,6 +36,13 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const alertRef = useRef<HTMLDivElement>(null);
 
+  const emailMessage = emailError(email);
+  const passwordMessage = passwordError(password);
+  const canSubmit =
+    email.trim().length > 0 &&
+    password.trim().length > 0 &&
+    !emailMessage &&
+    !passwordMessage;
   const busy = submitting || loading;
 
   useEffect(() => {
@@ -34,6 +56,7 @@ export function LoginPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!canSubmit) return;
     setError(null);
     setSubmitting(true);
     try {
@@ -94,7 +117,7 @@ export function LoginPage() {
 
           <div className="login-rule" aria-hidden="true" />
 
-          <form className="login-form" onSubmit={onSubmit}>
+          <form className="login-form" onSubmit={onSubmit} noValidate>
             {resetSuccess ? (
               <div className="login-status" role="status">
                 Password updated. Sign in with your new password.
@@ -127,11 +150,20 @@ export function LoginPage() {
                   name="email"
                   autoComplete="username"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setError(null);
+                  }}
+                  aria-invalid={emailMessage ? true : undefined}
+                  aria-describedby={emailMessage ? "login-email-error" : undefined}
                   disabled={busy}
                 />
               </div>
+              {emailMessage ? (
+                <p id="login-email-error" className="login-field-error">
+                  {emailMessage}
+                </p>
+              ) : null}
             </motion.div>
 
             <motion.div className="login-field" {...enter(reduce, 5)}>
@@ -145,9 +177,12 @@ export function LoginPage() {
                   name="password"
                   autoComplete="current-password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError(null);
+                  }}
+                  aria-invalid={passwordMessage ? true : undefined}
+                  aria-describedby={passwordMessage ? "login-password-error" : undefined}
                   disabled={busy}
                 />
                 <button
@@ -173,6 +208,11 @@ export function LoginPage() {
                   </span>
                 </button>
               </div>
+              {passwordMessage ? (
+                <p id="login-password-error" className="login-field-error">
+                  {passwordMessage}
+                </p>
+              ) : null}
               <p className="login-forgot">
                 <Link to="/forgot-password">Forgot password?</Link>
               </p>
@@ -181,7 +221,7 @@ export function LoginPage() {
             <motion.button
               className="login-submit"
               type="submit"
-              disabled={busy}
+              disabled={busy || !canSubmit}
               aria-busy={submitting}
               initial={submitArrive.initial}
               animate={submitArrive.animate}
@@ -194,7 +234,7 @@ export function LoginPage() {
                   delay: 0,
                 },
               }}
-              whileTap={reduce || busy ? undefined : { scale: 0.985 }}
+              whileTap={reduce || busy || !canSubmit ? undefined : { scale: 0.985 }}
             >
               {submitting ? "Signing in…" : "Sign in"}
             </motion.button>

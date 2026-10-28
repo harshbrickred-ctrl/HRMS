@@ -19,10 +19,10 @@ export class ApplyLeaveDto {
   @IsBoolean()
   halfDayEnd?: boolean;
 
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(500)
-  reason!: string;
+  reason?: string;
 }
 
 export class LeaveDecisionDto {

@@ -20,9 +20,20 @@ function assertDate(value: string) {
   return value;
 }
 
+function todayIso() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
 function available(entitled: number, used: number, pending: number) {
   return Math.max(0, entitled - used - pending);
 }
+
+const LEAVE_OFFICERS = new Set(['HR_EXEC', 'HR_HEAD', 'SECURITY_ADMIN', 'IT_ADMIN']);
 
 @Injectable()
 export class LeaveService {
@@ -33,7 +44,16 @@ export class LeaveService {
   ) {}
 
   async myLeave(userId: string) {
-    const employee = await this.employeeByUser(userId);
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('No employee profile for this login.');
+    const employee = await this.prisma.employee.findUnique({ where: { userId } });
+    if (!employee) {
+      return {
+        balances: this.catalogBalances(),
+        requests: [],
+        holidays: await this.holidayDates(user.tenantId, null),
+      };
+    }
     const [balances, requests, holidays] = await Promise.all([
       this.prisma.leaveBalance.findMany({ where: { employeeId: employee.id }, orderBy: { code: 'asc' } }),
       this.prisma.leaveRequest.findMany({
@@ -43,15 +63,16 @@ export class LeaveService {
       }),
       this.holidayDates(employee.tenantId, employee.locationId),
     ]);
+    const mapped = balances.map((row) => ({
+      code: row.code,
+      type: row.type,
+      entitled: row.entitled,
+      used: row.used,
+      pending: row.pending,
+      available: available(row.entitled, row.used, row.pending),
+    }));
     return {
-      balances: balances.map((row) => ({
-        code: row.code,
-        type: row.type,
-        entitled: row.entitled,
-        used: row.used,
-        pending: row.pending,
-        available: available(row.entitled, row.used, row.pending),
-      })),
+      balances: mapped.length > 0 ? mapped : this.catalogBalances(),
       requests: requests.map((row) => this.view(row)),
       holidays,
     };
@@ -62,7 +83,15 @@ export class LeaveService {
     const fromDate = assertDate(dto.fromDate);
     const toDate = assertDate(dto.toDate || dto.fromDate);
     if (toDate < fromDate) throw new BadRequestException('End date cannot be before start date.');
-    if (!dto.reason.trim()) throw new BadRequestException('Reason is required.');
+    const reason = dto.reason?.trim() ?? '';
+    const today = todayIso();
+    const officer = await this.isLeaveOfficer(userId);
+    if (dto.code === 'EL' && fromDate < today && !officer) {
+      throw new BadRequestException('Planned leave can only be applied for today or a later date.');
+    }
+    if (dto.code === 'SL' && (fromDate > today || toDate > today)) {
+      throw new BadRequestException('Sick leave cannot be applied for a future date.');
+    }
     if (!employee.managerId) {
       throw new BadRequestException('No manager is assigned for this leave request.');
     }
@@ -83,7 +112,7 @@ export class LeaveService {
     });
     if (!balance) throw new BadRequestException('Unknown leave type.');
     if (dto.code !== 'LOP') {
-      const left = available(balance.entitled, balance.used, balance.pending);
+      const left = Math.max(0, balance.entitled - balance.used);
       if (days > left) {
         throw new BadRequestException(`Only ${left} day(s) available for ${balance.type}.`);
       }
@@ -102,12 +131,6 @@ export class LeaveService {
     }
 
     const request = await this.prisma.$transaction(async (tx) => {
-      if (dto.code !== 'LOP') {
-        await tx.leaveBalance.update({
-          where: { id: balance.id },
-          data: { pending: balance.pending + days },
-        });
-      }
       return tx.leaveRequest.create({
         data: {
           tenantId: employee.tenantId,
@@ -119,7 +142,7 @@ export class LeaveService {
           days,
           halfDayStart: Boolean(dto.halfDayStart),
           halfDayEnd: Boolean(dto.halfDayEnd),
-          reason: dto.reason.trim(),
+          reason,
           approverEmployeeId: employee.managerId,
         },
       });
@@ -192,15 +215,34 @@ export class LeaveService {
     };
   }
 
+  async companyLeave(userId: string) {
+    const actor = await this.actor(userId);
+    if (!actor.officer) {
+      throw new ForbiddenException('Only HR or an admin can review company leave.');
+    }
+    const requests = await this.prisma.leaveRequest.findMany({
+      where: { tenantId: actor.tenantId, status: 'Pending' },
+      include: { employee: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return {
+      requests: requests.map((row) => ({
+        ...this.view(row),
+        person: this.person(row.employee),
+      })),
+    };
+  }
+
   async decide(userId: string, id: string, dto: LeaveDecisionDto) {
-    const manager = await this.employeeByUser(userId);
+    const actor = await this.actor(userId);
     const request = await this.prisma.leaveRequest.findFirst({
-      where: { id, tenantId: manager.tenantId },
+      where: { id, tenantId: actor.tenantId },
       include: { employee: true },
     });
     if (!request) throw new NotFoundException('Leave request not found.');
-    if (request.employee.managerId !== manager.id) {
-      throw new ForbiddenException('This leave belongs to another manager.');
+    const isManager = actor.employee != null && request.employee.managerId === actor.employee.id;
+    if (!isManager && !actor.officer) {
+      throw new ForbiddenException('Only the manager, HR, or an admin can decide this leave.');
     }
     if (request.status !== 'Pending') {
       throw new ConflictException('This leave request is already decided.');
@@ -215,6 +257,10 @@ export class LeaveService {
         });
         if (balance) {
           if (dto.status === 'Approved') {
+            const left = Math.max(0, balance.entitled - balance.used);
+            if (request.days > left) {
+              throw new BadRequestException(`Only ${left} day(s) left for ${request.type}.`);
+            }
             await tx.leaveBalance.update({
               where: { id: balance.id },
               data: {
@@ -267,7 +313,7 @@ export class LeaveService {
         kind: 'leave',
       });
     }
-    await this.audit(manager.tenantId, manager.userId, 'leave.request.decide', request.id, {
+    await this.audit(actor.tenantId, actor.userId, 'leave.request.decide', request.id, {
       status: dto.status,
     });
     return this.view(
@@ -291,6 +337,37 @@ export class LeaveService {
   private async holidayIsoList(tenantId: string, locationId: string | null) {
     const rows = await this.holidayDates(tenantId, locationId);
     return rows.map((row) => row.date);
+  }
+
+  private catalogBalances() {
+    return LEAVE_CATALOG.map((item) => ({
+      code: item.code,
+      type: item.type,
+      entitled: 0,
+      used: 0,
+      pending: 0,
+      available: 0,
+    }));
+  }
+
+  private async isLeaveOfficer(userId: string) {
+    const rows = await this.prisma.userRole.findMany({
+      where: { userId },
+      include: { role: { select: { code: true } } },
+    });
+    return rows.some((row) => LEAVE_OFFICERS.has(row.role.code));
+  }
+
+  private async actor(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('No employee profile for this login.');
+    const employee = await this.prisma.employee.findUnique({ where: { userId } });
+    return {
+      userId: user.id,
+      tenantId: user.tenantId,
+      employee,
+      officer: await this.isLeaveOfficer(userId),
+    };
   }
 
   private async employeeByUser(userId: string) {

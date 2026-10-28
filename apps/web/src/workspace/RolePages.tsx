@@ -220,14 +220,27 @@ export function TeamLeavePage() {
   >([]);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  function load() {
     fetchTeamLeave()
       .then((data) => {
         setRequests(data.requests);
         setError(null);
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load team leave.'));
+  }
+
+  useEffect(() => {
+    load();
   }, []);
+
+  async function onDecide(id: string, status: 'Approved' | 'Rejected') {
+    try {
+      await decideLeaveRequest(id, status);
+      load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not decide leave.');
+    }
+  }
 
   return (
     <div className="ess-section-stack">
@@ -251,8 +264,18 @@ export function TeamLeavePage() {
               </div>
               <span className="ess-muted">
                 {item.type} · {item.startDate}
-                {item.endDate !== item.startDate ? ` – ${item.endDate}` : ''} · {item.reason}
+                {item.endDate !== item.startDate ? ` – ${item.endDate}` : ''} · {item.days} day(s) · {item.reason}
               </span>
+              {item.status === 'Pending' ? (
+                <div className="ess-actions">
+                  <button type="button" className="ess-btn ess-btn-primary" onClick={() => void onDecide(item.id, 'Approved')}>
+                    Approve
+                  </button>
+                  <button type="button" className="ess-btn ess-btn-danger" onClick={() => void onDecide(item.id, 'Rejected')}>
+                    Reject
+                  </button>
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>

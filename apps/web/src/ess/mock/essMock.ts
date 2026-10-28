@@ -1014,6 +1014,16 @@ function localIso(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function hasWorkingDay(from: Date, to: Date, holidaySet: Set<string>) {
+  const cursor = new Date(from);
+  while (cursor <= to) {
+    const dow = cursor.getDay();
+    if (dow !== 0 && dow !== 6 && !holidaySet.has(localIso(cursor))) return true;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return false;
+}
+
 export function workingDaysBetween(
   start: string,
   end: string,
@@ -1027,22 +1037,36 @@ export function workingDaysBetween(
   if (endDt < startDt) return 0;
 
   let days = 0;
-  const cursor = new Date(startDt);
-  while (cursor <= endDt) {
-    const isoDate = localIso(cursor);
-    const dow = cursor.getDay();
+  const counted = new Date(startDt);
+  while (counted <= endDt) {
+    const isoDate = localIso(counted);
+    const dow = counted.getDay();
     if (dow !== 0 && dow !== 6 && !holidaySet.has(isoDate)) {
       days += 1;
     }
-    cursor.setDate(cursor.getDate() + 1);
+    counted.setDate(counted.getDate() + 1);
   }
 
   if (days === 0) return 0;
-  if (start === end && (halfDayStart || halfDayEnd)) return 0.5;
-  let result = days;
-  if (halfDayStart) result -= 0.5;
-  if (halfDayEnd && start !== end) result -= 0.5;
-  return Math.max(result, 0.5);
+  const sandwiched = new Date(startDt);
+  sandwiched.setDate(sandwiched.getDate() + 1);
+  while (sandwiched < endDt) {
+    const dow = sandwiched.getDay();
+    if (dow === 0 || dow === 6) {
+      const before = new Date(sandwiched);
+      before.setDate(before.getDate() - 1);
+      const after = new Date(sandwiched);
+      after.setDate(after.getDate() + 1);
+      if (hasWorkingDay(startDt, before, holidaySet) && hasWorkingDay(after, endDt, holidaySet)) {
+        days += 1;
+      }
+    }
+    sandwiched.setDate(sandwiched.getDate() + 1);
+  }
+  const oneHalf = halfDayStart !== halfDayEnd;
+  if (!oneHalf) return days;
+  if (start === end) return 0.5;
+  return Math.max(0.5, days - 0.5);
 }
 
 const LOGIN_PHOTOS: Record<string, string> = {

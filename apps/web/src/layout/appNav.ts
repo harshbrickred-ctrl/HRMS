@@ -201,6 +201,7 @@ const NAV_SECTIONS: NavSection[] = [
     roles: ['SECURITY_ADMIN', 'IT_ADMIN'],
     items: [
       { to: '/admin', label: 'Overview', icon: 'overview', end: true },
+      { to: '/admin/leave', label: 'Leave approvals', icon: 'leaveAdmin' },
       { to: '/admin/roles', label: 'Users & Roles', icon: 'roles' },
       { to: '/admin/audit', label: 'Audit log', icon: 'audit' },
     ],

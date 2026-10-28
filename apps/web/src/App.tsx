@@ -15,6 +15,7 @@ import { EssSalaryPage } from './ess/pages/EssSalaryPage';
 import { EssSettingsPage } from './ess/pages/EssSettingsPage';
 import { EssTeamPage } from './ess/pages/EssTeamPage';
 import { AppLayout } from './layout/AppLayout';
+import { AdminLeavePage } from './workspace/LeaveApprovalsPanel';
 import { AdminRolesPage } from './pages/AdminRolesPage';
 import { ForgotPasswordOtpPage } from './pages/ForgotPasswordOtpPage';
 import { ForgotPasswordRequestPage } from './pages/ForgotPasswordRequestPage';
@@ -120,6 +121,7 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="leave" element={<AdminLeavePage />} />
               <Route path="audit" element={<AdminAuditPage />} />
               <Route path="notifications" element={<AdminMailPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />

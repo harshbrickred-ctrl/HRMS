@@ -38,7 +38,14 @@ export const PERMISSIONS: { code: string; description: string }[] = [
 
 /** role code → permission codes */
 export const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
-  SECURITY_ADMIN: ['rbac.assign', 'rbac.read', 'identity.manage', 'audit.read'],
+  SECURITY_ADMIN: [
+    'rbac.assign',
+    'rbac.read',
+    'identity.manage',
+    'audit.read',
+    'leave.self',
+    'leave.approve',
+  ],
   IT_ADMIN: [
     'rbac.assign',
     'rbac.read',
@@ -47,6 +54,8 @@ export const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
     'assets.self',
     'assets.manage',
     'assets.tickets.manage',
+    'leave.self',
+    'leave.approve',
   ],
   HR_HEAD: [
     'rbac.read',
@@ -60,6 +69,7 @@ export const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
     'attendance.device.manage',
     'leave.self',
     'leave.manage',
+    'leave.approve',
     'helpdesk.manage',
     'helpdesk.self',
     'payslip.manage',
@@ -88,6 +98,7 @@ export const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
     'attendance.device.manage',
     'leave.self',
     'leave.manage',
+    'leave.approve',
     'helpdesk.manage',
     'helpdesk.self',
     'payslip.manage',

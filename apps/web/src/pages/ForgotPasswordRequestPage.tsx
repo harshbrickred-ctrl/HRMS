@@ -4,22 +4,31 @@ import { Link, useNavigate } from 'react-router-dom';
 import { requestPasswordReset } from '../lib/api';
 import { ForgotPasswordLayout } from './ForgotPasswordLayout';
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function emailError(value: string) {
+  const email = value.trim();
+  if (!email) return null;
+  if (!EMAIL_PATTERN.test(email)) return 'Email is invalid';
+  return null;
+}
+
 export function ForgotPasswordRequestPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [popup, setPopup] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const emailMessage = emailError(email);
+  const canSubmit = email.trim().length > 0 && !emailMessage && !submitting;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!canSubmit) return;
     setError(null);
     setInfo(null);
     const trimmed = email.trim().toLowerCase();
-    if (!trimmed) {
-      setError('Work email is required.');
-      return;
-    }
     setSubmitting(true);
     try {
       const res = await requestPasswordReset(trimmed);
@@ -29,7 +38,9 @@ export function ForgotPasswordRequestPage() {
         state: { email: trimmed },
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to send OTP');
+      const message = err instanceof Error ? err.message : 'Unable to send OTP';
+      if (message.toLowerCase().includes('not registered')) setPopup(message);
+      else setError(message);
     } finally {
       setSubmitting(false);
     }
@@ -54,18 +65,49 @@ export function ForgotPasswordRequestPage() {
             type="email"
             autoComplete="username"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setError(null);
+              setPopup(null);
+            }}
+            aria-invalid={emailMessage ? true : undefined}
+            aria-describedby={emailMessage ? 'fp-email-error' : undefined}
             disabled={submitting}
-            required
           />
+          {emailMessage ? (
+            <p id="fp-email-error" className="fp-field-error">
+              {emailMessage}
+            </p>
+          ) : null}
         </div>
-        <button type="submit" className="fp-submit" disabled={submitting}>
+        <button type="submit" className="fp-submit" disabled={!canSubmit}>
           {submitting ? 'Sending…' : 'Send OTP'}
         </button>
       </form>
       <p className="fp-links">
         <Link to="/login">Back to sign in</Link>
       </p>
+      {popup ? (
+        <div
+          className="fp-popup-backdrop"
+          role="presentation"
+          onClick={() => setPopup(null)}
+        >
+          <div
+            className="fp-popup"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="fp-popup-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="fp-popup-title">Email not registered</h2>
+            <p>{popup}</p>
+            <button type="button" className="fp-submit" onClick={() => setPopup(null)}>
+              OK
+            </button>
+          </div>
+        </div>
+      ) : null}
     </ForgotPasswordLayout>
   );
 }

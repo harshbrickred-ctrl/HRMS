@@ -34,6 +34,17 @@ export type MyLeave = {
   holidays: Array<{ date: string; name: string }>;
 };
 
+/** Shown when the signed-in user has no balance rows yet, so Apply still lists types. */
+export const LEAVE_TYPE_CATALOG: LeaveBalanceDto[] = [
+  { code: 'CL', type: 'Casual Leave', entitled: 0, used: 0, pending: 0, available: 0 },
+  { code: 'SL', type: 'Sick Leave', entitled: 0, used: 0, pending: 0, available: 0 },
+  { code: 'EL', type: 'Earned Leave or Planned Leave', entitled: 0, used: 0, pending: 0, available: 0 },
+  { code: 'CO', type: 'Comp-off', entitled: 0, used: 0, pending: 0, available: 0 },
+  { code: 'WFH', type: 'Work From Home', entitled: 0, used: 0, pending: 0, available: 0 },
+  { code: 'OBH', type: 'Optional - Birth Holiday', entitled: 0, used: 0, pending: 0, available: 0 },
+  { code: 'LOP', type: 'Loss of Pay', entitled: 0, used: 0, pending: 0, available: 0 },
+];
+
 export function fetchMyLeave() {
   return apiFetch<MyLeave>('/api/v1/leave/me');
 }
@@ -58,6 +69,10 @@ export function withdrawLeaveRequest(id: string) {
 
 export function fetchTeamLeave() {
   return apiFetch<{ requests: LeaveRequestDto[] }>('/api/v1/leave/team');
+}
+
+export function fetchCompanyLeave() {
+  return apiFetch<{ requests: LeaveRequestDto[] }>('/api/v1/leave/company');
 }
 
 export function decideLeaveRequest(id: string, status: 'Approved' | 'Rejected', note?: string) {

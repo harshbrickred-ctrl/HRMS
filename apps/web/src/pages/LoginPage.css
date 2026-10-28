@@ -193,6 +193,12 @@ html[data-theme="dark"] .login-control {
   outline: none;
 }
 
+/* Edge/IE native password eye — hide so only our Show/Hide stays */
+.login-control input[type="password"]::-ms-reveal,
+.login-control input[type="password"]::-ms-clear {
+  display: none;
+}
+
 .login-control input:disabled {
   opacity: 1;
   color: var(--ink);
@@ -316,6 +322,13 @@ html[data-theme="dark"] .login-submit {
 .login-alert:focus {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.login-field-error {
+  margin: 8px 0 0;
+  color: var(--danger);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 @media (max-width: 900px) {
