@@ -32,7 +32,7 @@ export const PERMISSIONS: { code: string; description: string }[] = [
   { code: 'payslip.self', description: 'View and download own payslips' },
   { code: 'payslip.manage', description: 'Upload and manage employee payslips' },
   { code: 'assets.self', description: 'View currently assigned assets and raise asset tickets' },
-  { code: 'assets.manage', description: 'Manage the IT asset register, assignments, and history' },
+  { code: 'assets.manage', description: 'Manage the asset register, categories, assignments, and history' },
   { code: 'assets.tickets.manage', description: 'Handle asset issues, queries, and new-asset requests' },
 ];
 
@@ -74,6 +74,9 @@ export const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
     'helpdesk.self',
     'payslip.manage',
     'payslip.self',
+    'assets.self',
+    'assets.manage',
+    'assets.tickets.manage',
   ],
   LEADERSHIP_READ: ['audit.read', 'reports.read'],
   FINANCE_READ: ['reports.read', 'payslip.self'],

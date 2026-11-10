@@ -140,16 +140,27 @@
 | Attendance month + punch | Employee | Same self API as web |
 
 
-### IT assets
+### Assets
+
+Statuses: In Stock, Allocated, Under Maintenance, Lost, Retired, Disposed, Written Off. Every status change records who, when, and why.
 
 | Feature | Who | What you get |
 |---------|-----|----------------|
-| Current assignments | Employee | Tag, category, model, serial, assigned date. Past owners are hidden |
-| Issue, query, or new request | Employee | Sent to IT, separate from HR Helpdesk |
-| Register, assign, return, history | IT Admin | Full inventory and assignment trail |
-| Ticket inbox | IT Admin | Status updates and notes back to the employee |
+| Dashboard | IT Admin, HR Head | Totals by status and category |
+| Categories | IT Admin, HR Head | Add, edit, or deactivate; tag prefix and custom fields per category |
+| Asset master | IT Admin, HR Head | Add, edit, view, search, filter; generated tag, optional unique serial, warranty, location, photo |
+| Delete asset | IT Admin, HR Head | Only for an asset in stock with no history |
+| Allocate, return, transfer | IT Admin, HR Head | Condition, accessories, inspection, photos; transfers keep the asset Allocated |
+| Status changes | IT Admin, HR Head | Only the allowed moves, each with a reason |
+| Asset and employee history | IT Admin, HR Head | Timeline, status history, every allocation, signed forms |
+| Requests | Employee, Manager, Dept head, Asset admin | Employee requests, manager and department head approve, asset admin issues |
+| Maintenance | IT Admin, HR Head | Repair records with vendor, cost, dates, and outcome; returns needing repair open one automatically |
+| Reports | IT Admin, HR Head | Stock, allocations, employee-wise, overdue, warranty, department cost, history; CSV download |
+| My Assets | Employee | Own assets, acknowledge receipt or handover, signed forms, asset history |
+| Fault and loss reports | Employee | Reference number, status, photos and documents; an admin reviews them and makes any status change |
+| Ticket inbox | IT Admin, HR Head | Review reports and reply to the employee; nobody can process their own report |
 
-HR does not manage assets.
+Not built: asset exit clearance. It needs an employee exit and F&F process, which does not exist yet.
 
 
 ---
@@ -241,7 +252,8 @@ HR does not manage assets.
 | Role           | Main live areas                                                                                                                   |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | **Employee**   | Home, leave, attendance, documents, people, notifications, helpdesk, current assets, payslip PDFs, settings |
-| **IT Admin**   | Asset register, assignment history, and asset tickets. Not an HR function |
+| **IT Admin**   | Asset categories, register, assignment history, and asset tickets |
+| **HR Head**    | Same asset access as IT Admin, for HR administration and oversight |
 | **Manager**    | Same + inbox (leave + attendance corrections), team leave, team attendance                                                        |
 | **HR**         | Employees, org, leave balances, attendance admin (devices, lock, register), documents + payslip upload, workflows queues, reports |
 | **Admin**      | Users & Roles; settings/jobs/audit still thin                                                                                     |

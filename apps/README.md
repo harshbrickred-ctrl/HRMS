@@ -39,6 +39,7 @@ The sidebar shows **Me** for everyone, plus Team / HR / Admin / Leadership when 
 | `employee@peopleos.local` | `EMPLOYEE` |
 | `manager@peopleos.local` | `MANAGER`, `EMPLOYEE` |
 | `hr@peopleos.local` | `HR_EXEC`, `EMPLOYEE` |
+| `it@peopleos.local` | `IT_ADMIN·EMPLOYEE`, `EMPLOYEE` |
 
 Admin role UI: http://localhost:5173/admin/roles (requires `rbac.assign`)
 

@@ -42,6 +42,10 @@ model Tenant {
   assets               Asset[]
   assetAssignments     AssetAssignment[]
   assetTickets         AssetTicket[]
+  assetCategories      AssetCategory[]
+  assetStatusHistory   AssetStatusHistory[]
+  assetRequests        AssetRequest[]
+  assetMaintenance     AssetMaintenance[]
 }
 
 model User {
@@ -60,6 +64,22 @@ model User {
   passwordResets PasswordResetOtp[]
   employee       Employee?
   notifications  Notification[]
+  assetCategoriesCreated AssetCategory[] @relation("AssetCategoryCreatedBy")
+  assetCategoriesUpdated AssetCategory[] @relation("AssetCategoryUpdatedBy")
+  assetsCreated  Asset[]            @relation("AssetCreatedBy")
+  assetsUpdated  Asset[]            @relation("AssetUpdatedBy")
+  assetsIssued   AssetAssignment[]  @relation("AssetIssuedBy")
+  assetsAcknowledged AssetAssignment[] @relation("AssetAckBy")
+  assetsReceived AssetAssignment[]  @relation("AssetReturnedBy")
+  assetHandovers AssetAssignment[]  @relation("AssetHandoverAckBy")
+  assetStatusChanges AssetStatusHistory[]
+  assetFilesUploaded AssetAssignmentFile[]
+  assetTicketFilesUploaded AssetTicketFile[]
+  assetRequestsCreated AssetRequest[] @relation("AssetRequestCreatedBy")
+  assetRequestsFulfilled AssetRequest[] @relation("AssetRequestFulfilledBy")
+  assetRequestDecisions AssetRequestDecision[]
+  assetMaintenanceCreated AssetMaintenance[] @relation("AssetMaintenanceCreatedBy")
+  assetMaintenanceUpdated AssetMaintenance[] @relation("AssetMaintenanceUpdatedBy")
 
   @@unique([tenantId, email])
   @@index([email])
@@ -155,7 +175,10 @@ model Department {
   name      String
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  /// Approves asset requests after the reporting manager.
+  headId    String?
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  head      Employee?  @relation("DepartmentHead", fields: [headId], references: [id], onDelete: SetNull)
   teams     Team[]
   employees Employee[]
 
@@ -173,6 +196,7 @@ model Location {
   employees Employee[]
   devices   AttendanceDevice[]
   holidays  Holiday[]
+  assets    Asset[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -232,6 +256,10 @@ model Employee {
   payslips     Payslip[]
   assetAssignments AssetAssignment[]
   assetTickets AssetTicket[]
+  headOfDepartments Department[] @relation("DepartmentHead")
+  assetRequests AssetRequest[] @relation("AssetRequestFor")
+  assetRequestsToApprove AssetRequest[] @relation("AssetRequestManager")
+  assetRequestsToApproveAsHead AssetRequest[] @relation("AssetRequestHead")
 
   @@unique([tenantId, employeeCode])
   @@index([tenantId])
@@ -644,26 +672,65 @@ model AttendancePeriod {
   @@unique([tenantId, year, month])
 }
 
-enum AssetCategory {
-  laptop
-  monitor
-  phone
-  access_card
-  other
-}
-
 enum AssetStatus {
   in_stock
-  assigned
-  repair
-  retired
+  allocated
+  under_maintenance
   lost
+  retired
+  disposed
+  written_off
+}
+
+enum AssetAckStatus {
+  pending
+  acknowledged
+  not_recorded
+}
+
+enum AssetReturnCondition {
+  good
+  damaged
+  requires_repair
+  missing_components
+}
+
+enum AssetAssignmentEnd {
+  returned
+  transferred
+  lost
+}
+
+enum AssetRequestStatus {
+  pending_manager
+  pending_head
+  approved
+  rejected
+  fulfilled
+  cancelled
+}
+
+enum AssetMaintenanceStatus {
+  open
+  completed
+}
+
+enum AssetRepairOutcome {
+  repaired
+  beyond_repair
 }
 
 enum AssetTicketType {
   Issue
   Query
   Request
+  Loss
+}
+
+enum AssetTicketPriority {
+  low
+  medium
+  high
 }
 
 enum AssetTicketStatus {
@@ -673,23 +740,73 @@ enum AssetTicketStatus {
   Closed
 }
 
+/// Configurable per tenant. `fields` holds the category's custom field definitions.
+model AssetCategory {
+  id            String   @id @default(cuid())
+  tenantId      String
+  code          String
+  name          String
+  tagPrefix     String
+  nextTagNumber Int      @default(1)
+  fields        Json     @default("[]")
+  /// Straight-line depreciation period used for book value.
+  usefulLifeMonths Int   @default(48)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdById   String?
+  updatedById   String?
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy     User?    @relation("AssetCategoryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy     User?    @relation("AssetCategoryUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  assets        Asset[]
+  requests      AssetRequest[]
+
+  @@unique([tenantId, code])
+  @@unique([tenantId, tagPrefix])
+}
+
 model Asset {
-  id           String             @id @default(cuid())
-  tenantId     String
-  assetTag     String
-  category     AssetCategory
-  makeModel    String             @default("")
-  serialNo     String             @default("")
-  status       AssetStatus        @default(in_stock)
-  purchasedOn  DateTime?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  assignments  AssetAssignment[]
-  tickets      AssetTicket[]
+  id             String            @id @default(cuid())
+  tenantId       String
+  assetTag       String
+  categoryId     String
+  name           String
+  make           String            @default("")
+  model          String            @default("")
+  serialNo       String?
+  status         AssetStatus       @default(in_stock)
+  purchasedOn    DateTime?
+  vendor         String            @default("")
+  /// Who owns the device, e.g. the company, a client, or a rental vendor.
+  owner          String            @default("")
+  cost           Decimal?          @db.Decimal(12, 2)
+  warrantyExpiry DateTime?         @db.Date
+  locationId     String?
+  photoPath      String            @default("")
+  description    String            @default("")
+  /// Condition as written in an imported sheet. Issue and return conditions take over once recorded.
+  condition      String            @default("")
+  customFields   Json              @default("{}")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  createdById    String?
+  updatedById    String?
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category       AssetCategory     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  location       Location?         @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  createdBy      User?             @relation("AssetCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy      User?             @relation("AssetUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  assignments    AssetAssignment[]
+  tickets        AssetTicket[]
+  statusHistory  AssetStatusHistory[]
+  maintenance    AssetMaintenance[]
 
   @@unique([tenantId, assetTag])
+  @@unique([tenantId, serialNo])
   @@index([tenantId, status])
+  @@index([tenantId, categoryId])
+  @@index([tenantId, locationId])
 }
 
 model AssetAssignment {
@@ -698,25 +815,99 @@ model AssetAssignment {
   assetId        String
   employeeId     String
   assignedOn     DateTime  @default(now())
+  expectedReturnOn DateTime? @db.Date
   returnedOn     DateTime?
   conditionNotes String    @default("")
+  issueCondition String    @default("")
+  accessories    String    @default("")
+  /// Project or work the device is issued for, and the holder's contact details at issue.
+  project        String    @default("")
+  contactMobile  String    @default("")
+  employmentType String    @default("")
+  issuedById     String?
+  ackStatus      AssetAckStatus @default(pending)
+  /// The employee is asked to accept by this day.
+  ackDueOn       DateTime? @db.Date
+  ackAt          DateTime?
+  ackById        String?
+  ackMethod      String    @default("")
+  returnCondition AssetReturnCondition?
+  damageNotes    String    @default("")
+  inspectionNotes String   @default("")
+  returnedById   String?
+  endReason      AssetAssignmentEnd?
+  transferredFromId String? @unique
+  transferReason String    @default("")
+  handoverAckStatus AssetAckStatus?
+  handoverAckAt  DateTime?
+  handoverAckById String?
+  handoverAckMethod String @default("")
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  asset          Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  asset          Asset     @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  issuedBy       User?     @relation("AssetIssuedBy", fields: [issuedById], references: [id], onDelete: SetNull)
+  ackBy          User?     @relation("AssetAckBy", fields: [ackById], references: [id], onDelete: SetNull)
+  returnedBy     User?     @relation("AssetReturnedBy", fields: [returnedById], references: [id], onDelete: SetNull)
+  handoverAckBy  User?     @relation("AssetHandoverAckBy", fields: [handoverAckById], references: [id], onDelete: SetNull)
+  transferredFrom AssetAssignment? @relation("AssetTransfer", fields: [transferredFromId], references: [id], onDelete: Restrict)
+  transferredTo  AssetAssignment? @relation("AssetTransfer")
+  files          AssetAssignmentFile[]
+  request        AssetRequest?
 
   @@index([tenantId, employeeId, returnedOn])
   @@index([assetId, returnedOn])
 }
 
+/// Every status an asset has moved through: permanent, never edited.
+model AssetStatusHistory {
+  id          String      @id @default(cuid())
+  tenantId    String
+  assetId     String
+  fromStatus  AssetStatus
+  toStatus    AssetStatus
+  reason      String
+  /// What caused the change: allocation | return | status | maintenance
+  source      String      @default("status")
+  changedById String?
+  changedAt   DateTime    @default(now())
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  asset       Asset       @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  changedBy   User?       @relation(fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([assetId, changedAt])
+  @@index([tenantId, changedAt])
+}
+
+/// Signed acknowledgement forms and return photos. `kind`: signed_ack | handover_ack | return_photo
+model AssetAssignmentFile {
+  id           String          @id @default(cuid())
+  assignmentId String
+  kind         String
+  fileName     String
+  storagePath  String
+  uploadedById String?
+  uploadedAt   DateTime        @default(now())
+  assignment   AssetAssignment @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  uploadedBy   User?           @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([assignmentId])
+}
+
 model AssetTicket {
   id         String            @id @default(cuid())
+  /// Shown to people as the report reference, e.g. AT-000123.
+  number     Int               @unique @default(autoincrement())
   tenantId   String
   employeeId String
   assetId    String?
   type       AssetTicketType
+  /// Fault category or lost/stolen for reports; a category code for requests.
   category   String            @default("")
+  priority   AssetTicketPriority @default(medium)
+  lostOn     DateTime?         @db.Date
+  lostLocation String          @default("")
   subject    String
   body       String
   status     AssetTicketStatus @default(Open)
@@ -726,9 +917,25 @@ model AssetTicket {
   employee   Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   asset      Asset?            @relation(fields: [assetId], references: [id], onDelete: SetNull)
   comments   AssetTicketComment[]
+  files      AssetTicketFile[]
+  maintenance AssetMaintenance[]
 
   @@index([tenantId, employeeId, status])
   @@index([tenantId, status])
+}
+
+/// Photos and documents attached to an employee's report.
+model AssetTicketFile {
+  id           String      @id @default(cuid())
+  ticketId     String
+  fileName     String
+  storagePath  String
+  uploadedById String?
+  uploadedAt   DateTime    @default(now())
+  ticket       AssetTicket @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+  uploadedBy   User?       @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([ticketId])
 }
 
 model AssetTicketComment {
@@ -740,4 +947,86 @@ model AssetTicketComment {
   ticket    AssetTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId, createdAt])
+}
+
+/// Employee request: manager approves, then the department head, then an asset admin issues.
+model AssetRequest {
+  id                String             @id @default(cuid())
+  /// Shown to people as the request reference, e.g. AR-000123.
+  number            Int                @unique @default(autoincrement())
+  tenantId          String
+  employeeId        String
+  categoryId        String
+  reason            String
+  status            AssetRequestStatus
+  managerApproverId String?
+  headApproverId    String?
+  fulfilledById     String?
+  fulfilledAt       DateTime?
+  assignmentId      String?            @unique
+  createdById       String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee          Employee           @relation("AssetRequestFor", fields: [employeeId], references: [id], onDelete: Restrict)
+  category          AssetCategory      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  managerApprover   Employee?          @relation("AssetRequestManager", fields: [managerApproverId], references: [id], onDelete: SetNull)
+  headApprover      Employee?          @relation("AssetRequestHead", fields: [headApproverId], references: [id], onDelete: SetNull)
+  fulfilledBy       User?              @relation("AssetRequestFulfilledBy", fields: [fulfilledById], references: [id], onDelete: SetNull)
+  createdBy         User?              @relation("AssetRequestCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  assignment        AssetAssignment?   @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  decisions         AssetRequestDecision[]
+
+  @@index([tenantId, status])
+  @@index([managerApproverId, status])
+  @@index([headApproverId, status])
+  @@index([employeeId])
+}
+
+/// One row per approval step decided: permanent, never edited.
+model AssetRequestDecision {
+  id          String       @id @default(cuid())
+  requestId   String
+  /// manager | head | admin
+  step        String
+  approved    Boolean
+  note        String       @default("")
+  decidedById String?
+  decidedAt   DateTime     @default(now())
+  request     AssetRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  decidedBy   User?        @relation(fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+}
+
+/// Repair record. A partial unique index allows one open record per asset.
+model AssetMaintenance {
+  id            String                 @id @default(cuid())
+  tenantId      String
+  assetId       String
+  ticketId      String?
+  issue         String
+  vendor        String                 @default("")
+  vendorContact String                 @default("")
+  startedOn     DateTime               @db.Date
+  expectedOn    DateTime?              @db.Date
+  completedOn   DateTime?              @db.Date
+  cost          Decimal?               @db.Decimal(12, 2)
+  outcome       AssetRepairOutcome?
+  outcomeNotes  String                 @default("")
+  status        AssetMaintenanceStatus @default(open)
+  /// Where an open repair is: with_vendor | testing | ready
+  stage         String                 @default("with_vendor")
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  createdById   String?
+  updatedById   String?
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  asset         Asset                  @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  ticket        AssetTicket?           @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  createdBy     User?                  @relation("AssetMaintenanceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy     User?                  @relation("AssetMaintenanceUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([assetId])
 }

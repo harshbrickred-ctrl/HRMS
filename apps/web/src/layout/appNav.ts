@@ -223,12 +223,18 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     id: 'it-assets',
-    label: 'IT assets',
+    label: 'Assets',
     emphasis: 'clear',
-    roles: ['IT_ADMIN'],
+    roles: ['IT_ADMIN', 'HR_HEAD'],
     items: [
+      { to: '/it/dashboard', label: 'Asset dashboard', icon: 'overview' },
       { to: '/it/assets', label: 'Asset register', icon: 'assets' },
-      { to: '/it/tickets', label: 'Asset tickets', icon: 'inbox' },
+      { to: '/it/requests', label: 'Requests and approvals', icon: 'inbox' },
+      { to: '/it/allocate', label: 'Issue and return', icon: 'employees' },
+      { to: '/it/maintenance', label: 'Maintenance and warranty', icon: 'jobs' },
+      { to: '/it/reports', label: 'Asset reports', icon: 'reports' },
+      { to: '/it/categories', label: 'Asset categories', icon: 'workflows' },
+      { to: '/it/approvers', label: 'Request approvers', icon: 'roles' },
     ],
   },
   {
@@ -246,6 +252,14 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
 ];
+
+/** Asset pages reached from tabs and links rather than the sidebar. */
+const IT_SUBPAGE_TITLES: Record<string, string> = {
+  '/it/return': 'Issue and return',
+  '/it/transfer': 'Issue and return',
+  '/it/employee-assets': 'Issue and return',
+  '/it/tickets': 'Asset tickets',
+};
 
 function canAccessSection(
   section: NavSection,
@@ -272,6 +286,8 @@ export function titleForPath(
 ): string {
   const items = allNavItems(sections);
   const exact = items.find((i) => i.to === pathname);
+  const inSection = items.some((i) => i.to.startsWith('/it/')) ? IT_SUBPAGE_TITLES[pathname] : undefined;
+  if (!exact && inSection) return inSection;
   if (exact) return exact.label;
   const prefix = [...items]
     .filter((i) => pathname.startsWith(i.to) && i.to !== '/ess')

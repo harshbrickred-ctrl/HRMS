@@ -13,6 +13,44 @@ import {
 const prisma = new PrismaClient();
 const UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
 
+/** Same defaults the asset_master migration gives existing tenants. */
+const ASSET_CATEGORIES = [
+  {
+    code: 'laptop',
+    name: 'Laptop',
+    tagPrefix: 'LAP',
+    fields: [
+      { key: 'ram', label: 'RAM', type: 'text' },
+      { key: 'storage', label: 'Storage', type: 'text' },
+      { key: 'processor', label: 'Processor', type: 'text' },
+      { key: 'os', label: 'OS', type: 'text' },
+    ],
+  },
+  {
+    code: 'mobile',
+    name: 'Mobile',
+    tagPrefix: 'MOB',
+    fields: [
+      { key: 'imei', label: 'IMEI', type: 'text' },
+      { key: 'device_number', label: 'Device Number', type: 'text' },
+    ],
+  },
+  { code: 'id_card', name: 'ID Card', tagPrefix: 'IDC', fields: [] },
+  { code: 'furniture', name: 'Furniture', tagPrefix: 'FUR', fields: [] },
+  { code: 'access_card', name: 'Access Card', tagPrefix: 'ACC', fields: [] },
+  {
+    code: 'software_licence',
+    name: 'Software Licence',
+    tagPrefix: 'SWL',
+    fields: [
+      { key: 'licence_key', label: 'Licence Key', type: 'text' },
+      { key: 'seat_count', label: 'Seat Count', type: 'number' },
+    ],
+  },
+  { code: 'monitor', name: 'Monitor', tagPrefix: 'MON', fields: [] },
+  { code: 'other', name: 'Other', tagPrefix: 'OTH', fields: [] },
+];
+
 const HARSH_DOCUMENTS: Array<{ fileName: string; category: string }> = [
   { fileName: 'BR_offer_letter_Acceptance.pdf', category: 'Brickred Documents' },
   { fileName: 'NDA_Acceptance.pdf', category: 'Brickred Documents' },
@@ -170,7 +208,7 @@ async function main() {
   await ensureNamed('department', 'Leadership');
   const noida = await ensureNamed('location', 'Noida');
   const bengaluru = await ensureNamed('location', 'Bengaluru');
-  await ensureNamed('location', 'Hyderabad');
+  const hyderabad = await ensureNamed('location', 'Hyderabad');
   const mumbai = await ensureNamed('location', 'Mumbai');
 
   async function ensureEmployee(input: {
@@ -417,38 +455,64 @@ async function main() {
     locationId: noida.id,
   });
 
+  await prisma.department.update({ where: { id: engineering.id }, data: { headId: rohit.id } });
+
+  const categoryIds = new Map<string, string>();
+  for (const category of ASSET_CATEGORIES) {
+    const row = await prisma.assetCategory.upsert({
+      where: { tenantId_code: { tenantId: tenant.id, code: category.code } },
+      update: {},
+      create: { tenantId: tenant.id, ...category },
+    });
+    categoryIds.set(category.code, row.id);
+  }
+
+  type SeedAssetStatus = 'in_stock' | 'allocated' | 'under_maintenance' | 'lost' | 'retired';
+
   async function ensureAsset(input: {
     assetTag: string;
-    category: 'laptop' | 'monitor' | 'phone' | 'access_card' | 'other';
-    makeModel: string;
+    category: string;
+    name: string;
+    make: string;
+    model: string;
     serialNo: string;
-    status: 'in_stock' | 'assigned' | 'repair' | 'retired' | 'lost';
+    status: SeedAssetStatus;
+    purchasedOn?: string;
+    vendor?: string;
+    cost?: number;
+    warrantyExpiry?: string;
+    locationId?: string;
+    description?: string;
+    customFields?: Record<string, string | number>;
   }) {
+    const { assetTag, category, status, purchasedOn, warrantyExpiry, ...details } = input;
+    const categoryId = categoryIds.get(category)!;
+    const dates = {
+      ...(purchasedOn ? { purchasedOn: new Date(purchasedOn) } : {}),
+      ...(warrantyExpiry ? { warrantyExpiry: new Date(warrantyExpiry) } : {}),
+    };
     return prisma.asset.upsert({
-      where: { tenantId_assetTag: { tenantId: tenant.id, assetTag: input.assetTag } },
-      update: {
-        category: input.category,
-        makeModel: input.makeModel,
-        serialNo: input.serialNo,
-      },
-      create: {
-        tenantId: tenant.id,
-        ...input,
-      },
+      where: { tenantId_assetTag: { tenantId: tenant.id, assetTag } },
+      update: { categoryId, ...details, ...dates },
+      create: { tenantId: tenant.id, assetTag, categoryId, status, ...details, ...dates },
     });
   }
 
   const harshLaptop = await ensureAsset({
     assetTag: 'LAP-266',
     category: 'laptop',
-    makeModel: 'Dell Latitude 5440',
+    name: 'Dell Latitude 5440',
+    make: 'Dell',
+    model: 'Latitude 5440',
     serialNo: 'DL5440-BR266',
-    status: 'assigned',
+    status: 'allocated',
   });
   await ensureAsset({
     assetTag: 'MON-014',
     category: 'monitor',
-    makeModel: 'Dell P2422H',
+    name: 'Dell P2422H',
+    make: 'Dell',
+    model: 'P2422H',
     serialNo: 'MON-P2422H-014',
     status: 'in_stock',
   });
@@ -467,13 +531,228 @@ async function main() {
     });
     await prisma.asset.update({
       where: { id: harshLaptop.id },
-      data: { status: 'assigned' },
+      data: { status: 'allocated' },
     });
   }
-  void itEmployee;
+  const holders = {
+    harsh: { employeeId: harsh.id, userId: employeeUser.id, name: 'Harsh Yadav' },
+    rohit: { employeeId: rohit.id, userId: managerUser.id, name: 'Rohit Mehta' },
+    ananya: { employeeId: ananya.id, userId: hrUser.id, name: 'Ananya Desai' },
+    isha: { employeeId: itEmployee.id, userId: itUser.id, name: 'Isha Kapoor' },
+  };
+  type Holder = keyof typeof holders;
+  type AssetStory =
+    | { kind: 'allocated'; to: Holder; on: string; accessories?: string; acknowledged: boolean }
+    | { kind: 'maintenance'; issue: string; vendor: string; vendorContact: string; startedOn: string; expectedOn: string }
+    | { kind: 'lost'; from: Holder; allocatedOn: string; lostOn: string; reason: string }
+    | { kind: 'retired'; on: string; reason: string };
+
+  const REGISTER: Array<Parameters<typeof ensureAsset>[0] & { story?: AssetStory }> = [
+    {
+      assetTag: 'LAP-0001', category: 'laptop', name: 'MacBook Pro 14" M3 Pro', make: 'Apple', model: 'MacBook Pro 14 (2023)',
+      serialNo: 'C02ZK1M3PRO1', status: 'allocated', purchasedOn: '2025-11-12', vendor: 'Unicorn Infosolutions', cost: 199900,
+      warrantyExpiry: '2027-11-11', locationId: bengaluru.id, customFields: { ram: '18 GB', storage: '512 GB SSD', processor: 'Apple M3 Pro' },
+      story: { kind: 'allocated', to: 'rohit', on: '2025-11-20', accessories: '96W USB-C charger, sleeve', acknowledged: true },
+    },
+    {
+      assetTag: 'LAP-0002', category: 'laptop', name: 'ThinkPad T14 Gen 4', make: 'Lenovo', model: 'T14 Gen 4',
+      serialNo: 'PF4T14G4A02', status: 'allocated', purchasedOn: '2026-02-03', vendor: 'Rashi Peripherals', cost: 112500,
+      warrantyExpiry: '2029-02-02', locationId: mumbai.id, customFields: { ram: '16 GB', storage: '512 GB SSD', processor: 'Intel Core i7-1355U' },
+      story: { kind: 'allocated', to: 'ananya', on: '2026-02-10', accessories: '65W charger, backpack', acknowledged: true },
+    },
+    {
+      assetTag: 'LAP-0003', category: 'laptop', name: 'Latitude 7440', make: 'Dell', model: 'Latitude 7440',
+      serialNo: 'DL7440-IT0003', status: 'allocated', purchasedOn: '2026-03-15', vendor: 'Dell India Online', cost: 128000,
+      warrantyExpiry: '2029-03-14', locationId: noida.id, customFields: { ram: '32 GB', storage: '1 TB SSD', processor: 'Intel Core i7-1365U' },
+      story: { kind: 'allocated', to: 'isha', on: '2026-03-18', accessories: '65W charger, docking station', acknowledged: true },
+    },
+    {
+      assetTag: 'LAP-0004', category: 'laptop', name: 'EliteBook 840 G10', make: 'HP', model: 'EliteBook 840 G10',
+      serialNo: '5CG3401HP04', status: 'in_stock', purchasedOn: '2026-09-22', vendor: 'Rashi Peripherals', cost: 104300,
+      warrantyExpiry: '2029-09-21', locationId: noida.id, customFields: { ram: '16 GB', storage: '512 GB SSD', processor: 'Intel Core i5-1345U' },
+      description: 'Ready for the November joiners batch.',
+    },
+    {
+      assetTag: 'LAP-0005', category: 'laptop', name: 'ThinkPad E14 Gen 5', make: 'Lenovo', model: 'E14 Gen 5',
+      serialNo: 'PF4E14G5A05', status: 'under_maintenance', purchasedOn: '2025-06-09', vendor: 'Rashi Peripherals', cost: 68900,
+      warrantyExpiry: '2026-12-08', locationId: hyderabad.id, customFields: { ram: '16 GB', storage: '512 GB SSD', processor: 'AMD Ryzen 5 7530U' },
+      story: {
+        kind: 'maintenance', issue: 'Battery swelling, trackpad lifting', vendor: 'Lenovo Service Centre, Hyderabad',
+        vendorContact: '1800-419-4666', startedOn: '2026-10-27', expectedOn: '2026-11-07',
+      },
+    },
+    {
+      assetTag: 'LAP-0006', category: 'laptop', name: 'Latitude 5420', make: 'Dell', model: 'Latitude 5420',
+      serialNo: 'DL5420-OLD006', status: 'retired', purchasedOn: '2021-08-02', vendor: 'Dell India Online', cost: 74000,
+      warrantyExpiry: '2024-08-01', locationId: noida.id, customFields: { ram: '8 GB', storage: '256 GB SSD', processor: 'Intel Core i5-1145G7' },
+      story: { kind: 'retired', on: '2026-08-14', reason: 'End of life, warranty expired and below spec' },
+    },
+    {
+      assetTag: 'MOB-0001', category: 'mobile', name: 'iPhone 15', make: 'Apple', model: 'iPhone 15 128 GB',
+      serialNo: 'F2LXQ15MOB01', status: 'allocated', purchasedOn: '2025-12-01', vendor: 'Imagine Store', cost: 79900,
+      warrantyExpiry: '2026-11-30', locationId: bengaluru.id, customFields: { imei: '356789104512301', device_number: '+91 98450 11201' },
+      story: { kind: 'allocated', to: 'rohit', on: '2025-12-03', accessories: 'USB-C cable, case', acknowledged: true },
+    },
+    {
+      assetTag: 'MOB-0002', category: 'mobile', name: 'Galaxy S23', make: 'Samsung', model: 'SM-S911B',
+      serialNo: 'R5CW23S23M02', status: 'in_stock', purchasedOn: '2026-04-18', vendor: 'Samsung Business Direct', cost: 64999,
+      warrantyExpiry: '2027-04-17', locationId: noida.id, customFields: { imei: '352315402318822', device_number: '' },
+    },
+    {
+      assetTag: 'MOB-0003', category: 'mobile', name: 'Pixel 7a', make: 'Google', model: 'Pixel 7a',
+      serialNo: '2B071JEGR0003', status: 'lost', purchasedOn: '2025-07-21', vendor: 'Flipkart Business', cost: 39999,
+      warrantyExpiry: '2026-07-20', locationId: noida.id, customFields: { imei: '358240051190334', device_number: '+91 99100 22603' },
+      story: {
+        kind: 'lost', from: 'harsh', allocatedOn: '2026-01-06', lostOn: '2026-09-29',
+        reason: 'Lost while commuting; FIR filed at Sector 62 police station',
+      },
+    },
+    {
+      assetTag: 'MON-0001', category: 'monitor', name: 'UltraFine 27UL850', make: 'LG', model: '27UL850-W',
+      serialNo: 'LG27UL850M01', status: 'allocated', purchasedOn: '2025-10-04', vendor: 'Amazon Business', cost: 38500,
+      warrantyExpiry: '2028-10-03', locationId: noida.id,
+      story: { kind: 'allocated', to: 'harsh', on: '2026-01-06', accessories: 'USB-C cable, HDMI cable', acknowledged: true },
+    },
+    {
+      assetTag: 'MON-0002', category: 'monitor', name: 'UltraSharp U2723QE', make: 'Dell', model: 'U2723QE',
+      serialNo: 'CN0U2723QE02', status: 'in_stock', purchasedOn: '2026-05-30', vendor: 'Dell India Online', cost: 52000,
+      warrantyExpiry: '2029-05-29', locationId: bengaluru.id,
+    },
+    {
+      assetTag: 'ACC-0001', category: 'access_card', name: 'Noida office access card', make: 'HID', model: 'iCLASS SE',
+      serialNo: 'HID-NOI-04471', status: 'allocated', purchasedOn: '2026-01-02', vendor: 'Secure Access Systems', cost: 650,
+      locationId: noida.id, description: 'Floors 3 and 4, server room excluded.',
+      story: { kind: 'allocated', to: 'harsh', on: '2026-01-06', acknowledged: true },
+    },
+    {
+      assetTag: 'ACC-0002', category: 'access_card', name: 'Noida office access card', make: 'HID', model: 'iCLASS SE',
+      serialNo: 'HID-NOI-04472', status: 'in_stock', purchasedOn: '2026-01-02', vendor: 'Secure Access Systems', cost: 650,
+      locationId: noida.id,
+    },
+    {
+      assetTag: 'IDC-0001', category: 'id_card', name: 'Employee ID card', make: 'Brickred', model: 'PVC photo ID',
+      serialNo: 'IDC-BR156', status: 'allocated', purchasedOn: '2026-02-05', vendor: 'PrintStop', cost: 250,
+      locationId: mumbai.id,
+      story: { kind: 'allocated', to: 'ananya', on: '2026-02-10', accessories: 'Lanyard', acknowledged: true },
+    },
+    {
+      assetTag: 'IDC-0002', category: 'id_card', name: 'Employee ID card', make: 'Brickred', model: 'PVC photo ID',
+      serialNo: 'IDC-BR900', status: 'allocated', purchasedOn: '2026-03-12', vendor: 'PrintStop', cost: 250,
+      locationId: noida.id,
+      story: { kind: 'allocated', to: 'isha', on: '2026-10-30', accessories: 'Lanyard', acknowledged: false },
+    },
+    {
+      assetTag: 'FUR-0001', category: 'furniture', name: 'Aeron ergonomic chair', make: 'Herman Miller', model: 'Aeron Size B',
+      serialNo: 'HM-AER-B0001', status: 'allocated', purchasedOn: '2025-09-15', vendor: 'Featherlite Office Furniture', cost: 142000,
+      warrantyExpiry: '2037-09-14', locationId: bengaluru.id,
+      story: { kind: 'allocated', to: 'rohit', on: '2025-09-20', acknowledged: true },
+    },
+    {
+      assetTag: 'FUR-0002', category: 'furniture', name: 'Electric standing desk', make: 'Featherlite', model: 'Elevate 1500',
+      serialNo: 'FL-ELV-1500-02', status: 'in_stock', purchasedOn: '2026-06-11', vendor: 'Featherlite Office Furniture', cost: 46000,
+      warrantyExpiry: '2031-06-10', locationId: noida.id,
+    },
+    {
+      assetTag: 'SWL-0001', category: 'software_licence', name: 'JetBrains All Products Pack', make: 'JetBrains', model: 'Organisation subscription',
+      serialNo: 'JB-ORG-2026-0001', status: 'in_stock', purchasedOn: '2026-04-01', vendor: 'JetBrains s.r.o.', cost: 245000,
+      warrantyExpiry: '2027-03-31', customFields: { licence_key: 'JB-XXXX-XXXX-7Q2M', seat_count: 10 },
+      description: 'Annual subscription; seats assigned from the JetBrains account portal.',
+    },
+    {
+      assetTag: 'SWL-0002', category: 'software_licence', name: 'Adobe Creative Cloud for teams', make: 'Adobe', model: 'All Apps',
+      serialNo: 'ADB-CCT-2026-0002', status: 'allocated', purchasedOn: '2026-02-01', vendor: 'Adobe Systems India', cost: 58000,
+      warrantyExpiry: '2027-01-31', customFields: { licence_key: 'ADB-XXXX-XXXX-91KF', seat_count: 1 },
+      story: { kind: 'allocated', to: 'ananya', on: '2026-02-12', acknowledged: false },
+    },
+    {
+      assetTag: 'OTH-0001', category: 'other', name: 'MX Keys + MX Master 3S combo', make: 'Logitech', model: 'MX Keys S Combo',
+      serialNo: 'LGT-MXC-0001', status: 'in_stock', purchasedOn: '2026-07-08', vendor: 'Amazon Business', cost: 17995,
+      warrantyExpiry: '2027-07-07', locationId: noida.id,
+    },
+  ];
+
+  const day = (value: string) => new Date(`${value}T00:00:00.000Z`);
+  for (const { story, ...item } of REGISTER) {
+    const asset = await ensureAsset(item);
+    if (!story) continue;
+    // Write each asset's history once, so changes made in the app survive a re-seed.
+    const [assignments, history] = await Promise.all([
+      prisma.assetAssignment.count({ where: { assetId: asset.id } }),
+      prisma.assetStatusHistory.count({ where: { assetId: asset.id } }),
+    ]);
+    if (assignments > 0 || history > 0) continue;
+    const base = { tenantId: tenant.id, assetId: asset.id, changedById: itUser.id };
+
+    if (story.kind === 'allocated') {
+      const holder = holders[story.to];
+      await prisma.assetAssignment.create({
+        data: {
+          tenantId: tenant.id,
+          assetId: asset.id,
+          employeeId: holder.employeeId,
+          assignedOn: day(story.on),
+          issueCondition: 'good',
+          accessories: story.accessories ?? '',
+          issuedById: itUser.id,
+          ...(story.acknowledged
+            ? { ackStatus: 'acknowledged', ackAt: day(story.on), ackById: holder.userId, ackMethod: 'digital' }
+            : {}),
+        },
+      });
+      await prisma.assetStatusHistory.create({
+        data: { ...base, fromStatus: 'in_stock', toStatus: 'allocated', reason: `Allocated to ${holder.name}`, source: 'allocation', changedAt: day(story.on) },
+      });
+    } else if (story.kind === 'maintenance') {
+      await prisma.assetMaintenance.create({
+        data: {
+          tenantId: tenant.id,
+          assetId: asset.id,
+          issue: story.issue,
+          vendor: story.vendor,
+          vendorContact: story.vendorContact,
+          startedOn: day(story.startedOn),
+          expectedOn: day(story.expectedOn),
+          createdById: itUser.id,
+        },
+      });
+      await prisma.assetStatusHistory.create({
+        data: { ...base, fromStatus: 'in_stock', toStatus: 'under_maintenance', reason: story.issue, source: 'maintenance', changedAt: day(story.startedOn) },
+      });
+    } else if (story.kind === 'lost') {
+      const holder = holders[story.from];
+      await prisma.assetAssignment.create({
+        data: {
+          tenantId: tenant.id,
+          assetId: asset.id,
+          employeeId: holder.employeeId,
+          assignedOn: day(story.allocatedOn),
+          issueCondition: 'good',
+          issuedById: itUser.id,
+          ackStatus: 'acknowledged',
+          ackAt: day(story.allocatedOn),
+          ackById: holder.userId,
+          ackMethod: 'digital',
+          returnedOn: day(story.lostOn),
+          returnedById: itUser.id,
+          endReason: 'lost',
+          damageNotes: story.reason,
+        },
+      });
+      await prisma.assetStatusHistory.createMany({
+        data: [
+          { ...base, fromStatus: 'in_stock', toStatus: 'allocated', reason: `Allocated to ${holder.name}`, source: 'allocation', changedAt: day(story.allocatedOn) },
+          { ...base, fromStatus: 'allocated', toStatus: 'lost', reason: story.reason, source: 'status', changedAt: day(story.lostOn) },
+        ],
+      });
+    } else {
+      await prisma.assetStatusHistory.create({
+        data: { ...base, fromStatus: 'in_stock', toStatus: 'retired', reason: story.reason, source: 'status', changedAt: day(story.on) },
+      });
+    }
+  }
 
   console.log(
-    `Seeded tenant=${tenant.code} roles=${ROLE_CATALOG.length} users=5 admin=${adminEmail} harshDocs=${HARSH_DOCUMENTS.length}`,
+    `Seeded tenant=${tenant.code} roles=${ROLE_CATALOG.length} users=5 admin=${adminEmail} harshDocs=${HARSH_DOCUMENTS.length} assets=${REGISTER.length + 2}`,
   );
 }
 
