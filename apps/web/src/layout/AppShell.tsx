@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
+import { Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { EssDataProvider } from '../ess/mock/EssDataContext';
@@ -12,6 +12,7 @@ import {
   writeSidebarCollapsed,
 } from './appNav';
 import { NavIcon } from './navIcons';
+import { NotificationBell } from './NotificationBell';
 import { UserMenu } from './UserMenu';
 import './AppShell.css';
 
@@ -72,15 +73,7 @@ export function AppShell() {
           >
             <Search size={18} aria-hidden />
           </button>
-          <button
-            type="button"
-            className="app-shell-icon-hit is-disabled"
-            disabled
-            title="Alerts coming next"
-            aria-label="Alerts (coming next)"
-          >
-            <Bell size={18} aria-hidden />
-          </button>
+          <NotificationBell />
           <ThemeToggle />
           <UserMenu
             email={user?.email ?? ''}

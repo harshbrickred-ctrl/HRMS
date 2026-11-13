@@ -155,11 +155,12 @@ export class AssetSupport {
     });
   }
 
-  async notifyAssetAdmins(tenantId: string, input: { title: string; body: string; href: string }) {
+  async notifyAssetAdmins(tenantId: string, input: { title: string; body: string; href: string }, except: string[] = []) {
     const users = await this.prisma.user.findMany({
       where: {
         tenantId,
         status: 'ACTIVE',
+        id: { notIn: except },
         roles: { some: { role: { code: { in: ASSET_ADMIN_ROLES } } } },
       },
       select: { id: true },

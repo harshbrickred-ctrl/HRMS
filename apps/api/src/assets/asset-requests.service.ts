@@ -75,6 +75,7 @@ export class AssetRequestsService {
     });
     await this.support.audit(employee.tenantId, userId, 'assets.request.create', row.id);
     await this.notifyNextApprover(row);
+    await this.notifyAssetDeskOfNewRequest(row);
     return this.view(row);
   }
 
@@ -323,6 +324,26 @@ export class AssetRequestsService {
         href: '/it/requests',
       });
     }
+  }
+
+  /**
+   * The asset desk hears about each new request once. When there is no approver,
+   * notifyNextApprover has already told the desk, so nothing more is sent. Whoever was
+   * notified as the approver, and the requester, are left out so nobody gets it twice.
+   */
+  private async notifyAssetDeskOfNewRequest(row: RequestRow) {
+    const approver = row.status === 'pending_manager' ? row.managerApprover : row.headApprover;
+    if (!approver) return;
+    const article = /^[aeiou]/i.test(row.category.name) ? 'an' : 'a';
+    await this.support.notifyAssetAdmins(
+      row.tenantId,
+      {
+        title: `New asset request ${requestReference(row.number)}`,
+        body: `${fullName(row.employee)} has submitted ${article} ${row.category.name} request for approval.`,
+        href: `/it/requests?request=${row.id}`,
+      },
+      [approver.userId, row.employee.userId],
+    );
   }
 
   private view(row: RequestRow) {

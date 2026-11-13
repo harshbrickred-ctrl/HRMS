@@ -123,6 +123,12 @@ export function ItAssetRequestsPage() {
       .finally(() => setReady(true));
   }, []);
 
+  // A notification link (/it/requests?request=<id>) opens that request.
+  const linkedRequest = params.get('request');
+  useEffect(() => {
+    if (linkedRequest) setSelectedId(linkedRequest);
+  }, [linkedRequest]);
+
   async function act(message: string, action: () => Promise<unknown>) {
     setError(null);
     try {
