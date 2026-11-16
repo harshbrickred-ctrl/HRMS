@@ -128,7 +128,7 @@ export const PERMISSIONS: { code: string; description: string }[] = [
   { code: 'payslip.manage', description: 'Upload and manage employee payslips' },
   { code: 'salary.manage', description: 'Upload salary structures and generate monthly pay' },
   { code: 'assets.self', description: 'View currently assigned assets and raise asset tickets' },
-  { code: 'assets.manage', description: 'Manage the IT asset register, assignments, and history' },
+  { code: 'assets.manage', description: 'Manage the asset register, categories, assignments, and history' },
   { code: 'assets.tickets.manage', description: 'Handle asset issues, queries, and new-asset requests' },
 ];
 
@@ -187,6 +187,8 @@ export const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
     'salary.manage',
     'payslip.self',
     'assets.self',
+    'assets.manage',
+    'assets.tickets.manage',
   ],
   HRBP: [
     'hr.manage',

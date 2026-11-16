@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asset Module Table Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a schema blueprint. Wide diagrams scroll inside their own frames; prose stays at reading width. */
+:root {
+  --bg: #f3f5f8;
+  --panel: #ffffff;
+  --ink: #18212d;
+  --muted: #5b6878;
+  --line: #cfd6df;
+  --edge: #4a5868;
+  --stripe: #f5f7fa;
+  --reg: #0d7a70;   --reg-tint: #dcefec;
+  --alloc: #2c5cb0; --alloc-tint: #dee7f6;
+  --req: #9a5c00;   --req-tint: #f6e9d3;
+  --tkt: #ab3556;   --tkt-tint: #f6dfe5;
+  --ext: #5f6b7a;   --ext-tint: #e7eaee;
+  --ok: #1f7a46; --info: #2c5cb0; --warn: #9a5c00; --bad: #b0302f; --off: #687584;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161d; --panel: #19202a; --ink: #e3e8ee; --muted: #9aa6b5; --line: #344050; --edge: #8d9aab; --stripe: #1d2530;
+    --reg: #49b9ad;   --reg-tint: #173532;
+    --alloc: #82a8ef; --alloc-tint: #1b2a45;
+    --req: #e1a650;   --req-tint: #3a2c16;
+    --tkt: #ec839f;   --tkt-tint: #3d1e28;
+    --ext: #a3adba;   --ext-tint: #262e39;
+    --ok: #5cc48a; --info: #82a8ef; --warn: #e1a650; --bad: #ef7f7e; --off: #9aa6b5;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161d; --panel: #19202a; --ink: #e3e8ee; --muted: #9aa6b5; --line: #344050; --edge: #8d9aab; --stripe: #1d2530;
+  --reg: #49b9ad;   --reg-tint: #173532;
+  --alloc: #82a8ef; --alloc-tint: #1b2a45;
+  --req: #e1a650;   --req-tint: #3a2c16;
+  --tkt: #ec839f;   --tkt-tint: #3d1e28;
+  --ext: #a3adba;   --ext-tint: #262e39;
+  --ok: #5cc48a; --info: #82a8ef; --warn: #e1a650; --bad: #ef7f7e; --off: #9aa6b5;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font-body); }
+main { padding: 32px clamp(16px, 4vw, 48px) 56px; display: grid; gap: 36px; }
+header, .prose { max-width: 72ch; }
+h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: 0.005em; }
+h1 { font-size: 34px; line-height: 1.15; }
+h2 { font-size: 22px; line-height: 1.2; margin-bottom: 6px; }
+p { margin: 6px 0 0; }
+.lede { color: var(--muted); font-size: 16px; }
+code { font: 13px var(--font-mono); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding: 0; list-style: none; }
+.chips li { display: flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: 13px; }
+.chips i { width: 10px; height: 10px; border-radius: 3px; display: block; }
+.c-reg i { background: var(--reg); } .c-alloc i { background: var(--alloc); } .c-req i { background: var(--req); }
+.c-tkt i { background: var(--tkt); } .c-ext i { background: var(--ext); }
+
+figure { margin: 0; display: grid; gap: 10px; }
+.frame { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.diagram { display: block; max-width: none; height: auto; color: var(--edge); }
+figcaption { color: var(--muted); font-size: 14px; max-width: 80ch; }
+
+/* ER map */
+.tbox { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
+.tstripe { fill: var(--stripe); }
+.ttitle { font: 600 14px var(--font-display); fill: var(--ink); }
+.ttag { font: 500 10.5px var(--font-body); fill: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.cname { font: 11.5px var(--font-mono); fill: var(--ink); }
+.cname.pk { font-weight: 600; }
+.ctype { font: 11px var(--font-body); fill: var(--muted); }
+.kbadge { fill: var(--ext-tint); }
+.ktext { font: 600 9px var(--font-mono); fill: var(--muted); }
+.kbadge.k-PK { fill: var(--ink); } .ktext.k-PK { fill: var(--panel); }
+.kbadge.k-FK { fill: var(--alloc-tint); } .ktext.k-FK { fill: var(--alloc); }
+.kbadge.k-UQ { fill: var(--req-tint); } .ktext.k-UQ { fill: var(--req); }
+.t-reg .thead { fill: var(--reg-tint); } .t-reg .ttitle { fill: var(--reg); } .t-reg .tbox { stroke: var(--reg); }
+.t-alloc .thead { fill: var(--alloc-tint); } .t-alloc .ttitle { fill: var(--alloc); } .t-alloc .tbox { stroke: var(--alloc); }
+.t-req .thead { fill: var(--req-tint); } .t-req .ttitle { fill: var(--req); } .t-req .tbox { stroke: var(--req); }
+.t-tkt .thead { fill: var(--tkt-tint); } .t-tkt .ttitle { fill: var(--tkt); } .t-tkt .tbox { stroke: var(--tkt); }
+.t-ext .thead { fill: var(--ext-tint); } .t-ext .ttitle { fill: var(--ext); } .t-ext .tbox { stroke: var(--ext); stroke-dasharray: 5 3; }
+.legend .tbox { stroke-dasharray: none; }
+.edge { fill: none; stroke: var(--edge); stroke-width: 1.4; }
+.edge.opt { stroke-dasharray: 5 4; }
+.mark { stroke: var(--edge); stroke-width: 1.4; }
+.elabel, .ltext { font: 11px var(--font-body); fill: var(--muted); }
+.elabel { font-family: var(--font-mono); paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+
+/* Lifecycle */
+.ledge { fill: none; stroke: var(--edge); stroke-width: 1.5; }
+.llabel { font: 500 12px var(--font-body); fill: var(--ink); paint-order: stroke; stroke: var(--panel); stroke-width: 5px; stroke-linejoin: round; }
+.lstart { fill: var(--edge); }
+.nbox { stroke-width: 1.6; }
+.nring { fill: none; stroke-width: 1.2; }
+.nlabel { font: 600 14px var(--font-display); }
+.ncode { font: 10.5px var(--font-mono); fill: var(--muted); }
+.s-ok .nbox { fill: color-mix(in srgb, var(--ok) 14%, var(--panel)); stroke: var(--ok); } .s-ok .nlabel { fill: var(--ok); }
+.s-info .nbox { fill: color-mix(in srgb, var(--info) 14%, var(--panel)); stroke: var(--info); } .s-info .nlabel { fill: var(--info); }
+.s-warn .nbox { fill: color-mix(in srgb, var(--warn) 14%, var(--panel)); stroke: var(--warn); } .s-warn .nlabel { fill: var(--warn); }
+.s-bad .nbox { fill: color-mix(in srgb, var(--bad) 14%, var(--panel)); stroke: var(--bad); } .s-bad .nlabel { fill: var(--bad); }
+.s-off .nbox { fill: color-mix(in srgb, var(--off) 12%, var(--panel)); stroke: var(--off); } .s-off .nlabel { fill: var(--off); }
+.s-off .nring { stroke: var(--off); }
+
+/* Reference tables */
+.tablewrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+th { font: 600 12px var(--font-body); color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; background: var(--stripe); }
+tr:last-child td { border-bottom: 0; }
+td.t { font: 13px var(--font-mono); white-space: nowrap; }
+.tag { display: inline-block; font: 12.5px var(--font-mono); padding: 1px 7px; margin: 2px 4px 2px 0; border-radius: 4px; border: 1px solid var(--line); background: var(--stripe); white-space: nowrap; }
+.tag.w { border-color: var(--alloc); color: var(--alloc); background: var(--alloc-tint); }
+footer { color: var(--muted); font-size: 13px; max-width: 80ch; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Asset Module Table Map</h1>
+  <p class="lede">The 11 tables behind the IT asset register in PeopleOS, how they reference each other, and how an asset moves between statuses. Every table is scoped to a tenant.</p>
+  <ul class="chips" aria-label="Table groups">
+    <li class="c-reg"><i></i>Register</li>
+    <li class="c-alloc"><i></i>Allocation</li>
+    <li class="c-req"><i></i>Requests and approvals</li>
+    <li class="c-tkt"><i></i>Tickets and repairs</li>
+    <li class="c-ext"><i></i>Core HR tables the module uses</li>
+  </ul>
+</header>
+
+<section>
+  <h2>How the tables connect</h2>
+  <figure>
+    <div class="frame"><svg class="diagram" viewBox="0 0 1830 1334" width="1830" role="img" aria-label="Entity relationship map of the 11 asset tables. Asset sits at the centre: AssetAssignment, AssetStatusHistory, AssetMaintenance and AssetTicket all reference it. Employee is referenced by AssetAssignment, AssetTicket and AssetRequest. AssetRequest links to AssetCategory and to the AssetAssignment that fulfils it.">
+<path class="edge opt" d="M360 118 H480"/><line class="mark" x1="369" y1="124" x2="369" y2="112"/><line class="mark" x1="467" y1="118" x2="480" y2="112"/><line class="mark" x1="467" y1="118" x2="480" y2="118"/><line class="mark" x1="467" y1="118" x2="480" y2="124"/>
+<path class="edge" d="M360 434 H430 V138 H480"/><line class="mark" x1="369" y1="440" x2="369" y2="428"/><line class="mark" x1="467" y1="138" x2="480" y2="132"/><line class="mark" x1="467" y1="138" x2="480" y2="138"/><line class="mark" x1="467" y1="138" x2="480" y2="144"/>
+<path class="edge" d="M360 434 H400 V707 H1336 V554 H1360"/><line class="mark" x1="369" y1="440" x2="369" y2="428"/><line class="mark" x1="1347" y1="554" x2="1360" y2="548"/><line class="mark" x1="1347" y1="554" x2="1360" y2="554"/><line class="mark" x1="1347" y1="554" x2="1360" y2="560"/>
+<path class="edge" d="M640 276 V386"/><line class="mark" x1="646" y1="285" x2="634" y2="285"/><line class="mark" x1="640" y1="373" x2="634" y2="386"/><line class="mark" x1="640" y1="373" x2="640" y2="386"/><line class="mark" x1="640" y1="373" x2="646" y2="386"/>
+<text class="elabel" x="648" y="335">assetId</text>
+<path class="edge" d="M800 78 H822 V830 H800"/><line class="mark" x1="809" y1="84" x2="809" y2="72"/><line class="mark" x1="813" y1="830" x2="800" y2="836"/><line class="mark" x1="813" y1="830" x2="800" y2="830"/><line class="mark" x1="813" y1="830" x2="800" y2="824"/>
+<path class="edge" d="M920 850 H845 V1226 H800"/><line class="mark" x1="911" y1="844" x2="911" y2="856"/><line class="mark" x1="813" y1="1226" x2="800" y2="1232"/><line class="mark" x1="813" y1="1226" x2="800" y2="1226"/><line class="mark" x1="813" y1="1226" x2="800" y2="1220"/>
+<path class="edge opt" d="M800 78 H875 V870 H920"/><line class="mark" x1="809" y1="84" x2="809" y2="72"/><line class="mark" x1="907" y1="870" x2="920" y2="864"/><line class="mark" x1="907" y1="870" x2="920" y2="870"/><line class="mark" x1="907" y1="870" x2="920" y2="876"/>
+<path class="edge" d="M800 78 H900 V118 H920"/><line class="mark" x1="809" y1="84" x2="809" y2="72"/><line class="mark" x1="907" y1="118" x2="920" y2="112"/><line class="mark" x1="907" y1="118" x2="920" y2="118"/><line class="mark" x1="907" y1="118" x2="920" y2="124"/>
+<path class="edge opt" d="M920 850 H800"/><line class="mark" x1="911" y1="844" x2="911" y2="856"/><line class="mark" x1="813" y1="850" x2="800" y2="856"/><line class="mark" x1="813" y1="850" x2="800" y2="850"/><line class="mark" x1="813" y1="850" x2="800" y2="844"/>
+<path class="edge" d="M1080 276 V386"/><line class="mark" x1="1086" y1="285" x2="1074" y2="285"/><line class="mark" x1="1080" y1="373" x2="1074" y2="386"/><line class="mark" x1="1080" y1="373" x2="1080" y2="386"/><line class="mark" x1="1080" y1="373" x2="1086" y2="386"/>
+<text class="elabel" x="1088" y="335">assignmentId</text>
+<path class="edge" d="M1080 1048 V1158"/><line class="mark" x1="1086" y1="1057" x2="1074" y2="1057"/><line class="mark" x1="1080" y1="1145" x2="1074" y2="1158"/><line class="mark" x1="1080" y1="1145" x2="1080" y2="1158"/><line class="mark" x1="1080" y1="1145" x2="1086" y2="1158"/>
+<text class="elabel" x="1088" y="1107">ticketId</text>
+<path class="edge" d="M1520 652 V762"/><line class="mark" x1="1526" y1="661" x2="1514" y2="661"/><line class="mark" x1="1520" y1="749" x2="1514" y2="762"/><line class="mark" x1="1520" y1="749" x2="1520" y2="762"/><line class="mark" x1="1520" y1="749" x2="1526" y2="762"/>
+<text class="elabel" x="1528" y="711">requestId</text>
+<path class="edge" d="M1360 138 H1240"/><line class="mark" x1="1351" y1="132" x2="1351" y2="144"/><line class="mark" x1="1253" y1="138" x2="1240" y2="144"/><line class="mark" x1="1253" y1="138" x2="1240" y2="138"/><line class="mark" x1="1253" y1="138" x2="1240" y2="132"/>
+<path class="edge" d="M1360 138 H1280 V890 H1240"/><line class="mark" x1="1351" y1="132" x2="1351" y2="144"/><line class="mark" x1="1253" y1="890" x2="1240" y2="896"/><line class="mark" x1="1253" y1="890" x2="1240" y2="890"/><line class="mark" x1="1253" y1="890" x2="1240" y2="884"/>
+<path class="edge opt" d="M1240 78 H1308 V534 H1360"/><line class="mark" x1="1249" y1="84" x2="1249" y2="72"/><line class="mark" x1="1351" y1="528" x2="1351" y2="540"/>
+<path class="edge" d="M1460 236 V386"/><line class="mark" x1="1466" y1="245" x2="1454" y2="245"/><line class="mark" x1="1460" y1="373" x2="1454" y2="386"/><line class="mark" x1="1460" y1="373" x2="1460" y2="386"/><line class="mark" x1="1460" y1="373" x2="1466" y2="386"/>
+<path class="edge opt" d="M1520 236 V386"/><line class="mark" x1="1526" y1="245" x2="1514" y2="245"/><line class="mark" x1="1520" y1="373" x2="1514" y2="386"/><line class="mark" x1="1520" y1="373" x2="1520" y2="386"/><line class="mark" x1="1520" y1="373" x2="1526" y2="386"/>
+<path class="edge opt" d="M1580 236 V386"/><line class="mark" x1="1586" y1="245" x2="1574" y2="245"/><line class="mark" x1="1580" y1="373" x2="1574" y2="386"/><line class="mark" x1="1580" y1="373" x2="1580" y2="386"/><line class="mark" x1="1580" y1="373" x2="1586" y2="386"/>
+<text class="elabel" x="1588" y="308">employeeId, managerApproverId,</text>
+<text class="elabel" x="1588" y="322">headApproverId</text>
+<path class="edge opt" d="M1240 78 H1258 V98 H1240"/><line class="mark" x1="1249" y1="84" x2="1249" y2="72"/><line class="mark" x1="1249" y1="104" x2="1249" y2="92"/>
+<g class="tbl t-ext"><rect class="tbox" x="40" y="70" width="320" height="86" rx="6"/><path class="thead" d="M40 102 V76 a6 6 0 0 1 6 -6 H354 a6 6 0 0 1 6 6 V102 Z"/><text class="ttitle" x="52" y="91">Location</text><text class="ttag" x="348" y="91" text-anchor="end">core</text><rect class="kbadge k-PK" x="49" y="112" width="24" height="13" rx="3"/><text class="ktext k-PK" x="61" y="122" text-anchor="middle">PK</text><text class="cname pk" x="82" y="122">id</text><text class="ctype" x="350" y="122" text-anchor="end">cuid</text><rect class="tstripe" x="41" y="128" width="318" height="20"/><text class="cname" x="82" y="142">name</text><text class="ctype" x="350" y="142" text-anchor="end">String</text></g>
+<g class="tbl t-reg"><rect class="tbox" x="480" y="30" width="320" height="246" rx="6"/><path class="thead" d="M480 62 V36 a6 6 0 0 1 6 -6 H794 a6 6 0 0 1 6 6 V62 Z"/><text class="ttitle" x="492" y="51">Asset</text><text class="ttag" x="788" y="51" text-anchor="end">register</text><rect class="kbadge k-PK" x="489" y="72" width="24" height="13" rx="3"/><text class="ktext k-PK" x="501" y="82" text-anchor="middle">PK</text><text class="cname pk" x="522" y="82">id</text><text class="ctype" x="790" y="82" text-anchor="end">cuid</text><rect class="tstripe" x="481" y="88" width="318" height="20"/><rect class="kbadge k-UQ" x="489" y="92" width="24" height="13" rx="3"/><text class="ktext k-UQ" x="501" y="102" text-anchor="middle">UQ</text><text class="cname" x="522" y="102">assetTag</text><text class="ctype" x="790" y="102" text-anchor="end">String, e.g. LAP-0007</text><rect class="kbadge k-FK" x="489" y="112" width="24" height="13" rx="3"/><text class="ktext k-FK" x="501" y="122" text-anchor="middle">FK</text><text class="cname" x="522" y="122">locationId</text><text class="ctype" x="790" y="122" text-anchor="end">→ Location?</text><rect class="tstripe" x="481" y="128" width="318" height="20"/><rect class="kbadge k-FK" x="489" y="132" width="24" height="13" rx="3"/><text class="ktext k-FK" x="501" y="142" text-anchor="middle">FK</text><text class="cname" x="522" y="142">categoryId</text><text class="ctype" x="790" y="142" text-anchor="end">→ AssetCategory</text><text class="cname" x="522" y="162">name, make, model</text><text class="ctype" x="790" y="162" text-anchor="end">String</text><rect class="tstripe" x="481" y="168" width="318" height="20"/><rect class="kbadge k-UQ" x="489" y="172" width="24" height="13" rx="3"/><text class="ktext k-UQ" x="501" y="182" text-anchor="middle">UQ</text><text class="cname" x="522" y="182">serialNo</text><text class="ctype" x="790" y="182" text-anchor="end">String?</text><text class="cname" x="522" y="202">status</text><text class="ctype" x="790" y="202" text-anchor="end">AssetStatus</text><rect class="tstripe" x="481" y="208" width="318" height="20"/><text class="cname" x="522" y="222">cost, purchasedOn</text><text class="ctype" x="790" y="222" text-anchor="end">Decimal?, DateTime?</text><text class="cname" x="522" y="242">warrantyExpiry</text><text class="ctype" x="790" y="242" text-anchor="end">Date?</text><rect class="tstripe" x="481" y="248" width="318" height="20"/><text class="cname" x="522" y="262">customFields</text><text class="ctype" x="790" y="262" text-anchor="end">Json</text></g>
+<g class="tbl t-alloc"><rect class="tbox" x="920" y="30" width="320" height="246" rx="6"/><path class="thead" d="M920 62 V36 a6 6 0 0 1 6 -6 H1234 a6 6 0 0 1 6 6 V62 Z"/><text class="ttitle" x="932" y="51">AssetAssignment</text><text class="ttag" x="1228" y="51" text-anchor="end">allocation</text><rect class="kbadge k-PK" x="929" y="72" width="24" height="13" rx="3"/><text class="ktext k-PK" x="941" y="82" text-anchor="middle">PK</text><text class="cname pk" x="962" y="82">id</text><text class="ctype" x="1230" y="82" text-anchor="end">cuid</text><rect class="tstripe" x="921" y="88" width="318" height="20"/><rect class="kbadge k-FK" x="929" y="92" width="24" height="13" rx="3"/><text class="ktext k-FK" x="941" y="102" text-anchor="middle">FK</text><text class="cname" x="962" y="102">transferredFromId</text><text class="ctype" x="1230" y="102" text-anchor="end">→ self?, unique</text><rect class="kbadge k-FK" x="929" y="112" width="24" height="13" rx="3"/><text class="ktext k-FK" x="941" y="122" text-anchor="middle">FK</text><text class="cname" x="962" y="122">assetId</text><text class="ctype" x="1230" y="122" text-anchor="end">→ Asset</text><rect class="tstripe" x="921" y="128" width="318" height="20"/><rect class="kbadge k-FK" x="929" y="132" width="24" height="13" rx="3"/><text class="ktext k-FK" x="941" y="142" text-anchor="middle">FK</text><text class="cname" x="962" y="142">employeeId</text><text class="ctype" x="1230" y="142" text-anchor="end">→ Employee</text><text class="cname" x="962" y="162">assignedOn</text><text class="ctype" x="1230" y="162" text-anchor="end">DateTime</text><rect class="tstripe" x="921" y="168" width="318" height="20"/><text class="cname" x="962" y="182">ackStatus</text><text class="ctype" x="1230" y="182" text-anchor="end">AssetAckStatus</text><text class="cname" x="962" y="202">returnedOn</text><text class="ctype" x="1230" y="202" text-anchor="end">DateTime?  (null = open)</text><rect class="tstripe" x="921" y="208" width="318" height="20"/><text class="cname" x="962" y="222">returnCondition</text><text class="ctype" x="1230" y="222" text-anchor="end">AssetReturnCondition?</text><text class="cname" x="962" y="242">endReason</text><text class="ctype" x="1230" y="242" text-anchor="end">AssetAssignmentEnd?</text><rect class="tstripe" x="921" y="248" width="318" height="20"/><text class="cname" x="962" y="262">handoverAckStatus</text><text class="ctype" x="1230" y="262" text-anchor="end">AssetAckStatus?</text></g>
+<g class="tbl t-ext"><rect class="tbox" x="1360" y="90" width="320" height="146" rx="6"/><path class="thead" d="M1360 122 V96 a6 6 0 0 1 6 -6 H1674 a6 6 0 0 1 6 6 V122 Z"/><text class="ttitle" x="1372" y="111">Employee</text><text class="ttag" x="1668" y="111" text-anchor="end">core</text><rect class="kbadge k-PK" x="1369" y="132" width="24" height="13" rx="3"/><text class="ktext k-PK" x="1381" y="142" text-anchor="middle">PK</text><text class="cname pk" x="1402" y="142">id</text><text class="ctype" x="1670" y="142" text-anchor="end">cuid</text><rect class="tstripe" x="1361" y="148" width="318" height="20"/><text class="cname" x="1402" y="162">employeeCode</text><text class="ctype" x="1670" y="162" text-anchor="end">String</text><text class="cname" x="1402" y="182">firstName, lastName</text><text class="ctype" x="1670" y="182" text-anchor="end">String</text><rect class="tstripe" x="1361" y="188" width="318" height="20"/><rect class="kbadge k-FK" x="1369" y="192" width="24" height="13" rx="3"/><text class="ktext k-FK" x="1381" y="202" text-anchor="middle">FK</text><text class="cname" x="1402" y="202">managerId</text><text class="ctype" x="1670" y="202" text-anchor="end">→ Employee?</text><rect class="kbadge k-FK" x="1369" y="212" width="24" height="13" rx="3"/><text class="ktext k-FK" x="1381" y="222" text-anchor="middle">FK</text><text class="cname" x="1402" y="222">departmentId</text><text class="ctype" x="1670" y="222" text-anchor="end">→ Department?</text></g>
+<g class="tbl t-reg"><rect class="tbox" x="40" y="386" width="320" height="186" rx="6"/><path class="thead" d="M40 418 V392 a6 6 0 0 1 6 -6 H354 a6 6 0 0 1 6 6 V418 Z"/><text class="ttitle" x="52" y="407">AssetCategory</text><text class="ttag" x="348" y="407" text-anchor="end">register</text><rect class="kbadge k-PK" x="49" y="428" width="24" height="13" rx="3"/><text class="ktext k-PK" x="61" y="438" text-anchor="middle">PK</text><text class="cname pk" x="82" y="438">id</text><text class="ctype" x="350" y="438" text-anchor="end">cuid</text><rect class="tstripe" x="41" y="444" width="318" height="20"/><rect class="kbadge k-UQ" x="49" y="448" width="24" height="13" rx="3"/><text class="ktext k-UQ" x="61" y="458" text-anchor="middle">UQ</text><text class="cname" x="82" y="458">code</text><text class="ctype" x="350" y="458" text-anchor="end">String, e.g. laptop</text><text class="cname" x="82" y="478">name</text><text class="ctype" x="350" y="478" text-anchor="end">String</text><rect class="tstripe" x="41" y="484" width="318" height="20"/><rect class="kbadge k-UQ" x="49" y="488" width="24" height="13" rx="3"/><text class="ktext k-UQ" x="61" y="498" text-anchor="middle">UQ</text><text class="cname" x="82" y="498">tagPrefix</text><text class="ctype" x="350" y="498" text-anchor="end">String, e.g. LAP</text><text class="cname" x="82" y="518">nextTagNumber</text><text class="ctype" x="350" y="518" text-anchor="end">Int</text><rect class="tstripe" x="41" y="524" width="318" height="20"/><text class="cname" x="82" y="538">fields</text><text class="ctype" x="350" y="538" text-anchor="end">Json (custom fields)</text><text class="cname" x="82" y="558">active</text><text class="ctype" x="350" y="558" text-anchor="end">Boolean</text></g>
+<g class="tbl t-reg"><rect class="tbox" x="480" y="386" width="320" height="186" rx="6"/><path class="thead" d="M480 418 V392 a6 6 0 0 1 6 -6 H794 a6 6 0 0 1 6 6 V418 Z"/><text class="ttitle" x="492" y="407">AssetStatusHistory</text><text class="ttag" x="788" y="407" text-anchor="end">append-only</text><rect class="kbadge k-PK" x="489" y="428" width="24" height="13" rx="3"/><text class="ktext k-PK" x="501" y="438" text-anchor="middle">PK</text><text class="cname pk" x="522" y="438">id</text><text class="ctype" x="790" y="438" text-anchor="end">cuid</text><rect class="tstripe" x="481" y="444" width="318" height="20"/><rect class="kbadge k-FK" x="489" y="448" width="24" height="13" rx="3"/><text class="ktext k-FK" x="501" y="458" text-anchor="middle">FK</text><text class="cname" x="522" y="458">assetId</text><text class="ctype" x="790" y="458" text-anchor="end">→ Asset</text><text class="cname" x="522" y="478">fromStatus</text><text class="ctype" x="790" y="478" text-anchor="end">AssetStatus</text><rect class="tstripe" x="481" y="484" width="318" height="20"/><text class="cname" x="522" y="498">toStatus</text><text class="ctype" x="790" y="498" text-anchor="end">AssetStatus</text><text class="cname" x="522" y="518">reason</text><text class="ctype" x="790" y="518" text-anchor="end">String</text><rect class="tstripe" x="481" y="524" width="318" height="20"/><text class="cname" x="522" y="538">source</text><text class="ctype" x="790" y="538" text-anchor="end">String</text><text class="cname" x="522" y="558">changedById, changedAt</text><text class="ctype" x="790" y="558" text-anchor="end">→ User?, DateTime</text></g>
+<g class="tbl t-alloc"><rect class="tbox" x="920" y="386" width="320" height="166" rx="6"/><path class="thead" d="M920 418 V392 a6 6 0 0 1 6 -6 H1234 a6 6 0 0 1 6 6 V418 Z"/><text class="ttitle" x="932" y="407">AssetAssignmentFile</text><text class="ttag" x="1228" y="407" text-anchor="end">allocation</text><rect class="kbadge k-PK" x="929" y="428" width="24" height="13" rx="3"/><text class="ktext k-PK" x="941" y="438" text-anchor="middle">PK</text><text class="cname pk" x="962" y="438">id</text><text class="ctype" x="1230" y="438" text-anchor="end">cuid</text><rect class="tstripe" x="921" y="444" width="318" height="20"/><rect class="kbadge k-FK" x="929" y="448" width="24" height="13" rx="3"/><text class="ktext k-FK" x="941" y="458" text-anchor="middle">FK</text><text class="cname" x="962" y="458">assignmentId</text><text class="ctype" x="1230" y="458" text-anchor="end">→ AssetAssignment</text><text class="cname" x="962" y="478">kind</text><text class="ctype" x="1230" y="478" text-anchor="end">String</text><rect class="tstripe" x="921" y="484" width="318" height="20"/><text class="cname" x="962" y="498">fileName</text><text class="ctype" x="1230" y="498" text-anchor="end">String</text><text class="cname" x="962" y="518">storagePath</text><text class="ctype" x="1230" y="518" text-anchor="end">String</text><rect class="tstripe" x="921" y="524" width="318" height="20"/><text class="cname" x="962" y="538">uploadedById, uploadedAt</text><text class="ctype" x="1230" y="538" text-anchor="end">→ User?, DateTime</text></g>
+<g class="tbl t-req"><rect class="tbox" x="1360" y="386" width="320" height="266" rx="6"/><path class="thead" d="M1360 418 V392 a6 6 0 0 1 6 -6 H1674 a6 6 0 0 1 6 6 V418 Z"/><text class="ttitle" x="1372" y="407">AssetRequest</text><text class="ttag" x="1668" y="407" text-anchor="end">requests</text><rect class="kbadge k-PK" x="1369" y="428" width="24" height="13" rx="3"/><text class="ktext k-PK" x="1381" y="438" text-anchor="middle">PK</text><text class="cname pk" x="1402" y="438">id</text><text class="ctype" x="1670" y="438" text-anchor="end">cuid</text><rect class="tstripe" x="1361" y="444" width="318" height="20"/><rect class="kbadge k-UQ" x="1369" y="448" width="24" height="13" rx="3"/><text class="ktext k-UQ" x="1381" y="458" text-anchor="middle">UQ</text><text class="cname" x="1402" y="458">number</text><text class="ctype" x="1670" y="458" text-anchor="end">Int, shown as AR-000123</text><rect class="kbadge k-FK" x="1369" y="468" width="24" height="13" rx="3"/><text class="ktext k-FK" x="1381" y="478" text-anchor="middle">FK</text><text class="cname" x="1402" y="478">employeeId</text><text class="ctype" x="1670" y="478" text-anchor="end">→ Employee</text><rect class="tstripe" x="1361" y="484" width="318" height="20"/><rect class="kbadge k-FK" x="1369" y="488" width="24" height="13" rx="3"/><text class="ktext k-FK" x="1381" y="498" text-anchor="middle">FK</text><text class="cname" x="1402" y="498">managerApproverId</text><text class="ctype" x="1670" y="498" text-anchor="end">→ Employee?</text><rect class="kbadge k-FK" x="1369" y="508" width="24" height="13" rx="3"/><text class="ktext k-FK" x="1381" y="518" text-anchor="middle">FK</text><text class="cname" x="1402" y="518">headApproverId</text><text class="ctype" x="1670" y="518" text-anchor="end">→ Employee?</text><rect class="tstripe" x="1361" y="524" width="318" height="20"/><rect class="kbadge k-FK" x="1369" y="528" width="24" height="13" rx="3"/><text class="ktext k-FK" x="1381" y="538" text-anchor="middle">FK</text><text class="cname" x="1402" y="538">assignmentId</text><text class="ctype" x="1670" y="538" text-anchor="end">→ AssetAssignment?, unique</text><rect class="kbadge k-FK" x="1369" y="548" width="24" height="13" rx="3"/><text class="ktext k-FK" x="1381" y="558" text-anchor="middle">FK</text><text class="cname" x="1402" y="558">categoryId</text><text class="ctype" x="1670" y="558" text-anchor="end">→ AssetCategory</text><rect class="tstripe" x="1361" y="564" width="318" height="20"/><text class="cname" x="1402" y="578">status</text><text class="ctype" x="1670" y="578" text-anchor="end">AssetRequestStatus</text><text class="cname" x="1402" y="598">reason</text><text class="ctype" x="1670" y="598" text-anchor="end">String</text><rect class="tstripe" x="1361" y="604" width="318" height="20"/><text class="cname" x="1402" y="618">fulfilledById</text><text class="ctype" x="1670" y="618" text-anchor="end">→ User?</text><text class="cname" x="1402" y="638">fulfilledAt</text><text class="ctype" x="1670" y="638" text-anchor="end">DateTime?</text></g>
+<g class="tbl t-tkt"><rect class="tbox" x="480" y="762" width="320" height="246" rx="6"/><path class="thead" d="M480 794 V768 a6 6 0 0 1 6 -6 H794 a6 6 0 0 1 6 6 V794 Z"/><text class="ttitle" x="492" y="783">AssetMaintenance</text><text class="ttag" x="788" y="783" text-anchor="end">repairs</text><rect class="kbadge k-PK" x="489" y="804" width="24" height="13" rx="3"/><text class="ktext k-PK" x="501" y="814" text-anchor="middle">PK</text><text class="cname pk" x="522" y="814">id</text><text class="ctype" x="790" y="814" text-anchor="end">cuid</text><rect class="tstripe" x="481" y="820" width="318" height="20"/><rect class="kbadge k-FK" x="489" y="824" width="24" height="13" rx="3"/><text class="ktext k-FK" x="501" y="834" text-anchor="middle">FK</text><text class="cname" x="522" y="834">assetId</text><text class="ctype" x="790" y="834" text-anchor="end">→ Asset</text><rect class="kbadge k-FK" x="489" y="844" width="24" height="13" rx="3"/><text class="ktext k-FK" x="501" y="854" text-anchor="middle">FK</text><text class="cname" x="522" y="854">ticketId</text><text class="ctype" x="790" y="854" text-anchor="end">→ AssetTicket?</text><rect class="tstripe" x="481" y="860" width="318" height="20"/><text class="cname" x="522" y="874">issue</text><text class="ctype" x="790" y="874" text-anchor="end">String</text><text class="cname" x="522" y="894">vendor, vendorContact</text><text class="ctype" x="790" y="894" text-anchor="end">String</text><rect class="tstripe" x="481" y="900" width="318" height="20"/><text class="cname" x="522" y="914">startedOn, expectedOn</text><text class="ctype" x="790" y="914" text-anchor="end">Date, Date?</text><text class="cname" x="522" y="934">completedOn</text><text class="ctype" x="790" y="934" text-anchor="end">Date?</text><rect class="tstripe" x="481" y="940" width="318" height="20"/><text class="cname" x="522" y="954">cost</text><text class="ctype" x="790" y="954" text-anchor="end">Decimal?</text><text class="cname" x="522" y="974">status</text><text class="ctype" x="790" y="974" text-anchor="end">AssetMaintenanceStatus</text><rect class="tstripe" x="481" y="980" width="318" height="20"/><text class="cname" x="522" y="994">outcome</text><text class="ctype" x="790" y="994" text-anchor="end">AssetRepairOutcome?</text></g>
+<g class="tbl t-tkt"><rect class="tbox" x="920" y="802" width="320" height="246" rx="6"/><path class="thead" d="M920 834 V808 a6 6 0 0 1 6 -6 H1234 a6 6 0 0 1 6 6 V834 Z"/><text class="ttitle" x="932" y="823">AssetTicket</text><text class="ttag" x="1228" y="823" text-anchor="end">tickets</text><rect class="kbadge k-PK" x="929" y="844" width="24" height="13" rx="3"/><text class="ktext k-PK" x="941" y="854" text-anchor="middle">PK</text><text class="cname pk" x="962" y="854">id</text><text class="ctype" x="1230" y="854" text-anchor="end">cuid</text><rect class="tstripe" x="921" y="860" width="318" height="20"/><rect class="kbadge k-FK" x="929" y="864" width="24" height="13" rx="3"/><text class="ktext k-FK" x="941" y="874" text-anchor="middle">FK</text><text class="cname" x="962" y="874">assetId</text><text class="ctype" x="1230" y="874" text-anchor="end">→ Asset?</text><rect class="kbadge k-FK" x="929" y="884" width="24" height="13" rx="3"/><text class="ktext k-FK" x="941" y="894" text-anchor="middle">FK</text><text class="cname" x="962" y="894">employeeId</text><text class="ctype" x="1230" y="894" text-anchor="end">→ Employee</text><rect class="tstripe" x="921" y="900" width="318" height="20"/><rect class="kbadge k-UQ" x="929" y="904" width="24" height="13" rx="3"/><text class="ktext k-UQ" x="941" y="914" text-anchor="middle">UQ</text><text class="cname" x="962" y="914">number</text><text class="ctype" x="1230" y="914" text-anchor="end">Int, shown as AT-000123</text><text class="cname" x="962" y="934">type</text><text class="ctype" x="1230" y="934" text-anchor="end">AssetTicketType</text><rect class="tstripe" x="921" y="940" width="318" height="20"/><text class="cname" x="962" y="954">category</text><text class="ctype" x="1230" y="954" text-anchor="end">String</text><text class="cname" x="962" y="974">priority</text><text class="ctype" x="1230" y="974" text-anchor="end">AssetTicketPriority</text><rect class="tstripe" x="921" y="980" width="318" height="20"/><text class="cname" x="962" y="994">status</text><text class="ctype" x="1230" y="994" text-anchor="end">AssetTicketStatus</text><text class="cname" x="962" y="1014">lostOn, lostLocation</text><text class="ctype" x="1230" y="1014" text-anchor="end">Date?, String</text><rect class="tstripe" x="921" y="1020" width="318" height="20"/><text class="cname" x="962" y="1034">subject, body</text><text class="ctype" x="1230" y="1034" text-anchor="end">String</text></g>
+<g class="tbl t-req"><rect class="tbox" x="1360" y="762" width="320" height="166" rx="6"/><path class="thead" d="M1360 794 V768 a6 6 0 0 1 6 -6 H1674 a6 6 0 0 1 6 6 V794 Z"/><text class="ttitle" x="1372" y="783">AssetRequestDecision</text><text class="ttag" x="1668" y="783" text-anchor="end">append-only</text><rect class="kbadge k-PK" x="1369" y="804" width="24" height="13" rx="3"/><text class="ktext k-PK" x="1381" y="814" text-anchor="middle">PK</text><text class="cname pk" x="1402" y="814">id</text><text class="ctype" x="1670" y="814" text-anchor="end">cuid</text><rect class="tstripe" x="1361" y="820" width="318" height="20"/><rect class="kbadge k-FK" x="1369" y="824" width="24" height="13" rx="3"/><text class="ktext k-FK" x="1381" y="834" text-anchor="middle">FK</text><text class="cname" x="1402" y="834">requestId</text><text class="ctype" x="1670" y="834" text-anchor="end">→ AssetRequest</text><text class="cname" x="1402" y="854">step</text><text class="ctype" x="1670" y="854" text-anchor="end">String</text><rect class="tstripe" x="1361" y="860" width="318" height="20"/><text class="cname" x="1402" y="874">approved</text><text class="ctype" x="1670" y="874" text-anchor="end">Boolean</text><text class="cname" x="1402" y="894">note</text><text class="ctype" x="1670" y="894" text-anchor="end">String</text><rect class="tstripe" x="1361" y="900" width="318" height="20"/><text class="cname" x="1402" y="914">decidedById, decidedAt</text><text class="ctype" x="1670" y="914" text-anchor="end">→ User?, DateTime</text></g>
+<g class="tbl t-tkt"><rect class="tbox" x="480" y="1158" width="320" height="146" rx="6"/><path class="thead" d="M480 1190 V1164 a6 6 0 0 1 6 -6 H794 a6 6 0 0 1 6 6 V1190 Z"/><text class="ttitle" x="492" y="1179">AssetTicketComment</text><text class="ttag" x="788" y="1179" text-anchor="end">tickets</text><rect class="kbadge k-PK" x="489" y="1200" width="24" height="13" rx="3"/><text class="ktext k-PK" x="501" y="1210" text-anchor="middle">PK</text><text class="cname pk" x="522" y="1210">id</text><text class="ctype" x="790" y="1210" text-anchor="end">cuid</text><rect class="tstripe" x="481" y="1216" width="318" height="20"/><rect class="kbadge k-FK" x="489" y="1220" width="24" height="13" rx="3"/><text class="ktext k-FK" x="501" y="1230" text-anchor="middle">FK</text><text class="cname" x="522" y="1230">ticketId</text><text class="ctype" x="790" y="1230" text-anchor="end">→ AssetTicket</text><text class="cname" x="522" y="1250">authorId</text><text class="ctype" x="790" y="1250" text-anchor="end">String (user id)</text><rect class="tstripe" x="481" y="1256" width="318" height="20"/><text class="cname" x="522" y="1270">body</text><text class="ctype" x="790" y="1270" text-anchor="end">String</text><text class="cname" x="522" y="1290">createdAt</text><text class="ctype" x="790" y="1290" text-anchor="end">DateTime</text></g>
+<g class="tbl t-tkt"><rect class="tbox" x="920" y="1158" width="320" height="146" rx="6"/><path class="thead" d="M920 1190 V1164 a6 6 0 0 1 6 -6 H1234 a6 6 0 0 1 6 6 V1190 Z"/><text class="ttitle" x="932" y="1179">AssetTicketFile</text><text class="ttag" x="1228" y="1179" text-anchor="end">tickets</text><rect class="kbadge k-PK" x="929" y="1200" width="24" height="13" rx="3"/><text class="ktext k-PK" x="941" y="1210" text-anchor="middle">PK</text><text class="cname pk" x="962" y="1210">id</text><text class="ctype" x="1230" y="1210" text-anchor="end">cuid</text><rect class="tstripe" x="921" y="1216" width="318" height="20"/><rect class="kbadge k-FK" x="929" y="1220" width="24" height="13" rx="3"/><text class="ktext k-FK" x="941" y="1230" text-anchor="middle">FK</text><text class="cname" x="962" y="1230">ticketId</text><text class="ctype" x="1230" y="1230" text-anchor="end">→ AssetTicket</text><text class="cname" x="962" y="1250">fileName</text><text class="ctype" x="1230" y="1250" text-anchor="end">String</text><rect class="tstripe" x="921" y="1256" width="318" height="20"/><text class="cname" x="962" y="1270">storagePath</text><text class="ctype" x="1230" y="1270" text-anchor="end">String</text><text class="cname" x="962" y="1290">uploadedById, uploadedAt</text><text class="ctype" x="1230" y="1290" text-anchor="end">→ User?, DateTime</text></g>
+<g class="legend">
+<rect class="tbox" x="40" y="762" width="320" height="210" rx="6"/>
+<text class="ttitle" x="54" y="786">How to read it</text>
+<path class="edge" d="M56 812 H116"/><line class="mark" x1="65" y1="818" x2="65" y2="806"/><line class="mark" x1="103" y1="812" x2="116" y2="806"/><line class="mark" x1="103" y1="812" x2="116" y2="812"/><line class="mark" x1="103" y1="812" x2="116" y2="818"/>
+<text class="ltext" x="130" y="816">one parent → many children</text>
+<path class="edge" d="M56 840 H116"/><line class="mark" x1="65" y1="846" x2="65" y2="834"/><line class="mark" x1="107" y1="834" x2="107" y2="846"/>
+<text class="ltext" x="130" y="844">one to one (unique FK)</text>
+<path class="edge opt" d="M56 868 H116"/>
+<text class="ltext" x="130" y="872">dashed: FK is optional (nullable)</text>
+<text class="ltext" x="56" y="900">Lines start at the parent's id and end on</text>
+<text class="ltext" x="56" y="916">the child's FK row. ? marks a nullable column.</text>
+<rect class="kbadge k-PK" x="56" y="934" width="24" height="13" rx="3"/><text class="ktext k-PK" x="68" y="944" text-anchor="middle">PK</text>
+<rect class="kbadge k-FK" x="136" y="934" width="24" height="13" rx="3"/><text class="ktext k-FK" x="148" y="944" text-anchor="middle">FK</text>
+<rect class="kbadge k-UQ" x="216" y="934" width="24" height="13" rx="3"/><text class="ktext k-UQ" x="228" y="944" text-anchor="middle">UQ</text>
+<text class="ltext" x="86" y="944">primary</text><text class="ltext" x="166" y="944">foreign</text><text class="ltext" x="246" y="944">unique</text>
+</g>
+</svg></div>
+    <figcaption>Asset is the hub: allocations, status history, repairs and tickets all point at it. Employee is referenced by allocations, tickets and requests (three FKs on a request: the requester and both approvers). A fulfilled request points at the allocation that issued the asset, and a transfer links each allocation to the one before it. Columns that reference User (<code>createdById</code>, <code>issuedById</code>, <code>ackById</code> and similar) are left out to keep the lines readable.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Asset status lifecycle</h2>
+  <figure>
+    <div class="frame"><svg class="diagram" viewBox="0 0 1230 410" width="1230" role="img" aria-label="Asset status lifecycle. In Stock can go to Allocated, Under Maintenance or Retired. Allocated can return to In Stock, go to Under Maintenance, or become Lost. Under Maintenance goes back to In Stock or to Retired. Lost goes back to In Stock or to Written Off. Retired goes to Disposed. Disposed and Written Off are final.">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="ledge" d="M218.8 164.3 L385.6 108.7" marker-end="url(#arr)"/>
+<text class="llabel" x="297.1" y="125.3" text-anchor="middle">Allocate</text>
+<path class="ledge" d="M391.2 125.7 L224.4 181.3" marker-end="url(#arr)"/>
+<text class="llabel" x="312.9" y="172.7" text-anchor="middle">Return, good</text>
+<path class="ledge" d="M218.8 235.7 L385.6 291.3" marker-end="url(#arr)"/>
+<text class="llabel" x="297.1" y="282.7" text-anchor="middle">Send to repair</text>
+<path class="ledge" d="M391.2 274.3 L224.4 218.7" marker-end="url(#arr)"/>
+<text class="llabel" x="312.9" y="235.3" text-anchor="middle">Repaired</text>
+<path class="ledge" d="M470.0 119.4 L470.0 280.6" marker-end="url(#arr)"/>
+<text class="llabel" x="480.0" y="204.0" text-anchor="start">Return, damaged</text>
+<path class="ledge" d="M566.6 90.0 L703.4 90.0" marker-end="url(#arr)"/>
+<text class="llabel" x="635.0" y="80.0" text-anchor="middle">Mark lost</text>
+<path class="ledge" d="M566.6 310.0 L703.4 310.0" marker-end="url(#arr)"/>
+<text class="llabel" x="635.0" y="300.0" text-anchor="middle">Beyond repair</text>
+<path class="ledge" d="M896.0 90.0 L1004.0 90.0" marker-end="url(#arr)"/>
+<text class="llabel" x="950.0" y="80.0" text-anchor="middle">Write off</text>
+<path class="ledge" d="M896.0 310.0 L1004.0 310.0" marker-end="url(#arr)"/>
+<text class="llabel" x="950.0" y="300.0" text-anchor="middle">Dispose</text>
+<path class="ledge" d="M800 65 V28 H140 V174" marker-end="url(#arr)"/>
+<text class="llabel" x="470" y="22" text-anchor="middle">Found</text>
+<path class="ledge" d="M140 225 V392 H800 V336" marker-end="url(#arr)"/>
+<text class="llabel" x="470" y="386" text-anchor="middle">Retire</text>
+<circle class="lstart" cx="40" cy="200" r="6"/>
+<path class="ledge" d="M46 200 H49" marker-end="url(#arr)"/>
+<g class="node s-ok">
+<rect class="nbox" x="50" y="175" width="180" height="50" rx="25"/>
+<text class="nlabel" x="140" y="198" text-anchor="middle">In Stock</text>
+<text class="ncode" x="140" y="213" text-anchor="middle">in_stock</text></g>
+<g class="node s-info">
+<rect class="nbox" x="380" y="65" width="180" height="50" rx="25"/>
+<text class="nlabel" x="470" y="88" text-anchor="middle">Allocated</text>
+<text class="ncode" x="470" y="103" text-anchor="middle">allocated</text></g>
+<g class="node s-warn">
+<rect class="nbox" x="380" y="285" width="180" height="50" rx="25"/>
+<text class="nlabel" x="470" y="308" text-anchor="middle">Under Maintenance</text>
+<text class="ncode" x="470" y="323" text-anchor="middle">under_maintenance</text></g>
+<g class="node s-bad">
+<rect class="nbox" x="710" y="65" width="180" height="50" rx="25"/>
+<text class="nlabel" x="800" y="88" text-anchor="middle">Lost</text>
+<text class="ncode" x="800" y="103" text-anchor="middle">lost</text></g>
+<g class="node s-off">
+<rect class="nbox" x="710" y="285" width="180" height="50" rx="25"/>
+<text class="nlabel" x="800" y="308" text-anchor="middle">Retired</text>
+<text class="ncode" x="800" y="323" text-anchor="middle">retired</text></g>
+<g class="node s-off">
+<rect class="nring" x="1006" y="61" width="188" height="58" rx="29"/>
+<rect class="nbox" x="1010" y="65" width="180" height="50" rx="25"/>
+<text class="nlabel" x="1100" y="88" text-anchor="middle">Written Off</text>
+<text class="ncode" x="1100" y="103" text-anchor="middle">written_off</text></g>
+<g class="node s-off">
+<rect class="nring" x="1006" y="281" width="188" height="58" rx="29"/>
+<rect class="nbox" x="1010" y="285" width="180" height="50" rx="25"/>
+<text class="nlabel" x="1100" y="308" text-anchor="middle">Disposed</text>
+<text class="ncode" x="1100" y="323" text-anchor="middle">disposed</text></g>
+</svg></div>
+    <figcaption>These are the only moves the API allows (<code>NEXT_STATUSES</code> in asset-rules.ts). Each arrow adds one row to <code>AssetStatusHistory</code>. An allocated asset leaves allocation only by Return or Mark lost, so the return condition is always captured. Disposed and Written Off are final.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What each action writes</h2>
+  <p class="prose">Highlighted tables get a new row; the others are updated.</p>
+  <div class="tablewrap" style="margin-top:12px">
+    <table>
+      <thead><tr><th>Action</th><th>Who</th><th>Tables touched</th></tr></thead>
+      <tbody>
+        <tr><td>Register an asset</td><td>IT admin</td><td><span class="tag w">Asset</span><span class="tag">AssetCategory</span> (next tag number)</td></tr>
+        <tr><td>Allocate</td><td>IT admin</td><td><span class="tag w">AssetAssignment</span><span class="tag w">AssetStatusHistory</span><span class="tag">Asset</span></td></tr>
+        <tr><td>Acknowledge receipt</td><td>Employee, or IT admin with a signed form</td><td><span class="tag">AssetAssignment</span><span class="tag w">AssetAssignmentFile</span> (signed form only)</td></tr>
+        <tr><td>Transfer to another employee</td><td>IT admin</td><td><span class="tag">AssetAssignment</span> (old, closed)<span class="tag w">AssetAssignment</span> (new, linked)</td></tr>
+        <tr><td>Return</td><td>IT admin</td><td><span class="tag">AssetAssignment</span><span class="tag w">AssetAssignmentFile</span> (photos)<span class="tag w">AssetStatusHistory</span><span class="tag">Asset</span></td></tr>
+        <tr><td>Mark lost</td><td>IT admin</td><td><span class="tag">AssetAssignment</span><span class="tag w">AssetStatusHistory</span><span class="tag">Asset</span></td></tr>
+        <tr><td>Request a new asset</td><td>Employee</td><td><span class="tag w">AssetRequest</span></td></tr>
+        <tr><td>Approve or decline a step</td><td>Manager, department head, or IT admin</td><td><span class="tag">AssetRequest</span><span class="tag w">AssetRequestDecision</span></td></tr>
+        <tr><td>Issue against a request</td><td>IT admin</td><td><span class="tag">AssetRequest</span><span class="tag w">AssetAssignment</span><span class="tag w">AssetStatusHistory</span><span class="tag">Asset</span></td></tr>
+        <tr><td>Report a fault or loss</td><td>Employee</td><td><span class="tag w">AssetTicket</span><span class="tag w">AssetTicketFile</span></td></tr>
+        <tr><td>Reply to a ticket</td><td>IT admin</td><td><span class="tag">AssetTicket</span><span class="tag w">AssetTicketComment</span></td></tr>
+        <tr><td>Open a repair</td><td>IT admin</td><td><span class="tag w">AssetMaintenance</span><span class="tag w">AssetStatusHistory</span><span class="tag">Asset</span><span class="tag">AssetTicket</span> (to In Progress)</td></tr>
+        <tr><td>Complete a repair</td><td>IT admin</td><td><span class="tag">AssetMaintenance</span><span class="tag w">AssetStatusHistory</span><span class="tag">Asset</span><span class="tag">AssetTicket</span> (to Resolved)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Enum and code values</h2>
+  <div class="tablewrap" style="margin-top:12px">
+    <table>
+      <thead><tr><th>Column</th><th>Values</th></tr></thead>
+      <tbody>
+        <tr><td class="t">Asset.status</td><td>in_stock · allocated · under_maintenance · lost · retired · disposed · written_off</td></tr>
+        <tr><td class="t">AssetAssignment.ackStatus</td><td>pending · acknowledged · not_recorded (handoverAckStatus uses the same set)</td></tr>
+        <tr><td class="t">AssetAssignment.ackMethod</td><td>digital · signed_form</td></tr>
+        <tr><td class="t">AssetAssignment.returnCondition</td><td>good → In Stock; damaged · requires_repair · missing_components → Under Maintenance</td></tr>
+        <tr><td class="t">AssetAssignment.endReason</td><td>returned · transferred · lost</td></tr>
+        <tr><td class="t">AssetAssignmentFile.kind</td><td>signed_ack · handover_ack · return_photo</td></tr>
+        <tr><td class="t">AssetStatusHistory.source</td><td>allocation · return · status · maintenance</td></tr>
+        <tr><td class="t">AssetRequest.status</td><td>pending_manager · pending_head · approved · rejected · fulfilled · cancelled</td></tr>
+        <tr><td class="t">AssetRequestDecision.step</td><td>manager · head · admin</td></tr>
+        <tr><td class="t">AssetTicket.type</td><td>Issue · Query · Request · Loss</td></tr>
+        <tr><td class="t">AssetTicket.priority</td><td>low · medium · high</td></tr>
+        <tr><td class="t">AssetTicket.status</td><td>Open · InProgress · Resolved · Closed</td></tr>
+        <tr><td class="t">AssetMaintenance.status / outcome</td><td>open · completed / repaired · beyond_repair</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>Drawn from <code>apps/api/prisma/schema.prisma</code> and the services in <code>apps/api/src/assets</code>, as of 3 Nov 2026. Unique keys are per tenant except ticket and request numbers, which are global.</footer>
+</main>
+</body>
+</html>

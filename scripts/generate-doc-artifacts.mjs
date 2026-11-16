@@ -15,9 +15,9 @@ const DOCS = path.join(ROOT, "docs");
 const ARTIFACTS = path.join(ROOT, "artifacts");
 
 const AUDIENCE_HINTS = [
-  [/executive|ceo|part.?48|recommendation/i, "CEO / Leadership"],
+  [/executive|ceo|part.?48|recommendation|sales.?leadership|product.?guide/i, "CEO / Leadership / Sales"],
   [/market|competitor/i, "CEO / Product"],
-  [/vision|business.?req|persona|prd|srs|user.?stor|process|ux/i, "Product / HR / BA"],
+  [/vision|business.?req|persona|prd|srs|user.?stor|process|ux|feature.?catalog|workflow.?catalog/i, "Product / HR / BA"],
   [/architect|domain|database|api|security|tenant|azure|zero-cost|migration|adr/i, "Engineering / Architecture"],
   [/test|devops|deploy|sprint|project.?plan|risk|change|govern|kpi|saas|capacity|fr-catalog/i, "Delivery / Ops / QA"],
   [/readme|index/i, "All stakeholders"],

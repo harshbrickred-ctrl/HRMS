@@ -1,14 +1,28 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  StreamableFile,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, type AuthUser } from '../auth/current-user.decorator';
 import { Permissions } from '../rbac/permissions.decorator';
 import { PermissionsGuard } from '../rbac/permissions.guard';
+import { AssetSheetService } from './asset-sheet.service';
+import { UPLOAD_LIMITS, type AssetUpload } from './asset-support.service';
 import { AssetsService } from './assets.service';
 import {
-  AssignAssetDto,
   CreateAssetDto,
-  CreateAssetTicketDto,
-  ReturnAssetDto,
+  ImportAssetSheetDto,
   UpdateAssetDto,
   UpdateAssetTicketDto,
 } from './dto/assets.dto';
@@ -16,25 +30,10 @@ import {
 @Controller('assets')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class AssetsController {
-  constructor(private readonly assets: AssetsService) {}
-
-  @Get('me')
-  @Permissions('assets.self')
-  mine(@CurrentUser() user: AuthUser) {
-    return this.assets.myAssets(user.userId);
-  }
-
-  @Get('me/tickets')
-  @Permissions('assets.self')
-  myTickets(@CurrentUser() user: AuthUser) {
-    return this.assets.myTickets(user.userId);
-  }
-
-  @Post('me/tickets')
-  @Permissions('assets.self')
-  createTicket(@CurrentUser() user: AuthUser, @Body() dto: CreateAssetTicketDto) {
-    return this.assets.createTicket(user.userId, dto);
-  }
+  constructor(
+    private readonly assets: AssetsService,
+    private readonly sheets: AssetSheetService,
+  ) {}
 
   @Get('tickets')
   @Permissions('assets.tickets.manage')
@@ -52,16 +51,67 @@ export class AssetsController {
     return this.assets.updateTicket(user.tenantId, user.userId, id, dto);
   }
 
+  @Get('tickets/:id/files/:fileId')
+  @Permissions('assets.tickets.manage')
+  async ticketFile(@CurrentUser() user: AuthUser, @Param('id') id: string, @Param('fileId') fileId: string) {
+    const file = await this.assets.openTicketFile(user.tenantId, id, fileId);
+    return new StreamableFile(file.stream, {
+      type: file.contentType,
+      disposition: `inline; filename="${file.fileName.replace(/"/g, '')}"`,
+    });
+  }
+
   @Get('people')
   @Permissions('assets.manage')
   people(@CurrentUser() user: AuthUser) {
     return this.assets.people(user.tenantId);
   }
 
+  @Get('locations')
+  @Permissions('assets.manage')
+  locations(@CurrentUser() user: AuthUser) {
+    return this.assets.locations(user.tenantId);
+  }
+
   @Get()
   @Permissions('assets.manage')
-  list(@CurrentUser() user: AuthUser, @Query('status') status?: string) {
-    return this.assets.list(user.tenantId, status);
+  list(
+    @CurrentUser() user: AuthUser,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('locationId') locationId?: string,
+    @Query('departmentId') departmentId?: string,
+    @Query('view') view?: string,
+  ) {
+    return this.assets.list(user.tenantId, user.userId, { q, status, categoryId, locationId, departmentId, view });
+  }
+
+  @Get('summary')
+  @Permissions('assets.manage')
+  summary(@CurrentUser() user: AuthUser) {
+    return this.assets.summary(user.tenantId, user.userId);
+  }
+
+  /** The register in the IT team's Excel sheet layout, with the same filters as the list. */
+  @Get('sheet')
+  @Permissions('assets.manage')
+  sheet(
+    @CurrentUser() user: AuthUser,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('locationId') locationId?: string,
+    @Query('departmentId') departmentId?: string,
+    @Query('view') view?: string,
+  ) {
+    return this.sheets.exportRows(user.tenantId, user.userId, { q, status, categoryId, locationId, departmentId, view });
+  }
+
+  @Post('sheet')
+  @Permissions('assets.manage')
+  importSheet(@CurrentUser() user: AuthUser, @Body() dto: ImportAssetSheetDto) {
+    return this.sheets.importRows(user.tenantId, user.userId, dto);
   }
 
   @Post()
@@ -70,10 +120,10 @@ export class AssetsController {
     return this.assets.create(user.tenantId, user.userId, dto);
   }
 
-  @Get(':id/history')
+  @Get(':id')
   @Permissions('assets.manage')
-  history(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.assets.history(user.tenantId, id);
+  detail(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.assets.detail(user.tenantId, id);
   }
 
   @Patch(':id')
@@ -82,19 +132,30 @@ export class AssetsController {
     return this.assets.update(user.tenantId, user.userId, id, dto);
   }
 
-  @Post(':id/assign')
+  @Delete(':id')
   @Permissions('assets.manage')
-  assign(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: AssignAssetDto) {
-    return this.assets.assign(user.tenantId, user.userId, id, dto);
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.assets.remove(user.tenantId, user.userId, id);
   }
 
-  @Post(':id/return')
+  @Post(':id/photo')
   @Permissions('assets.manage')
-  returnAsset(
+  @UseInterceptors(FileInterceptor('file', UPLOAD_LIMITS))
+  uploadPhoto(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-    @Body() dto: ReturnAssetDto,
+    @UploadedFile() file: AssetUpload,
   ) {
-    return this.assets.returnAsset(user.tenantId, user.userId, id, dto);
+    return this.assets.setPhoto(user.tenantId, user.userId, id, file);
+  }
+
+  @Get(':id/photo')
+  @Permissions('assets.manage')
+  async photo(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const file = await this.assets.openPhoto(user.tenantId, id);
+    return new StreamableFile(file.stream, {
+      type: file.contentType,
+      disposition: `inline; filename="${file.fileName.replace(/"/g, '')}"`,
+    });
   }
 }

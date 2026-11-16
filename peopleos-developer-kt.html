@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PeopleOS — Developer Knowledge Transfer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a2332;
+    --muted: #5a6573;
+    --paper: #f7f6f3;
+    --surface: #ffffff;
+    --line: #e2dfd8;
+    --accent: #1f6b56;
+    --accent-soft: #e8f3ef;
+    --warm: #efeae2;
+    --warn: #8a6a1a;
+    --warn-soft: #f7f0dd;
+    --serif: "Source Serif 4", Georgia, serif;
+    --sans: "DM Sans", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.65;
+    font-size: 1.05rem;
+  }
+  a { color: var(--accent); }
+  a:hover { text-decoration: underline; }
+  code, .path {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: var(--warm);
+    padding: 0.12em 0.4em;
+    border-radius: 3px;
+  }
+  pre {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    background: #1a2332;
+    color: #e8ecef;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    line-height: 1.5;
+    margin: 0.85rem 0 1.1rem;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  .page {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 2.5rem 1.35rem 4rem;
+  }
+
+  header.hero {
+    padding: 0 0 2rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 2.25rem;
+  }
+  .kicker {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 0.7rem;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(1.75rem, 4vw, 2.25rem);
+    line-height: 1.2;
+    margin: 0 0 0.75rem;
+    letter-spacing: -0.02em;
+  }
+  .lead {
+    font-size: 1.12rem;
+    color: var(--muted);
+    margin: 0 0 1rem;
+    max-width: 38em;
+  }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  nav.jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.75rem;
+    margin-top: 1.35rem;
+    padding-top: 1.15rem;
+    border-top: 1px solid var(--line);
+  }
+  nav.jump a {
+    font-size: 0.86rem;
+    color: var(--muted);
+    text-decoration: none;
+  }
+  nav.jump a:hover { color: var(--accent); }
+
+  section { margin: 0 0 2.6rem; }
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 1.4rem;
+    margin: 0 0 0.85rem;
+  }
+  h3 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 1.08rem;
+    margin: 1.4rem 0 0.45rem;
+  }
+  p { margin: 0 0 0.8rem; }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.2rem; }
+  li { margin: 0 0 0.4rem; }
+
+  .callout {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding: 0.85rem 1rem;
+    margin: 1rem 0;
+  }
+  .callout.warn {
+    background: var(--warn-soft);
+    border-left-color: var(--warn);
+  }
+  .callout p { margin: 0; }
+
+  .agenda {
+    counter-reset: agenda;
+    list-style: none;
+    padding: 0;
+    margin: 0.75rem 0 0;
+  }
+  .agenda li {
+    position: relative;
+    padding: 0.7rem 0 0.7rem 2.5rem;
+    border-bottom: 1px solid var(--line);
+    margin: 0;
+  }
+  .agenda li:last-child { border-bottom: none; }
+  .agenda li::before {
+    counter-increment: agenda;
+    content: counter(agenda);
+    position: absolute;
+    left: 0;
+    top: 0.7rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .agenda strong { display: block; margin-bottom: 0.15rem; }
+  .agenda span { color: var(--muted); font-size: 0.95rem; }
+
+  .grid2 {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0.9rem 0;
+  }
+  @media (min-width: 640px) {
+    .grid2 { grid-template-columns: 1fr 1fr; }
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 0.95rem 1.05rem;
+  }
+  .card h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+  .card p, .card ul { margin: 0; color: var(--muted); font-size: 0.95rem; }
+  .card ul { padding-left: 1.1rem; margin-top: 0.35rem; }
+
+  .arch {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 1.1rem 1.2rem;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    line-height: 1.55;
+    white-space: pre;
+    overflow-x: auto;
+    color: var(--ink);
+    margin: 0.9rem 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.93rem;
+    margin: 0.75rem 0 1rem;
+    background: var(--surface);
+  }
+  th, td {
+    text-align: left;
+    padding: 0.6rem 0.7rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    background: var(--warm);
+    font-weight: 600;
+  }
+
+  .flow {
+    background: var(--warm);
+    padding: 0.9rem 1rem;
+    margin: 0.75rem 0;
+    font-size: 0.98rem;
+  }
+
+  .checklist label {
+    display: flex;
+    gap: 0.55rem;
+    align-items: flex-start;
+    padding: 0.4rem 0;
+    cursor: default;
+  }
+  .checklist input { margin-top: 0.3rem; }
+
+  footer {
+    margin-top: 2rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <p class="kicker">PeopleOS · Internal KT</p>
+      <h1>Developer knowledge transfer</h1>
+      <p class="lead">
+        A practical guide to onboard a new developer: what the product is, how the repo is built,
+        how to run it, and where to change code — without drowning in jargon.
+      </p>
+      <div class="meta-row">
+        <span>Audience: joining engineers</span>
+        <span>Stack: NestJS · React (Vite) · Prisma · Postgres</span>
+        <span>Repo: monorepo <code>peopleos</code></span>
+      </div>
+      <nav class="jump" aria-label="Jump to section">
+        <a href="#agenda">Agenda</a>
+        <a href="#product">Product</a>
+        <a href="#repo">Repo map</a>
+        <a href="#setup">Setup</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#auth">Auth &amp; RBAC</a>
+        <a href="#modules">Modules</a>
+        <a href="#frontend">Frontend</a>
+        <a href="#backend">Backend</a>
+        <a href="#demo">Live demo path</a>
+        <a href="#gotchas">Gotchas</a>
+        <a href="#docs">Docs</a>
+        <a href="#checklist">Day-1 checklist</a>
+      </nav>
+    </header>
+
+    <section id="agenda">
+      <h2>1. Suggested KT agenda (~90 minutes)</h2>
+      <p>Use this as a speaking script. Pause for questions after each block.</p>
+      <ol class="agenda">
+        <li>
+          <strong>Product in 5 minutes</strong>
+          <span>What PeopleOS does, who uses it, what we are not building yet.</span>
+        </li>
+        <li>
+          <strong>Repo walk (10 min)</strong>
+          <span>Monorepo layout: <code>apps/api</code>, <code>apps/web</code>, <code>apps/mobile</code>, <code>docs/</code>.</span>
+        </li>
+        <li>
+          <strong>Run locally together (15 min)</strong>
+          <span>Docker → migrate/seed → API → web → login as employee + manager.</span>
+        </li>
+        <li>
+          <strong>Request path (15 min)</strong>
+          <span>Login → JWT → leave apply API → manager approve. Open the files as you talk.</span>
+        </li>
+        <li>
+          <strong>Module tour (25 min)</strong>
+          <span>HR, leave, attendance, assets, notifications — Live vs still mock.</span>
+        </li>
+        <li>
+          <strong>How we ship &amp; where docs live (10 min)</strong>
+          <span>Feature catalog, Credentials, Decisions, Vercel note.</span>
+        </li>
+        <li>
+          <strong>First task ideas (10 min)</strong>
+          <span>Pick a small Live-adjacent ticket; pair on finding the right folder.</span>
+        </li>
+      </ol>
+    </section>
+
+    <section id="product">
+      <h2>2. Product in plain words</h2>
+      <p>
+        <strong>PeopleOS</strong> is an internal HRMS. One web app: every employee gets self-service
+        (<strong>Me</strong>). Managers, HR, IT, and Security see extra sidebar sections based on roles.
+      </p>
+      <div class="callout">
+        <p><strong>Mental model:</strong> one login → role-based sidebar → APIs under <code>/api/v1/…</code> → Postgres.</p>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h3>Live today (safe to demo)</h3>
+          <ul>
+            <li>Auth, RBAC, forgot password</li>
+            <li>Leave apply / approve</li>
+            <li>Attendance (web + biometric path)</li>
+            <li>HR employees / org / documents</li>
+            <li>Payslip PDF upload/download</li>
+            <li>IT assets + My Assets</li>
+            <li>Helpdesk (employee create)</li>
+            <li>In-app notifications</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Not the focus yet</h3>
+          <ul>
+            <li>Full Indian payroll engine</li>
+            <li>PMS / OKR / LMS / expenses</li>
+            <li>Full workflow engine</li>
+            <li>Some Admin screens are UI-only</li>
+            <li>Mobile beyond attendance is thin</li>
+          </ul>
+        </div>
+      </div>
+      <p>Non-technical product story for stakeholders: <a href="peopleos-product-guide-sales-leadership.html">product guide HTML</a>.</p>
+    </section>
+
+    <section id="repo">
+      <h2>3. Repo map</h2>
+      <p>npm workspaces monorepo. Most day-to-day work is in <code>apps/api</code> and <code>apps/web</code>.</p>
+      <table>
+        <thead>
+          <tr><th>Path</th><th>What it is</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>apps/api</code></td><td>NestJS API + Prisma schema/migrations/seed</td></tr>
+          <tr><td><code>apps/web</code></td><td>React + Vite SPA (main product UI)</td></tr>
+          <tr><td><code>apps/mobile</code></td><td>Expo app (attendance Live; much else mock)</td></tr>
+          <tr><td><code>docs/</code></td><td>Blueprint + as-built catalogs (33, 34, 36…)</td></tr>
+          <tr><td><code>docker-compose.yml</code></td><td>Postgres <code>:5440</code> + Mailpit <code>:8025</code></td></tr>
+          <tr><td><code>Credentials.md</code></td><td>Local URLs + seed logins</td></tr>
+          <tr><td><code>Progress.md</code> / <code>Decision.md</code></td><td>Status tracker + decision log</td></tr>
+        </tbody>
+      </table>
+      <h3>Useful root scripts</h3>
+<pre><code>npm run db:up          # docker compose up -d
+npm run prisma:migrate # from workspace (or cd apps/api)
+npm run prisma:seed
+npm run dev:api
+npm run dev:web</code></pre>
+    </section>
+
+    <section id="setup">
+      <h2>4. Local setup (do this live in KT)</h2>
+      <p><strong>Need:</strong> Node 20+ (22+ recommended), Docker Desktop, Git.</p>
+<pre><code># 1) Start DB + mail
+docker compose up -d
+
+# 2) API
+cd apps/api
+npx prisma generate
+npx prisma migrate deploy   # or: migrate dev
+npm run prisma:seed
+npm run start:dev           # http://localhost:3000
+
+# 3) Web (new terminal, repo root)
+npm run dev:web             # http://localhost:5173</code></pre>
+      <table>
+        <thead>
+          <tr><th>Service</th><th>URL</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Web login</td><td><a href="http://localhost:5173/login">http://localhost:5173/login</a></td></tr>
+          <tr><td>API health</td><td><a href="http://localhost:3000/api/v1/health">http://localhost:3000/api/v1/health</a></td></tr>
+          <tr><td>Mailpit (OTP email)</td><td><a href="http://localhost:8025">http://localhost:8025</a></td></tr>
+          <tr><td>Postgres</td><td><code>localhost:5440</code> · user/db/pass <code>peopleos</code></td></tr>
+        </tbody>
+      </table>
+      <h3>Seed users (password for all: <code>ChangeMe123!</code>)</h3>
+      <table>
+        <thead>
+          <tr><th>Email</th><th>Roles</th><th>Use for</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>employee@peopleos.local</code></td><td>EMPLOYEE</td><td>Me / leave / assets</td></tr>
+          <tr><td><code>manager@peopleos.local</code></td><td>MANAGER + EMPLOYEE</td><td>Inbox approvals</td></tr>
+          <tr><td><code>hr@peopleos.local</code></td><td>HR_EXEC + EMPLOYEE</td><td>HR admin</td></tr>
+          <tr><td><code>it@peopleos.local</code></td><td>IT_ADMIN + EMPLOYEE</td><td>Assets + admin</td></tr>
+          <tr><td><code>admin@peopleos.local</code></td><td>SECURITY_ADMIN</td><td>Users &amp; Roles</td></tr>
+        </tbody>
+      </table>
+      <div class="callout warn">
+        <p><strong>Tip:</strong> If seed fails with Prisma type errors, run <code>npx prisma generate</code> first, then seed again.</p>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>5. Architecture (big picture)</h2>
+      <div class="arch">Browser (Vite React)
+    │  JWT in localStorage
+    ▼
+NestJS API  (/api/v1/...)
+    │  Prisma Client
+    ▼
+PostgreSQL (Docker :5440)
+
+Side: Mailpit for OTP email (SMTP :1025)
+Side: eSSL iClock devices → attendance ADMS endpoints</div>
+      <ul>
+        <li><strong>Modular monolith</strong> — one API process, feature modules (auth, leave, attendance, assets…).</li>
+        <li><strong>Single tenant runtime</strong> today; schema still has <code>tenantId</code>.</li>
+        <li><strong>PeopleOS is attendance SoR</strong> — punches are not synced from greytHR.</li>
+        <li><strong>Payslips</strong> = PDF files HR uploads; not a payroll calculator.</li>
+      </ul>
+    </section>
+
+    <section id="auth">
+      <h2>6. Auth &amp; RBAC (must understand)</h2>
+      <h3>Login flow</h3>
+      <div class="flow">
+        Login page → <code>POST /api/v1/auth/login</code> → access + refresh tokens stored →
+        <code>AuthContext</code> loads user → land on <code>/ess</code> → sidebar from roles.
+      </div>
+      <table>
+        <thead>
+          <tr><th>Topic</th><th>Where to look</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Web tokens / API client</td><td><code>apps/web/src/lib/api.ts</code></td></tr>
+          <tr><td>Auth provider / login state</td><td><code>apps/web/src/auth/AuthContext.tsx</code></td></tr>
+          <tr><td>Route guards</td><td><code>ProtectedRoute.tsx</code>, <code>App.tsx</code> <code>RoleOutlet</code></td></tr>
+          <tr><td>Sidebar by role</td><td><code>apps/web/src/layout/appNav.ts</code></td></tr>
+          <tr><td>Role → permission matrix</td><td><code>apps/api/src/rbac/role-matrix.ts</code></td></tr>
+          <tr><td>Auth module</td><td><code>apps/api/src/auth/</code></td></tr>
+        </tbody>
+      </table>
+      <p>
+        <strong>Two layers:</strong> (1) route/nav roles (MANAGER, HR_EXEC, …) control what UI you see;
+        (2) permission codes (<code>leave.approve</code>, <code>assets.manage</code>, …) guard APIs.
+      </p>
+      <p>
+        Roles not seeded as logins: <code>HR_HEAD</code>, <code>LEADERSHIP_READ</code>, <code>FINANCE_READ</code> —
+        assign via <strong>Admin → Users &amp; Roles</strong> (<code>/admin/roles</code>).
+      </p>
+    </section>
+
+    <section id="modules">
+      <h2>7. Domain modules (what exists)</h2>
+      <p>API modules are registered in <code>apps/api/src/app.module.ts</code>.</p>
+      <table>
+        <thead>
+          <tr><th>Module</th><th>API folder</th><th>Main UI</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Auth / RBAC</td><td><code>auth/</code>, <code>rbac/</code></td><td>Login, Settings, Admin Roles</td><td>Live</td></tr>
+          <tr><td>HR (org + employees + docs)</td><td><code>hr/</code></td><td><code>/hr/*</code></td><td>Live</td></tr>
+          <tr><td>Leave</td><td><code>leave/</code></td><td><code>/ess/leave</code>, manager inbox</td><td>Live</td></tr>
+          <tr><td>Attendance</td><td><code>attendance/</code></td><td><code>/ess/attendance</code>, HR attendance admin</td><td>Live + devices</td></tr>
+          <tr><td>Notifications</td><td><code>notifications/</code></td><td>Bell + <code>/ess/notifications</code></td><td>In-app Live</td></tr>
+          <tr><td>Helpdesk</td><td><code>helpdesk/</code></td><td><code>/ess/helpdesk</code></td><td>Self Live; HR UI thin</td></tr>
+          <tr><td>Payslips</td><td><code>payslips/</code></td><td>Salary + HR Document Center</td><td>PDF Live</td></tr>
+          <tr><td>Reports</td><td><code>reports/</code></td><td>Leadership / HR queues</td><td>Live KPIs</td></tr>
+          <tr><td>Assets</td><td><code>assets/</code></td><td><code>/ess/assets</code>, <code>/it/*</code></td><td>Large Live module</td></tr>
+        </tbody>
+      </table>
+      <h3>Data models</h3>
+      <p>Single source of truth: <code>apps/api/prisma/schema.prisma</code>. Migrations under <code>prisma/migrations/</code>. Seed stories in <code>prisma/seed.ts</code>.</p>
+    </section>
+
+    <section id="frontend">
+      <h2>8. Frontend map (web)</h2>
+      <table>
+        <thead>
+          <tr><th>Area</th><th>Folder / file</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Routes</td><td><code>apps/web/src/App.tsx</code></td><td>All paths + role outlets</td></tr>
+          <tr><td>Shell / sidebar</td><td><code>layout/</code></td><td>App shell, nav, notification bell</td></tr>
+          <tr><td>ESS (Me)</td><td><code>ess/pages/</code></td><td>Employee self-service screens</td></tr>
+          <tr><td>Manager / HR / Admin / Exec</td><td><code>workspace/</code></td><td>Role pages + <code>*Api.ts</code> clients</td></tr>
+          <tr><td>IT Assets UI</td><td><code>workspace/It*.tsx</code></td><td>Register, requests, tickets…</td></tr>
+          <tr><td>Theme</td><td><code>theme/</code></td><td>Light / dark / system</td></tr>
+          <tr><td>Still-mock helpers</td><td><code>ess/mock/</code>, <code>workspace/workspaceMock.ts</code></td><td>Do not treat as DB truth</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <p>
+          <strong>Pattern:</strong> page component → thin API helper in <code>workspace/*Api.ts</code> or ESS fetchers → Nest controller → Prisma.
+          Prefer following an existing feature end-to-end before inventing a new pattern.
+        </p>
+      </div>
+    </section>
+
+    <section id="backend">
+      <h2>9. Backend map (API)</h2>
+      <ul>
+        <li>Feature folder: <code>*.module.ts</code>, <code>*.controller.ts</code>, <code>*.service.ts</code>.</li>
+        <li>Global config via Nest <code>ConfigModule</code>; local secrets in <code>apps/api/.env</code> (gitignored — start from <code>.env.example</code>).</li>
+        <li>Permissions checked with guards tied to <code>role-matrix.ts</code>.</li>
+        <li>Health: <code>GET /api/v1/health</code>.</li>
+        <li>Throttling enabled globally (see <code>ThrottlerModule</code> in <code>app.module.ts</code>).</li>
+      </ul>
+      <h3>Example end-to-end: leave approve</h3>
+      <ol>
+        <li>Employee UI: <code>ess/pages/EssLeavePage.tsx</code> → leave API.</li>
+        <li>API: <code>apps/api/src/leave/</code> creates <code>LeaveRequest</code>, updates balances.</li>
+        <li>Manager UI: <code>ManagerInboxPage</code> / team leave → decide.</li>
+        <li>Notification emitted → bell / notifications page.</li>
+      </ol>
+      <p>Walk this path live in KT — it teaches auth, RBAC, Prisma, and UI wiring in one story.</p>
+    </section>
+
+    <section id="demo">
+      <h2>10. Live demo path (20 minutes)</h2>
+      <ol>
+        <li><strong>Employee</strong> — apply leave, open attendance, open My Assets.</li>
+        <li><strong>Manager</strong> — Inbox → approve leave.</li>
+        <li><strong>HR</strong> — Employees / Leave Admin / Document Center.</li>
+        <li><strong>IT</strong> — Asset dashboard → register → tickets.</li>
+        <li><strong>Admin</strong> — Users &amp; Roles → assign <code>LEADERSHIP_READ</code> → show <code>/exec</code>.</li>
+      </ol>
+      <p>Forgot password: request OTP → open Mailpit → reset. Good test of mail + auth.</p>
+    </section>
+
+    <section id="gotchas">
+      <h2>11. Gotchas for new developers</h2>
+      <ul>
+        <li><strong>Mock vs Live:</strong> Some Home widgets, Manager overview/directory, Admin audit/jobs/settings still use mock/static data. Check <code>docs/34-feature-catalog.md</code> before assuming Postgres.</li>
+        <li><strong>Helpdesk manage:</strong> company APIs exist; dedicated HR ticket screen is incomplete.</li>
+        <li><strong>Salary extras:</strong> YTD / loans style panels can be sample UI — PDFs are the Live payslip path.</li>
+        <li><strong>Prisma client drift:</strong> after pulling schema changes, always <code>prisma generate</code> (and migrate).</li>
+        <li><strong>Vercel:</strong> hosts the Vite web app; API/DB may be separate. Local Docker is the reliable full stack for development.</li>
+        <li><strong>No portal switcher:</strong> role sections appear in one sidebar (decision D-028).</li>
+      </ul>
+    </section>
+
+    <section id="docs">
+      <h2>12. Docs worth opening</h2>
+      <table>
+        <thead>
+          <tr><th>Doc</th><th>When to use it</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>apps/README.md</code></td><td>Quick start</td></tr>
+          <tr><td><code>Credentials.md</code></td><td>URLs + seed users</td></tr>
+          <tr><td><code>docs/34-feature-catalog.md</code></td><td>Live / Partial / Planned (authoritative)</td></tr>
+          <tr><td><code>docs/33-implemented-workflow-catalog.md</code></td><td>As-built workflows</td></tr>
+          <tr><td><code>docs/36-product-guide-sales-leadership.md</code></td><td>Simple product story</td></tr>
+          <tr><td><code>docs/35-asset-module-data-model.md</code></td><td>Assets depth</td></tr>
+          <tr><td><code>Progress.md</code> / <code>Decision.md</code></td><td>What’s done / why we chose X</td></tr>
+          <tr><td><code>docs/00-README.md</code></td><td>Index of the full blueprint pack</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="checklist">
+      <h2>13. Day-1 checklist for the new joiners</h2>
+      <div class="checklist">
+        <label><input type="checkbox" disabled> Clone repo, install deps (<code>npm install</code> at root)</label>
+        <label><input type="checkbox" disabled> Docker up; migrate + seed; API + web running</label>
+        <label><input type="checkbox" disabled> Login as employee, manager, HR, IT, admin</label>
+        <label><input type="checkbox" disabled> Trace leave apply → approve in code</label>
+        <label><input type="checkbox" disabled> Skim <code>role-matrix.ts</code> + <code>appNav.ts</code> + <code>App.tsx</code></label>
+        <label><input type="checkbox" disabled> Read feature catalog § Live vs Partial</label>
+        <label><input type="checkbox" disabled> Note first ticket + pairing buddy</label>
+      </div>
+      <div class="callout" style="margin-top:1.25rem">
+        <p><strong>First-week tip:</strong> Prefer fixing or extending a Live path (leave, attendance, assets, HR CRUD) over polishing mock screens — that teaches the real stack.</p>
+      </div>
+    </section>
+
+    <footer>
+      PeopleOS developer KT · Open this file in a browser during the session ·
+      Companion: <a href="peopleos-product-guide-sales-leadership.html">product guide</a> ·
+      Source of truth for maturity: <a href="docs/34-feature-catalog.md">docs/34-feature-catalog.md</a>
+    </footer>
+  </div>
+</body>
+</html>

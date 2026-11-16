@@ -1,6 +1,6 @@
 ---
 manual: false
-generated: 2026-09-16
+generated: 2026-11-13
 ---
 
 # 24 — 12-Week Project Plan (Parts 28–31)

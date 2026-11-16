@@ -512,8 +512,8 @@ function AssetsSection() {
 
   useEffect(() => {
     fetchMyAssets()
-      .then((rows) => {
-        setAssets(rows);
+      .then((data) => {
+        setAssets(data.assets);
         setError(null);
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load assets.'));
@@ -537,10 +537,10 @@ function AssetsSection() {
         {assets.length === 0 ? <EmptyNote label="Nothing is assigned to you right now." /> : null}
         <ul className="ess-asset-list">
           {assets.map((asset) => (
-            <li key={asset.assetId} className="ess-asset-card">
+            <li key={asset.allocationId} className="ess-asset-card">
               <div>
                 <strong>{asset.assetTag}</strong>
-                <p>{asset.makeModel || categoryLabel(asset.category)}</p>
+                <p>{asset.name}</p>
               </div>
               <dl>
                 <div>

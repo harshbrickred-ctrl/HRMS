@@ -1,6 +1,6 @@
 ---
 manual: false
-generated: 2026-09-16
+generated: 2026-11-13
 ---
 
 # ADR-008 - Messaging: In-Process ? Service Bus Later

@@ -4,12 +4,12 @@ Quick briefs for every blueprint document. Open a folder’s `brief.html` to sha
 
 **Source of truth:** [`docs/`](../docs/00-README.md)  
 **Regenerate:** `node scripts/generate-doc-artifacts.mjs`  
-**Generated:** 2026-09-16
+**Generated:** 2026-11-13
 
 | Artifact | Audience | Brief |
 |----------|----------|-------|
 | HRMS Enterprise Blueprint — Documentation Index | All stakeholders | [md](00-README/brief.md) · [html](00-README/brief.html) |
-| 01 — Executive Proposal (CEO Approval Document) | CEO / Leadership | [md](01-executive-proposal/brief.md) · [html](01-executive-proposal/brief.html) |
+| 01 — Executive Proposal (CEO Approval Document) | CEO / Leadership / Sales | [md](01-executive-proposal/brief.md) · [html](01-executive-proposal/brief.html) |
 | 02 — Market Analysis (Parts 3–6) | CEO / Product | [md](02-market-analysis/brief.md) · [html](02-market-analysis/brief.html) |
 | 03 — Product Vision | Product / HR / BA | [md](03-product-vision/brief.md) · [html](03-product-vision/brief.html) |
 | 04 — Business Requirements Document (BRD) | Product / HR / BA | [md](04-business-requirements/brief.md) · [html](04-business-requirements/brief.html) |
@@ -53,8 +53,11 @@ Quick briefs for every blueprint document. Open a folder’s `brief.html` to sha
 | 30 — Engineering Governance | Delivery / Ops / QA | [md](30-engineering-governance/brief.md) · [html](30-engineering-governance/brief.html) |
 | PeopleOS — Management Overview | General | [md](31-management-overview/brief.md) · [html](31-management-overview/brief.html) |
 | PeopleOS — Manager Weekly Development Timeline | General | [md](32-manager-weekly-timeline/brief.md) · [html](32-manager-weekly-timeline/brief.html) |
-| 33 — Implemented workflow catalog | General | [md](33-implemented-workflow-catalog/brief.md) · [html](33-implemented-workflow-catalog/brief.html) |
+| 33 — Implemented workflow catalog | Product / HR / BA | [md](33-implemented-workflow-catalog/brief.md) · [html](33-implemented-workflow-catalog/brief.html) |
+| PeopleOS — Feature Catalog | Product / HR / BA | [md](34-feature-catalog/brief.md) · [html](34-feature-catalog/brief.html) |
+| PeopleOS — Asset Module: Data Model and Flows | General | [md](35-asset-module-data-model/brief.md) · [html](35-asset-module-data-model/brief.html) |
+| PeopleOS — Simple Product Guide | CEO / Leadership / Sales | [md](36-product-guide-sales-leadership/brief.md) · [html](36-product-guide-sales-leadership/brief.html) |
 | Appendix — Capacity Sheet (4 × 12 Weeks) | Delivery / Ops / QA | [md](appendices/capacity-sheet/brief.md) · [html](appendices/capacity-sheet/brief.html) |
 | Appendix — Competitor Capability Matrix | CEO / Product | [md](appendices/competitor-matrix/brief.md) · [html](appendices/competitor-matrix/brief.html) |
 | Appendix — FR / NFR Catalog | Delivery / Ops / QA | [md](appendices/fr-catalog/brief.md) · [html](appendices/fr-catalog/brief.html) |
-| Part 48 — Final Architectural & Product Recommendation | CEO / Leadership | [md](appendices/part-48-final-recommendation/brief.md) · [html](appendices/part-48-final-recommendation/brief.html) |
+| Part 48 — Final Architectural & Product Recommendation | CEO / Leadership / Sales | [md](appendices/part-48-final-recommendation/brief.md) · [html](appendices/part-48-final-recommendation/brief.html) |

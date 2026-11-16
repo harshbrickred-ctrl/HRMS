@@ -2,6 +2,11 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom
 import { AuthProvider } from './auth/AuthContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { EssLayout } from './ess/components/EssLayout';
+import { EssAssetDetailPage } from './ess/pages/EssAssetDetailPage';
+import { EssAssetFaultPage } from './ess/pages/EssAssetFaultPage';
+import { EssAssetHistoryPage } from './ess/pages/EssAssetHistoryPage';
+import { EssAssetLostPage } from './ess/pages/EssAssetLostPage';
+import { EssAssetReportsPage } from './ess/pages/EssAssetReportsPage';
 import { EssAssetsPage } from './ess/pages/EssAssetsPage';
 import { EssAttendancePage } from './ess/pages/EssAttendancePage';
 import { EssDocumentsPage } from './ess/pages/EssDocumentsPage';
@@ -45,8 +50,6 @@ import {
 } from './workspace/RolePages';
 import { HrSalaryPage } from './workspace/HrSalaryPage';
 import { FinancePayoutPage } from './workspace/FinancePayoutPage';
-import { ItAssetsPage } from './workspace/ItAssetsPage';
-import { ItAssetTicketsPage } from './workspace/ItAssetTicketsPage';
 import {
   ADMIN_ROLES,
   FINANCE_ROLES,
@@ -55,6 +58,21 @@ import {
   LEADERSHIP_ROLES,
   MANAGER_ROLES,
 } from './workspace/roleCatalog';
+import { ItAssetAllocatePage } from './workspace/ItAssetAllocatePage';
+import { ItAssetApproversPage } from './workspace/ItAssetApproversPage';
+import { ItAssetCategoriesPage } from './workspace/ItAssetCategoriesPage';
+import { ItAssetDashboardPage } from './workspace/ItAssetDashboardPage';
+import { ItAssetDetailPage } from './workspace/ItAssetDetailPage';
+import { ItAssetFormPage } from './workspace/ItAssetFormPage';
+import { ItAssetHistoryPage } from './workspace/ItAssetHistoryPage';
+import { ItAssetMaintenancePage } from './workspace/ItAssetMaintenancePage';
+import { ItAssetReportsPage } from './workspace/ItAssetReportsPage';
+import { ItAssetRequestsPage } from './workspace/ItAssetRequestsPage';
+import { ItAssetReturnPage } from './workspace/ItAssetReturnPage';
+import { ItAssetsPage } from './workspace/ItAssetsPage';
+import { ItAssetTicketsPage } from './workspace/ItAssetTicketsPage';
+import { ItAssetTransferPage } from './workspace/ItAssetTransferPage';
+import { ItEmployeeAssetsPage } from './workspace/ItEmployeeAssetsPage';
 
 function RoleOutlet({ roles }: { roles: string[] }) {
   return (
@@ -98,6 +116,11 @@ export default function App() {
               <Route path="settings" element={<EssSettingsPage />} />
               <Route path="helpdesk" element={<EssHelpdeskPage />} />
               <Route path="assets" element={<EssAssetsPage />} />
+              <Route path="assets/history" element={<EssAssetHistoryPage />} />
+              <Route path="assets/reports" element={<EssAssetReportsPage />} />
+              <Route path="assets/:id" element={<EssAssetDetailPage />} />
+              <Route path="assets/:id/fault" element={<EssAssetFaultPage />} />
+              <Route path="assets/:id/lost" element={<EssAssetLostPage />} />
             </Route>
 
             <Route path="/manager" element={<RoleOutlet roles={[...MANAGER_ROLES]} />}>
@@ -151,6 +174,19 @@ export default function App() {
             <Route path="/it" element={<RoleOutlet roles={[...IT_ROLES]} />}>
               <Route index element={<Navigate to="assets" replace />} />
               <Route path="assets" element={<ItAssetsPage />} />
+              <Route path="assets/new" element={<ItAssetFormPage />} />
+              <Route path="assets/:id" element={<ItAssetDetailPage />} />
+              <Route path="assets/:id/edit" element={<ItAssetFormPage />} />
+              <Route path="assets/:id/history" element={<ItAssetHistoryPage />} />
+              <Route path="allocate" element={<ItAssetAllocatePage />} />
+              <Route path="return" element={<ItAssetReturnPage />} />
+              <Route path="transfer" element={<ItAssetTransferPage />} />
+              <Route path="employee-assets" element={<ItEmployeeAssetsPage />} />
+              <Route path="requests" element={<ItAssetRequestsPage />} />
+              <Route path="maintenance" element={<ItAssetMaintenancePage />} />
+              <Route path="reports" element={<ItAssetReportsPage />} />
+              <Route path="approvers" element={<ItAssetApproversPage />} />
+              <Route path="categories" element={<ItAssetCategoriesPage />} />
               <Route path="tickets" element={<ItAssetTicketsPage />} />
             </Route>
 
