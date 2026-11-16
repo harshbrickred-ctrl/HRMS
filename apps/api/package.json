@@ -27,6 +27,7 @@
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^12.0.0",
     "@nestjs/core": "^11.0.1",
@@ -34,6 +35,7 @@
     "@nestjs/passport": "^12.0.0",
     "@nestjs/platform-express": "^11.2.5",
     "@nestjs/throttler": "^6.6.0",
+    "@prisma/adapter-neon": "^6.16.2",
     "@prisma/client": "^6.16.2",
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
@@ -43,7 +45,8 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -58,6 +61,7 @@
     "@types/nodemailer": "^8.0.2",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^7.0.0",
+    "@types/ws": "^8.18.2",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
@@ -84,7 +88,12 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": ["ts-jest", { "tsconfig": "<rootDir>/../tsconfig.jest.json" }]
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "tsconfig": "<rootDir>/../tsconfig.jest.json"
+        }
+      ]
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

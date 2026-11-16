@@ -8,6 +8,7 @@ import {
   downloadRegister,
   enrollDevice,
   fetchAttendanceExceptions,
+  fetchAttendancePay,
   fetchAttendancePeriod,
   fetchDevices,
   fetchHolidays,
@@ -20,7 +21,9 @@ import {
   type AttendanceDevice,
   type HolidayDto,
   type ShiftDto,
+  type AttendancePayRow,
 } from './attendanceApi';
+import { showToast } from '../ui/toast';
 import './hr-att.css';
 
 type ExceptionRow = {
@@ -33,10 +36,15 @@ type ExceptionRow = {
   person: { id: string; name: string; photo: string; employeeCode: string } | null;
 };
 
+function formatDays(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
 export function HrAttendanceAdminPage() {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
+  const [payRows, setPayRows] = useState<AttendancePayRow[]>([]);
   const [exceptions, setExceptions] = useState<ExceptionRow[]>([]);
   const [unmatched, setUnmatched] = useState<
     Array<{ id: string; pin: string; rawTimestamp: string; serial: string; deviceName: string | null }>
@@ -61,6 +69,7 @@ export function HrAttendanceAdminPage() {
   function load() {
     Promise.all([
       fetchAttendanceExceptions(year, month),
+      fetchAttendancePay(year, month),
       fetchUnmatchedPunches(),
       fetchDevices().catch(() => ({ devices: [], operationLogs: [] })),
       fetchHolidays(),
@@ -68,8 +77,9 @@ export function HrAttendanceAdminPage() {
       fetchHrEmployees(),
       fetchAttendancePeriod(year, month),
     ])
-      .then(([exceptionRows, pins, devicePayload, holidayRows, shiftRows, people, periodRow]) => {
+      .then(([exceptionRows, pay, pins, devicePayload, holidayRows, shiftRows, people, periodRow]) => {
         setExceptions(exceptionRows);
+        setPayRows(pay.rows);
         setUnmatched(pins);
         setDevices(devicePayload.devices);
         setHolidays(holidayRows);
@@ -98,6 +108,7 @@ export function HrAttendanceAdminPage() {
       setHolidayName('');
       setHolidayDate('');
       setMessage('Holiday saved.');
+      showToast('Holiday saved.');
       load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not save the holiday.');
@@ -111,6 +122,7 @@ export function HrAttendanceAdminPage() {
       setSerial('');
       setDeviceName('');
       setMessage('Device registered. Point it at /api/v1/iclock/cdata.');
+      showToast('Device registered.');
       load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not register the device.');
@@ -127,6 +139,7 @@ export function HrAttendanceAdminPage() {
     try {
       await enrollDevice(device.id, enrollEmployee, enrollPin);
       setMessage('Enrollment queued. The terminal picks it up on the next poll.');
+      showToast('Enrollment queued.');
       setEnrollPin('');
       load();
     } catch (err: unknown) {
@@ -138,6 +151,7 @@ export function HrAttendanceAdminPage() {
     try {
       await mapUnmatchedPunch(punchId, employeeId);
       setMessage('PIN mapped to the employee.');
+      showToast('PIN mapped to the employee.');
       load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not map that punch.');
@@ -154,6 +168,7 @@ export function HrAttendanceAdminPage() {
       });
       setOverrideReason('');
       setMessage('Day updated.');
+      showToast('Day updated.');
       load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not update that day.');
@@ -164,6 +179,7 @@ export function HrAttendanceAdminPage() {
     try {
       await lockAttendancePeriod(year, month);
       setMessage('Month locked.');
+      showToast('Month locked.');
       load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not lock the month.');
@@ -180,6 +196,44 @@ export function HrAttendanceAdminPage() {
           </p>
         </div>
       </header>
+      <section className="hr-att-panel">
+        <h2>Payable days · {year}-{String(month).padStart(2, '0')}</h2>
+        <p className="hr-att-note">
+          Verify this before Finance calculates salary. Payable days are present plus paid leave. Weekends and holidays
+          are not working days. A day with no attendance row stays present until you mark it.
+        </p>
+        <div className="hr-att-scroll">
+          <table className="hr-att-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Working days</th>
+                <th>Present</th>
+                <th>Paid leave</th>
+                <th>Unpaid leave</th>
+                <th>Payable days</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payRows.map((row) => (
+                <tr key={row.employeeId}>
+                  <td>
+                    <strong>{row.name}</strong>
+                    <span>{row.employeeCode}</span>
+                    {row.note ? <span className="hr-att-note">{row.note}</span> : null}
+                  </td>
+                  <td>{formatDays(row.workingDays)}</td>
+                  <td>{formatDays(row.present)}</td>
+                  <td>{formatDays(row.paidLeave)}</td>
+                  <td>{formatDays(row.unpaidLeave)}</td>
+                  <td>{formatDays(row.payableDays)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {payRows.length === 0 ? <p className="hr-att-empty">No employees to verify.</p> : null}
+      </section>
       {error ? <p className="ess-alert">{error}</p> : null}
       {message ? <p className="ess-muted">{message}</p> : null}
 

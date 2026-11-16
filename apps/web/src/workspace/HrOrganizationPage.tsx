@@ -11,11 +11,13 @@ import {
   fetchHrOrg,
   renameDepartment,
   renameLocation,
+  updateHrEmployee,
   updateTeam,
   type HrEmployee,
   type HrNamed,
   type HrTeam,
 } from './hrApi';
+import { showToast } from '../ui/toast';
 import './hr-org.css';
 
 function messageOf(error: unknown) {
@@ -64,6 +66,7 @@ export function HrOrganizationPage() {
     setError(null);
     try {
       await action();
+      showToast('Saved.');
       return true;
     } catch (err) {
       setError(messageOf(err));
@@ -140,6 +143,7 @@ export function HrOrganizationPage() {
         <DepartmentDetail
           department={selected}
           teams={departmentTeams}
+          assignTeams={teams}
           people={departmentPeople}
           employees={employees}
           teamCounts={counts.team}
@@ -166,6 +170,14 @@ export function HrOrganizationPage() {
           }}
           onDeleteTeam={async (id) => {
             await deleteTeam(id);
+            await reload();
+          }}
+          onAssignTeam={async (person, teamId) => {
+            const team = teams.find((item) => item.id === teamId);
+            await updateHrEmployee(person.id, {
+              teamId: teamId || null,
+              departmentId: team?.departmentId ?? person.departmentId,
+            });
             await reload();
           }}
         />
@@ -272,6 +284,7 @@ function DepartmentRail({
 function DepartmentDetail({
   department,
   teams,
+  assignTeams,
   people,
   employees,
   teamCounts,
@@ -282,9 +295,11 @@ function DepartmentDetail({
   onCreateTeam,
   onSaveTeam,
   onDeleteTeam,
+  onAssignTeam,
 }: {
   department: HrNamed | null;
   teams: HrTeam[];
+  assignTeams: HrTeam[];
   people: HrEmployee[];
   employees: HrEmployee[];
   teamCounts: Map<string, number>;
@@ -298,6 +313,7 @@ function DepartmentDetail({
     input: { name: string; departmentId: string; managerId: string | null },
   ) => Promise<void>;
   onDeleteTeam: (id: string) => Promise<void>;
+  onAssignTeam: (person: HrEmployee, teamId: string) => Promise<void>;
 }) {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState('');
@@ -531,7 +547,13 @@ function DepartmentDetail({
                   </div>
                 </div>
               )}
-              <People people={members} empty="No one is on this team yet." />
+              <People
+                people={members}
+                teams={assignTeams}
+                busy={busy}
+                empty="No one is on this team yet."
+                onAssign={(person, teamId) => run(() => onAssignTeam(person, teamId))}
+              />
             </article>
           );
         })}
@@ -545,7 +567,13 @@ function DepartmentDetail({
                 </span>
               </div>
             </div>
-            <People people={loose} empty="" />
+            <People
+              people={loose}
+              teams={assignTeams}
+              busy={busy}
+              empty=""
+              onAssign={(person, teamId) => run(() => onAssignTeam(person, teamId))}
+            />
           </article>
         ) : null}
       </div>
@@ -553,7 +581,19 @@ function DepartmentDetail({
   );
 }
 
-function People({ people, empty }: { people: HrEmployee[]; empty: string }) {
+function People({
+  people,
+  teams,
+  busy,
+  empty,
+  onAssign,
+}: {
+  people: HrEmployee[];
+  teams: HrTeam[];
+  busy: boolean;
+  empty: string;
+  onAssign: (person: HrEmployee, teamId: string) => Promise<boolean>;
+}) {
   if (people.length === 0) {
     return empty ? <p className="hr-org-empty">{empty}</p> : null;
   }
@@ -569,6 +609,20 @@ function People({ people, empty }: { people: HrEmployee[]; empty: string }) {
               <strong>{fullName(person)}</strong>
               <span>{person.designation || person.locationName || person.email}</span>
             </span>
+            <select
+              aria-label={`Team for ${fullName(person)}`}
+              value={person.teamId ?? ''}
+              disabled={busy}
+              onChange={(event) => void onAssign(person, event.target.value)}
+            >
+              <option value="">Unassigned</option>
+              {teams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                  {team.departmentName ? ` · ${team.departmentName}` : ''}
+                </option>
+              ))}
+            </select>
           </li>
         ))}
     </ul>

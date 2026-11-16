@@ -1,0 +1,33 @@
+.app-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(380px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--key-lime) 70%, var(--surface));
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.app-toast.is-danger {
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--line));
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.app-toast button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}

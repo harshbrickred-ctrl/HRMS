@@ -1,3 +1,32 @@
+.hr-att-scroll {
+  overflow-x: auto;
+}
+
+.hr-att-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.hr-att-table th,
+.hr-att-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.hr-att-table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.hr-att-table td span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .hr-att {
   display: grid;
   gap: 16px;

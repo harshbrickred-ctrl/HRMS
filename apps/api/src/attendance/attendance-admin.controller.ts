@@ -90,6 +90,17 @@ export class AttendanceAdminController {
     return this.attendance.updatePolicy(user.tenantId, user.userId, dto);
   }
 
+  @Get('pay')
+  @Permissions('attendance.manage')
+  pay(
+    @CurrentUser() user: AuthUser,
+    @Query('year') year?: string,
+    @Query('month') month?: string,
+  ) {
+    const query = monthQuery(year, month);
+    return this.attendance.paySummary(user.tenantId, query.year, query.month);
+  }
+
   @Get('exceptions')
   @Permissions('attendance.manage')
   exceptions(

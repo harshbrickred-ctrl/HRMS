@@ -12,6 +12,7 @@ import {
   type AssetPerson,
   type AssetRecord,
 } from './assetsApi';
+import { showToast } from '../ui/toast';
 import './it-assets.css';
 
 function messageOf(error: unknown) {
@@ -66,6 +67,7 @@ export function ItAssetsPage() {
       setMakeModel('');
       setSerialNo('');
       setMessage('Asset added to stock.');
+      showToast('Asset added to stock.');
       load();
     } catch (err: unknown) {
       setError(messageOf(err));
@@ -78,6 +80,7 @@ export function ItAssetsPage() {
     try {
       await assignAsset(asset.id, employeeId, note[asset.id]);
       setMessage(`${asset.assetTag} assigned.`);
+      showToast(`${asset.assetTag} assigned.`);
       setOpenHistory(null);
       load();
     } catch (err: unknown) {
@@ -89,6 +92,7 @@ export function ItAssetsPage() {
     try {
       await returnAsset(asset.id, next, note[asset.id]);
       setMessage(`${asset.assetTag} marked ${next.replace('_', ' ')}.`);
+      showToast(`${asset.assetTag} updated.`);
       setOpenHistory(null);
       load();
     } catch (err: unknown) {

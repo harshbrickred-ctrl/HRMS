@@ -434,6 +434,15 @@
   border-bottom: 0;
 }
 
+a.ess-stat-item {
+  color: inherit;
+  text-decoration: none;
+}
+
+a.ess-stat-item:hover {
+  color: var(--ink);
+}
+
 .ess-stat-item strong,
 .ess-track-item strong,
 .ess-leave-available,
@@ -1054,6 +1063,17 @@
   margin: 2px 0 0;
 }
 
+a.ess-holiday-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+a.ess-holiday-link:hover {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
 .ess-track {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1611,6 +1631,14 @@
   gap: 12px;
 }
 
+.ess-leave-half-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .ess-leave-halfdays {
   display: flex;
   flex-wrap: wrap;
@@ -1632,6 +1660,22 @@
   border-color: color-mix(in srgb, var(--accent-fill) 70%, var(--ink));
   background: var(--accent-fill);
   color: var(--accent-ink);
+}
+
+.ess-leave-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ess-reject-box {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ess-reject-box textarea {
+  width: 100%;
+  margin-top: 4px;
 }
 
 .ess-leave-form-actions {
@@ -1665,6 +1709,16 @@
   margin: 4px 0 0;
   font-size: 12px;
   line-height: 1.45;
+}
+
+.ess-leave-request-groups {
+  display: grid;
+  gap: 22px;
+}
+
+.ess-leave-request-group h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
 }
 
 .ess-leave-request-list {
@@ -1848,6 +1902,18 @@
   font-weight: 600;
   letter-spacing: normal;
   line-height: 1.2;
+}
+
+button.ess-insight {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+button.ess-insight.is-active {
+  outline: 2px solid var(--accent-fill);
 }
 
 .ess-att-facts {
@@ -2272,9 +2338,94 @@
   color: var(--muted);
 }
 
+.ess-my-access {
+  display: grid;
+  gap: 12px;
+}
+
+.ess-my-access-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ess-my-access-head h2 {
+  margin: 0;
+}
+
+.ess-my-access-head span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ess-my-access-roles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ess-my-access-roles li {
+  display: grid;
+  gap: 2px;
+  min-width: 140px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--key-lime) 55%, var(--surface));
+}
+
+.ess-my-access-roles strong {
+  font-size: 13px;
+}
+
+.ess-my-access-roles em {
+  font-style: normal;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.ess-my-access-groups {
+  display: grid;
+  gap: 14px;
+}
+
+.ess-my-access-group {
+  display: grid;
+  gap: 8px;
+}
+
+.ess-my-access-group p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ess-my-access-group div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ess-my-access-group span {
+  border-radius: 999px;
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .ess-profile-tabs {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
   gap: 8px;
   padding: 6px;
   border: 1px solid var(--line);

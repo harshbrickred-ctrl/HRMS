@@ -228,6 +228,11 @@
   font-size: 12px;
 }
 
+.hr-org-person select {
+  margin-left: auto;
+  max-width: 180px;
+}
+
 .hr-org-places {
   display: grid;
   gap: 12px;

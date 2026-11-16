@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Laptop } from 'lucide-react';
+import { showToast } from '../../ui/toast';
 import { StatusChip } from '../components/StatusChip';
 import {
   ASSET_CATEGORIES,
@@ -54,6 +55,7 @@ export function EssAssetsPage() {
       setSubject('');
       setBody('');
       load();
+      showToast('Sent to IT.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not send that to IT.');
     } finally {

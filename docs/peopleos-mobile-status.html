@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>PeopleOS Mobile — what is built</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 18mm; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: #1c1d1a;
+    font-family: "Segoe UI", Calibri, sans-serif;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.02em; }
+  h2 {
+    font-size: 14px;
+    margin: 18px 0 6px;
+    padding-bottom: 3px;
+    border-bottom: 2px solid #1f6b4a;
+    page-break-after: avoid;
+  }
+  h3 { font-size: 12px; margin: 12px 0 4px; page-break-after: avoid; }
+  p { margin: 0 0 8px; }
+  .meta { color: #4d5148; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; margin: 0 0 8px; page-break-inside: auto; }
+  th, td { border: 1px solid #d5d8d0; padding: 5px 7px; vertical-align: top; text-align: left; }
+  th { background: #eef6f1; font-weight: 650; }
+  tr { page-break-inside: avoid; }
+  .note {
+    background: #f7f6f1;
+    border-left: 3px solid #1f6b4a;
+    padding: 8px 10px;
+    margin: 8px 0 12px;
+  }
+  code { font-family: Consolas, monospace; font-size: 10px; }
+</style>
+</head>
+<body>
+  <h1>PeopleOS Mobile</h1>
+  <p class="meta">Expo app status by role. Same APIs as the web app. API base <code>https://peopleos-api.vercel.app/api/v1</code>. Date: 19 Oct 2026.</p>
+  <div class="note">
+    A row is “live” when the screen calls the real API. On the current production database, the employee role had no stored permissions, so attendance, leave, payslips, and helpdesk returned 403. API commit <code>0fa6b59</code> grants those permissions from the role itself. Punch buttons turn on only after that build is serving, and only when the tenant policy has web punch enabled.
+  </div>
+
+  <h2>1. Built and wired to the API</h2>
+
+  <h3>Platform and identity — all roles</h3>
+  <table>
+    <tr><th>Feature</th><th>Who</th><th>What you get</th></tr>
+    <tr><td>Login / logout / refresh JWT</td><td>All</td><td>Email and password. Tokens kept in device secure storage.</td></tr>
+    <tr><td>Forgot password</td><td>All</td><td>Email, OTP, then new password. Same auth API as web.</td></tr>
+    <tr><td>Change password</td><td>All</td><td>Settings. Other sessions are revoked.</td></tr>
+    <tr><td>Role navigation</td><td>By role</td><td>Everyone gets Home, Leave, Attendance, People, More. Manager, HR, Admin, and Leadership open only when that role is on the user.</td></tr>
+    <tr><td>Public API URL</td><td>All</td><td>Baked into the app so a phone or APK does not depend on localhost.</td></tr>
+  </table>
+
+  <h3>Employee</h3>
+  <table>
+    <tr><th>Feature</th><th>What you get</th></tr>
+    <tr><td>Home</td><td>Greeting, punch in/out, leave left, present days, unread count, latest payslip, upcoming holidays.</td></tr>
+    <tr><td>Web punch</td><td>Same rule as web. Punch in is on when attendance loads and web punch is allowed. Punch out turns on only after punch in, and turns off after punch out.</td></tr>
+    <tr><td>Attendance</td><td>Month list, status, in and out times, correction request to the manager.</td></tr>
+    <tr><td>Leave</td><td>Apply and withdraw. Types, dates, half-day, reason. Balances and holiday list.</td></tr>
+    <tr><td>People</td><td>Directory list and person detail.</td></tr>
+    <tr><td>My Team</td><td>Manager and teammates from the directory.</td></tr>
+    <tr><td>My documents</td><td>Files stored on the employee record, with download.</td></tr>
+    <tr><td>Salary</td><td>Payslip list and PDF download. This is not a payroll calculator.</td></tr>
+    <tr><td>Notifications</td><td>Inbox, mark one read, mark all read. Unread count on More.</td></tr>
+    <tr><td>Helpdesk</td><td>Create a ticket and list your own tickets.</td></tr>
+    <tr><td>Profile, work fields</td><td>Code, title, department, location, team, and manager from the employee API.</td></tr>
+  </table>
+
+  <h3>Manager</h3>
+  <table>
+    <tr><th>Feature</th><th>What you get</th></tr>
+    <tr><td>Inbox</td><td>Pending leave. Approve or reject.</td></tr>
+    <tr><td>Team leave</td><td>Team requests and the same decision.</td></tr>
+    <tr><td>Team attendance</td><td>Team month, plus approve or reject corrections.</td></tr>
+    <tr><td>Team directory</td><td>People directory. This is not the HR employee admin list.</td></tr>
+  </table>
+
+  <h3>HR</h3>
+  <table>
+    <tr><th>Feature</th><th>What you get</th></tr>
+    <tr><td>Employees</td><td>List, create, update, disable.</td></tr>
+    <tr><td>Organization</td><td>Add department, location, and team.</td></tr>
+    <tr><td>Leave admin</td><td>Increase an entitled balance.</td></tr>
+    <tr><td>Attendance admin</td><td>Exceptions, holidays, devices, month lock, register.</td></tr>
+    <tr><td>Document center</td><td>Employee files and payslip upload. The file picker works in the web build of this app.</td></tr>
+    <tr><td>Workflows</td><td>Live queues: pending leave, corrections, unmatched punches, helpdesk.</td></tr>
+    <tr><td>Reports</td><td>Summary KPIs: headcount, leave, exceptions, open tickets.</td></tr>
+  </table>
+
+  <h3>Admin and Leadership</h3>
+  <table>
+    <tr><th>Feature</th><th>Who</th><th>What you get</th></tr>
+    <tr><td>Users and roles</td><td>Admin</td><td>See roles and assign or revoke them. Needs <code>rbac.assign</code>.</td></tr>
+    <tr><td>Reports</td><td>Leadership</td><td>Same summary KPIs as HR.</td></tr>
+  </table>
+
+  <h2>2. Built only for the phone app</h2>
+  <table>
+    <tr><th>Feature</th><th>What you get</th></tr>
+    <tr><td>Bottom tabs</td><td>Home, Leave, Attendance, People, More. Web uses a sidebar. The phone uses tabs.</td></tr>
+    <tr><td>Secure token storage</td><td>Access and refresh tokens stay in the device secure store, not in a browser session.</td></tr>
+    <tr><td>Theme control</td><td>Light, dark, or system, from the phone appearance setting.</td></tr>
+    <tr><td>APK-ready API address</td><td>Release builds call the public API, so the app works off the office network.</td></tr>
+    <tr><td>Share and save files</td><td>Payslips and documents download through the phone share sheet. On web they download as a file.</td></tr>
+    <tr><td>Role stacks</td><td>Manager, HR, Admin, and Leadership are separate phone screens reached from More, not a second website.</td></tr>
+  </table>
+
+  <h2>3. Partial</h2>
+  <table>
+    <tr><th>Area</th><th>Status</th><th>Gap</th></tr>
+    <tr><td>Punch on the live server</td><td>Screen is built</td><td>Buttons stay off until the new API is deployed and the policy allows web punch. The message is “Insufficient permissions”, not “use the office terminal”.</td></tr>
+    <tr><td>Home and overviews</td><td>Mixed</td><td>API numbers show when the call succeeds. A few overview figures and import counts are still sample data.</td></tr>
+    <tr><td>Profile</td><td>Mixed</td><td>Work fields are live. Personal details, family, and timeline are sample data.</td></tr>
+    <tr><td>Documents</td><td>Mixed</td><td>“Mine” is live. The company policies tab is sample data.</td></tr>
+    <tr><td>HR file upload on a phone</td><td>Partial</td><td>Upload uses a web file picker. A native phone picker is not built.</td></tr>
+    <tr><td>Admin platform</td><td>Sample data</td><td>Audit log, mail, system settings, and jobs are not live.</td></tr>
+    <tr><td>HR migration</td><td>Sample data</td><td>The import screen is not a real CSV import.</td></tr>
+    <tr><td>APK</td><td>Not finished</td><td>The Android project was generated. The release compile was still running and no APK file was produced.</td></tr>
+  </table>
+
+  <h2>4. Still to build</h2>
+  <table>
+    <tr><th>Feature</th><th>Notes</th></tr>
+    <tr><td>Finish the APK</td><td>Installable file using the public API.</td></tr>
+    <tr><td>Punch after API deploy</td><td><code>employee@peopleos.local</code> gets Punch in when web punch is allowed. Admin cannot punch. That role has no punch permission.</td></tr>
+    <tr><td>Native file picker</td><td>HR document and payslip upload on a real phone.</td></tr>
+    <tr><td>Profile personal data</td><td>Replace sample family and timeline when the API stores those fields.</td></tr>
+    <tr><td>Company policies from the API</td><td>Policies tab is still sample data.</td></tr>
+    <tr><td>Admin audit, mail, settings, jobs</td><td>Replace sample screens when those APIs exist.</td></tr>
+    <tr><td>HR CSV import</td><td>Real migration, not a static screen.</td></tr>
+    <tr><td>Email on leave and attendance decisions</td><td>Password reset email exists. Other events are in-app only.</td></tr>
+    <tr><td>Later, same as web</td><td>Workflow engine, escalation, delegation, ATS, onboarding, IT assets. Not in this phone pass. PeopleOS is the system of record. There is no greytHR punch sync.</td></tr>
+  </table>
+</body>
+</html>

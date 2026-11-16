@@ -16,6 +16,7 @@ import {
   uploadEmployeePayslip,
   type PayslipDto,
 } from './payslipApi';
+import { showToast } from '../ui/toast';
 import './hr-docs.css';
 
 const CATEGORIES = [
@@ -192,6 +193,7 @@ export function HrDocumentsPage() {
       setDetail(updated);
       clearFile();
       setMessage(`${file.name} saved in ${category.trim()}.`);
+      showToast(`${file.name} saved.`);
     } catch (err) {
       setError(messageOf(err));
     } finally {
@@ -236,6 +238,7 @@ export function HrDocumentsPage() {
       const updated = await deleteHrDocument(detail.id, document.id);
       setDetail(updated);
       setMessage(`${document.fileName} removed.`);
+      showToast(`${document.fileName} removed.`);
     } catch (err) {
       setError(messageOf(err));
     } finally {
@@ -493,6 +496,7 @@ function PayslipUploadPanel({ employeeId }: { employeeId: string }) {
       setFile(null);
       setLabel('');
       setMessage('Payslip uploaded.');
+      showToast('Payslip uploaded.');
       setError(null);
       load();
     } catch (err: unknown) {

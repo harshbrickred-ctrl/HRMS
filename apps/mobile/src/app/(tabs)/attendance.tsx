@@ -1,57 +1,71 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
-import { Card, Screen } from '@/components/ui';
+import { ActivityIndicator, Text, useColorScheme, View } from 'react-native';
+import { Card, DateField, Field, PrimaryButton, Screen, Segmented } from '@/components/ui';
 import { brand, useThemeColors } from '@/constants/theme';
+import { showToast } from '@/lib/toast';
 import {
   fetchMyAttendance,
   punchMe,
+  requestAttendanceCorrection,
   uiStatus,
+  type AttendanceCorrectionDto,
   type AttendanceDayDto,
 } from '@/lib/attendanceApi';
+
+type ViewMode = 'days' | 'correct';
 
 export default function AttendanceScreen() {
   const scheme = useColorScheme();
   const colors = useThemeColors(scheme);
-  const now = new Date();
+  const [punchDate, setPunchDate] = useState(new Date().toLocaleDateString('en-CA'));
+  const year = Number(punchDate.slice(0, 4)) || new Date().getFullYear();
+  const month = Number(punchDate.slice(5, 7)) || new Date().getMonth() + 1;
   const [days, setDays] = useState<AttendanceDayDto[]>([]);
+  const [corrections, setCorrections] = useState<AttendanceCorrectionDto[]>([]);
   const [webPunchEnabled, setWebPunchEnabled] = useState(false);
+  const [punchLoaded, setPunchLoaded] = useState(false);
+  const [shift, setShift] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<ViewMode>('days');
+  const [date, setDate] = useState(new Date().toLocaleDateString('en-CA'));
+  const [requestedStatus, setRequestedStatus] = useState<'present' | 'absent' | 'leave'>('present');
+  const [reason, setReason] = useState('');
 
   const load = useCallback(() => {
     setLoading(true);
-    fetchMyAttendance(now.getFullYear(), now.getMonth() + 1)
+    fetchMyAttendance(year, month)
       .then((data) => {
-        setDays([...data.days].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 14));
+        setDays([...data.days].sort((a, b) => b.date.localeCompare(a.date)));
+        setCorrections(data.corrections ?? []);
         setWebPunchEnabled(data.webPunchEnabled);
+        setPunchLoaded(true);
+        setShift(data.shift ? `${data.shift.name} ${data.shift.startTime}–${data.shift.endTime}` : '');
         setError(null);
       })
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load attendance.'))
+      .catch((err: unknown) => {
+        setPunchLoaded(false);
+        setWebPunchEnabled(false);
+        setError(err instanceof Error ? err.message : 'Could not load attendance.');
+      })
       .finally(() => setLoading(false));
-  }, [now.getFullYear(), now.getMonth()]);
+  }, [month, year]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const today = new Date().toLocaleDateString('en-CA');
-  const todayRow = days.find((day) => day.date === today);
-  const punchedIn = Boolean(todayRow?.checkIn);
-  const punchedOut = Boolean(todayRow?.checkOut);
+  const punchRow = days.find((day) => day.date === punchDate);
+  const punchedIn = Boolean(punchRow?.checkIn);
+  const punchedOut = Boolean(punchRow?.checkOut);
 
   async function onPunch(direction: 'IN' | 'OUT') {
     setBusy(true);
     try {
-      await punchMe(direction);
+      await punchMe(direction, punchDate);
       load();
+      showToast(direction === 'IN' ? 'Punched in.' : 'Punched out.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Punch failed.');
     } finally {
@@ -59,94 +73,94 @@ export default function AttendanceScreen() {
     }
   }
 
-  function statusColor(status: string) {
-    switch (status) {
-      case 'present':
-        return brand.success;
-      case 'absent':
-        return brand.danger;
-      case 'leave':
-      case 'holiday':
-        return brand.primaryInk;
-      case 'missing_punch':
-      case 'half_day':
-        return brand.warning;
-      default:
-        return colors.textSecondary;
+  async function onCorrection() {
+    setBusy(true);
+    setError(null);
+    try {
+      await requestAttendanceCorrection({ date, requestedStatus, reason });
+      setReason('');
+      setView('days');
+      load();
+      showToast('Correction submitted.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not request a correction.');
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
     <Screen title="Attendance">
       <Card>
-        <Text style={[styles.title, { color: colors.text }]}>Today</Text>
+        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '800' }}>Punch any day</Text>
+        <DateField label="Day" value={punchDate} onChange={setPunchDate} />
         <Text style={{ color: colors.textSecondary }}>
-          {todayRow
-            ? `${uiStatus(todayRow.status)} · ${todayRow.checkIn ?? '—'} → ${todayRow.checkOut ?? '—'}`
+          {punchRow
+            ? `${uiStatus(punchRow.status)} · ${punchRow.checkIn ?? '—'} → ${punchRow.checkOut ?? '—'}`
             : 'No punches yet'}
         </Text>
+        {shift ? <Text style={{ color: colors.textSecondary }}>{shift}</Text> : null}
         {webPunchEnabled ? (
-          <View style={styles.actions}>
-            <Pressable
-              style={[styles.btn, { opacity: punchedIn || busy ? 0.5 : 1 }]}
-              disabled={punchedIn || busy}
-              onPress={() => void onPunch('IN')}
-            >
-              <Text style={styles.btnText}>Punch in</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.btn, { opacity: !punchedIn || punchedOut || busy ? 0.5 : 1 }]}
-              disabled={!punchedIn || punchedOut || busy}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <PrimaryButton label="Punch in" disabled={!punchDate || punchedIn || busy} onPress={() => void onPunch('IN')} />
+            <PrimaryButton
+              label="Punch out"
+              disabled={!punchDate || !punchedIn || punchedOut || busy}
               onPress={() => void onPunch('OUT')}
-            >
-              <Text style={styles.btnText}>Punch out</Text>
-            </Pressable>
+            />
           </View>
-        ) : (
-          <Text style={{ color: colors.textSecondary, marginTop: 8 }}>
-            Web punch is turned off. Use the office terminal.
-          </Text>
-        )}
+        ) : punchLoaded ? (
+          <Text style={{ color: colors.textSecondary }}>Web punch is turned off. Use the office terminal.</Text>
+        ) : null}
       </Card>
-      {error ? (
+      {error ? <Text style={{ color: brand.danger }}>{error}</Text> : null}
+      <Segmented
+        value={view}
+        options={[
+          ['days', 'Register'],
+          ['correct', 'Correction'],
+        ]}
+        onChange={setView}
+      />
+      {view === 'correct' ? (
         <Card>
-          <Text style={{ color: brand.danger }}>{error}</Text>
+          <Text style={{ color: colors.text, fontWeight: '800' }}>Request a correction</Text>
+          <DateField label="Date" value={date} onChange={setDate} />
+          <Segmented
+            value={requestedStatus}
+            options={[
+              ['present', 'Present'],
+              ['absent', 'Absent'],
+              ['leave', 'Leave'],
+            ]}
+            onChange={setRequestedStatus}
+          />
+          <Field label="Reason" value={reason} onChangeText={setReason} multiline />
+          <PrimaryButton label="Submit" disabled={busy || !reason.trim()} onPress={() => void onCorrection()} />
+          {corrections.map((item) => (
+            <Text key={item.id} style={{ color: colors.textSecondary }}>
+              {item.date} · {item.status} · {item.reason}
+            </Text>
+          ))}
         </Card>
       ) : null}
       {loading ? <ActivityIndicator color={brand.primaryInk} /> : null}
-      {days.map((day) => (
-        <Card key={day.date}>
-          <View style={styles.rowBetween}>
-            <Text style={[styles.title, { color: colors.text }]}>{day.date}</Text>
-            <Text style={{ color: statusColor(day.status), fontWeight: '700' }}>
-              {uiStatus(day.status)}
-            </Text>
-          </View>
-          {day.checkIn || day.checkOut ? (
-            <Text style={{ color: colors.textSecondary }}>
-              {day.checkIn ?? '—'} → {day.checkOut ?? '—'}
-            </Text>
-          ) : null}
-          {day.note ? <Text style={{ color: colors.text }}>{day.note}</Text> : null}
-        </Card>
-      ))}
+      {view === 'days'
+        ? days.map((day) => (
+            <Card key={day.date}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ color: colors.text, fontWeight: '700' }}>{day.date}</Text>
+                <Text style={{ color: colors.text, fontWeight: '700' }}>{uiStatus(day.status)}</Text>
+              </View>
+              {day.checkIn || day.checkOut ? (
+                <Text style={{ color: colors.textSecondary }}>
+                  {day.checkIn ?? '—'} → {day.checkOut ?? '—'}
+                </Text>
+              ) : null}
+              {day.note ? <Text style={{ color: colors.text }}>{day.note}</Text> : null}
+            </Card>
+          ))
+        : null}
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  title: { fontSize: 16, fontWeight: '700' },
-  rowBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  actions: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  btn: {
-    backgroundColor: brand.primaryInk,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  btnText: { color: '#fff', fontWeight: '700' },
-});

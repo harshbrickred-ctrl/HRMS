@@ -47,6 +47,7 @@ import {
   type DayStatusName,
   type PunchDirectionName,
 } from './day-math';
+import { buildAttendancePay } from '../salary/pay-attendance';
 import type {
   AssignmentDto,
   CommKeyDto,
@@ -183,17 +184,17 @@ export class AttendanceService implements OnModuleInit {
     };
   }
 
-  async punchWeb(userId: string, direction: 'IN' | 'OUT') {
+  async punchWeb(userId: string, direction: 'IN' | 'OUT', date?: string) {
     const employee = await this.employeeByUser(userId);
     const policy = await this.policy(employee.tenantId);
     if (!policy.webPunchEnabled) {
       throw new ForbiddenException('Web punch is turned off.');
     }
     const now = new Date();
-    const rawTimestamp = localStamp(policy.timeZone, now);
-    const punchedAt = wallToUtc(rawTimestamp.slice(0, 10), rawTimestamp.slice(11), policy.timeZone);
-    const shift = await this.shiftFor(employee.id, rawTimestamp.slice(0, 10));
-    const businessDate = businessDateFor(punchedAt, policy.timeZone, shift);
+    const stamp = localStamp(policy.timeZone, now);
+    const businessDate = date ? assertDate(date) : stamp.slice(0, 10);
+    const rawTimestamp = `${businessDate} ${stamp.slice(11)}`;
+    const punchedAt = wallToUtc(businessDate, stamp.slice(11), policy.timeZone);
     if (await this.isLocked(employee.tenantId, businessDate)) {
       throw new ConflictException('This month is locked.');
     }
@@ -650,6 +651,79 @@ export class AttendanceService implements OnModuleInit {
       );
     }
     return lines.join('\n');
+  }
+
+  async paySummary(tenantId: string, year: number, month: number) {
+    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+    const dates = eachDate(year, month);
+    const start = dateOnlyUtc(dates[0]);
+    const end = dateOnlyUtc(dates[dates.length - 1]);
+    const [days, leaves, holidays, employees] = await Promise.all([
+      this.prisma.attendanceDay.findMany({
+        where: { tenantId, attendanceDate: { gte: start, lte: end } },
+        select: { employeeId: true, attendanceDate: true, status: true },
+      }),
+      this.prisma.leaveRequest.findMany({
+        where: {
+          tenantId,
+          status: { in: ['Approved', 'Pending'] },
+          fromDate: { lte: end },
+          toDate: { gte: start },
+        },
+        select: {
+          employeeId: true,
+          code: true,
+          status: true,
+          fromDate: true,
+          toDate: true,
+          halfDayStart: true,
+          halfDayEnd: true,
+        },
+      }),
+      this.prisma.holiday.findMany({
+        where: { tenantId },
+        select: { holidayDate: true, locationId: true },
+      }),
+      this.prisma.employee.findMany({
+        where: { tenantId },
+        select: { id: true, employeeCode: true, firstName: true, lastName: true, locationId: true },
+        orderBy: { employeeCode: 'asc' },
+      }),
+    ]);
+    const rows = employees.map((employee) => {
+      const pay = buildAttendancePay({
+        dates,
+        holidays: holidays
+          .filter((holiday) => holiday.locationId == null || holiday.locationId === employee.locationId)
+          .map((holiday) => isoFromDateOnly(holiday.holidayDate)),
+        attendance: days
+          .filter((day) => day.employeeId === employee.id)
+          .map((day) => ({ date: isoFromDateOnly(day.attendanceDate), status: day.status })),
+        leaves: leaves
+          .filter((leave) => leave.employeeId === employee.id)
+          .map((leave) => ({
+            code: leave.code,
+            status: leave.status,
+            fromDate: isoFromDateOnly(leave.fromDate),
+            toDate: isoFromDateOnly(leave.toDate),
+            halfStart: leave.halfDayStart,
+            halfEnd: leave.halfDayEnd,
+          })),
+      });
+      return {
+        employeeId: employee.id,
+        employeeCode: employee.employeeCode,
+        name: `${employee.firstName} ${employee.lastName}`.trim(),
+        ...pay,
+      };
+    });
+    return { month: monthKey, rows };
+  }
+
+  async payByEmployee(tenantId: string, month: string) {
+    const [year, mon] = month.split('-').map(Number);
+    const summary = await this.paySummary(tenantId, year, mon);
+    return new Map(summary.rows.map((row) => [row.employeeId, row]));
   }
 
   async companyExceptions(tenantId: string, year: number, month: number) {

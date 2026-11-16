@@ -239,6 +239,13 @@
   outline: none;
 }
 
+.hr-master .hr-password input::-ms-reveal,
+.hr-master .hr-password input::-ms-clear {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .hr-password:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);

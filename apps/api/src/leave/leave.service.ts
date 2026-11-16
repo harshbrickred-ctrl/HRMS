@@ -9,9 +9,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AttendanceService } from '../attendance/attendance.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { dateOnlyUtc, isoFromDateOnly } from '../attendance/clock';
-import { LEAVE_CATALOG } from '../hr/leave-catalog';
+import { LEAVE_CATALOG, leaveTypeName } from '../hr/leave-catalog';
+import { LEAVE_OFFICER_CODES } from '../rbac/role-matrix';
 import { eachWorkingDate, workingDaysBetween } from './leave-days';
-import type { ApplyLeaveDto, LeaveDecisionDto } from './dto/leave.dto';
+import type { ApplyLeaveDto, ApplyLeaveForEmployeeDto, LeaveDecisionDto } from './dto/leave.dto';
 
 function assertDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -33,7 +34,37 @@ function available(entitled: number, used: number, pending: number) {
   return Math.max(0, entitled - used - pending);
 }
 
-const LEAVE_OFFICERS = new Set(['HR_EXEC', 'HR_HEAD', 'SECURITY_ADMIN', 'IT_ADMIN']);
+function resolveLeaveHalves(dto: ApplyLeaveDto, fromDate: string, toDate: string) {
+  const explicit =
+    dto.fromHalfStart !== undefined ||
+    dto.fromHalfEnd !== undefined ||
+    dto.toHalfStart !== undefined ||
+    dto.toHalfEnd !== undefined;
+  if (explicit) {
+    return {
+      fromHalfStart: Boolean(dto.fromHalfStart),
+      fromHalfEnd: Boolean(dto.fromHalfEnd),
+      toHalfStart: Boolean(dto.toHalfStart),
+      toHalfEnd: Boolean(dto.toHalfEnd),
+    };
+  }
+  if (fromDate === toDate) {
+    return {
+      fromHalfStart: Boolean(dto.halfDayStart) && !dto.halfDayEnd,
+      fromHalfEnd: Boolean(dto.halfDayEnd) && !dto.halfDayStart,
+      toHalfStart: false,
+      toHalfEnd: false,
+    };
+  }
+  return {
+    fromHalfStart: false,
+    fromHalfEnd: Boolean(dto.halfDayStart),
+    toHalfStart: Boolean(dto.halfDayEnd),
+    toHalfEnd: false,
+  };
+}
+
+const LEAVE_OFFICERS = new Set<string>(LEAVE_OFFICER_CODES);
 
 @Injectable()
 export class LeaveService {
@@ -65,7 +96,7 @@ export class LeaveService {
     ]);
     const mapped = balances.map((row) => ({
       code: row.code,
-      type: row.type,
+      type: leaveTypeName(row.code, row.type),
       entitled: row.entitled,
       used: row.used,
       pending: row.pending,
@@ -80,30 +111,70 @@ export class LeaveService {
 
   async apply(userId: string, dto: ApplyLeaveDto) {
     const employee = await this.employeeByUser(userId);
+    return this.createRequest(employee, dto, false);
+  }
+
+  async applyForEmployee(actorUserId: string, dto: ApplyLeaveForEmployeeDto) {
+    const actor = await this.actor(actorUserId);
+    if (!actor.officer) {
+      throw new ForbiddenException('Only HR or an admin can apply leave for an employee.');
+    }
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: dto.employeeId, tenantId: actor.tenantId },
+    });
+    if (!employee) throw new NotFoundException('Employee not found.');
+    return this.createRequest(employee, dto, true);
+  }
+
+  private async createRequest(
+    employee: {
+      id: string;
+      tenantId: string;
+      userId: string | null;
+      managerId: string | null;
+      locationId: string | null;
+      firstName: string;
+      lastName: string;
+    },
+    dto: ApplyLeaveDto,
+    onBehalf: boolean,
+  ) {
     const fromDate = assertDate(dto.fromDate);
     const toDate = assertDate(dto.toDate || dto.fromDate);
     if (toDate < fromDate) throw new BadRequestException('End date cannot be before start date.');
+    const halves = resolveLeaveHalves(dto, fromDate, toDate);
+    if (fromDate === toDate && (halves.fromHalfStart && halves.fromHalfEnd || halves.toHalfStart || halves.toHalfEnd)) {
+      throw new BadRequestException('On a single day, choose either Half Day Start or Half Day End.');
+    }
+    if (fromDate !== toDate && halves.fromHalfStart && halves.fromHalfEnd) {
+      throw new BadRequestException('On the From date, choose either Half Day Start or Half Day End.');
+    }
+    if (fromDate !== toDate && halves.toHalfStart && halves.toHalfEnd) {
+      throw new BadRequestException('On the To date, choose either Half Day Start or Half Day End.');
+    }
     const reason = dto.reason?.trim() ?? '';
     const today = todayIso();
-    const officer = await this.isLeaveOfficer(userId);
-    if (dto.code === 'EL' && fromDate < today && !officer) {
-      throw new BadRequestException('Planned leave can only be applied for today or a later date.');
+    if (!onBehalf && dto.code !== 'SL' && fromDate < today) {
+      throw new BadRequestException('Leave cannot be applied for a past date.');
     }
-    if (dto.code === 'SL' && (fromDate > today || toDate > today)) {
+    if (!onBehalf && dto.code === 'SL' && (fromDate > today || toDate > today)) {
       throw new BadRequestException('Sick leave cannot be applied for a future date.');
     }
-    if (!employee.managerId) {
+    if (!onBehalf && !employee.managerId) {
       throw new BadRequestException('No manager is assigned for this leave request.');
     }
     const catalog = LEAVE_CATALOG.find((item) => item.code === dto.code);
     if (!catalog) throw new BadRequestException('Unknown leave type.');
     const holidays = await this.holidayIsoList(employee.tenantId, employee.locationId);
+    const fromIsHalf = halves.fromHalfStart !== halves.fromHalfEnd;
+    const toIsHalf = fromDate !== toDate && halves.toHalfStart !== halves.toHalfEnd;
     const days = workingDaysBetween(
       fromDate,
       toDate,
       holidays,
-      Boolean(dto.halfDayStart),
-      Boolean(dto.halfDayEnd),
+      fromIsHalf,
+      toIsHalf,
+      dto.code === 'EL',
     );
     if (days <= 0) throw new BadRequestException('Selected range has no working days.');
 
@@ -136,19 +207,25 @@ export class LeaveService {
           tenantId: employee.tenantId,
           employeeId: employee.id,
           code: dto.code,
-          type: catalog.type,
+          type: leaveTypeName(dto.code, catalog.type),
           fromDate: dateOnlyUtc(fromDate),
           toDate: dateOnlyUtc(toDate),
           days,
-          halfDayStart: Boolean(dto.halfDayStart),
-          halfDayEnd: Boolean(dto.halfDayEnd),
+          halfDayStart: fromIsHalf,
+          halfDayEnd: toIsHalf,
+          fromHalfStart: halves.fromHalfStart,
+          fromHalfEnd: halves.fromHalfEnd,
+          toHalfStart: fromDate === toDate ? false : halves.toHalfStart,
+          toHalfEnd: fromDate === toDate ? false : halves.toHalfEnd,
           reason,
           approverEmployeeId: employee.managerId,
         },
       });
     });
 
-    const manager = await this.prisma.employee.findUnique({ where: { id: employee.managerId } });
+    const manager = employee.managerId
+      ? await this.prisma.employee.findUnique({ where: { id: employee.managerId } })
+      : null;
     if (manager?.userId) {
       await this.notifications.notify({
         tenantId: employee.tenantId,
@@ -246,6 +323,9 @@ export class LeaveService {
     }
     if (request.status !== 'Pending') {
       throw new ConflictException('This leave request is already decided.');
+    }
+    if (dto.status === 'Rejected' && !dto.note?.trim()) {
+      throw new BadRequestException('A comment is required to reject leave.');
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -386,6 +466,10 @@ export class LeaveService {
     days: number;
     halfDayStart: boolean;
     halfDayEnd: boolean;
+    fromHalfStart: boolean;
+    fromHalfEnd: boolean;
+    toHalfStart: boolean;
+    toHalfEnd: boolean;
     reason: string;
     status: string;
     decisionNote: string;
@@ -396,13 +480,17 @@ export class LeaveService {
       id: row.id,
       employeeId: row.employeeId,
       code: row.code,
-      type: row.type,
+      type: leaveTypeName(row.code, row.type),
       typeCode: row.code,
       startDate: isoFromDateOnly(row.fromDate),
       endDate: isoFromDateOnly(row.toDate),
       days: row.days,
       halfDayStart: row.halfDayStart,
       halfDayEnd: row.halfDayEnd,
+      fromHalfStart: row.fromHalfStart,
+      fromHalfEnd: row.fromHalfEnd,
+      toHalfStart: row.toHalfStart,
+      toHalfEnd: row.toHalfEnd,
       reason: row.reason,
       status: row.status,
       decisionNote: row.decisionNote,

@@ -142,11 +142,14 @@ async function main() {
     return user;
   }
 
-  await upsertUser(adminEmail, ['SECURITY_ADMIN']);
-  const itUser = await upsertUser('it@peopleos.local', ['IT_ADMIN', 'EMPLOYEE']);
-  const employeeUser = await upsertUser('employee@peopleos.local', ['EMPLOYEE']);
-  const managerUser = await upsertUser('manager@peopleos.local', ['MANAGER', 'EMPLOYEE']);
-  const hrUser = await upsertUser('hr@peopleos.local', ['HR_EXEC', 'EMPLOYEE']);
+  await upsertUser(
+    adminEmail,
+    ROLE_CATALOG.map((role) => role.code),
+  );
+  const itUser = await upsertUser('it@peopleos.local', ['ITA', 'EMP']);
+  const employeeUser = await upsertUser('employee@peopleos.local', ['EMP']);
+  const managerUser = await upsertUser('manager@peopleos.local', ['MGR', 'EMP']);
+  const hrUser = await upsertUser('hr@peopleos.local', ['HRA', 'EMP']);
 
   async function ensureNamed(kind: 'department' | 'location', name: string) {
     if (kind === 'department') {
@@ -334,14 +337,19 @@ async function main() {
       });
     }
   }
-  const gandhi = new Date('2026-10-02T00:00:00.000Z');
-  const existingHoliday = await prisma.holiday.findFirst({
-    where: { tenantId: tenant.id, holidayDate: gandhi, locationId: null },
-  });
-  if (!existingHoliday) {
-    await prisma.holiday.create({
-      data: { tenantId: tenant.id, holidayDate: gandhi, name: 'Gandhi Jayanti' },
+  const companyHolidays = [
+    { date: new Date('2026-10-02T00:00:00.000Z'), name: 'Gandhi Jayanti' },
+    { date: new Date('2026-12-25T00:00:00.000Z'), name: 'Christmas' },
+  ];
+  for (const holiday of companyHolidays) {
+    const existingHoliday = await prisma.holiday.findFirst({
+      where: { tenantId: tenant.id, holidayDate: holiday.date, locationId: null },
     });
+    if (!existingHoliday) {
+      await prisma.holiday.create({
+        data: { tenantId: tenant.id, holidayDate: holiday.date, name: holiday.name },
+      });
+    }
   }
 
   const pendingLeave = await prisma.leaveRequest.findFirst({

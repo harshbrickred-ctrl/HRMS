@@ -1,7 +1,16 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Tabs } from 'expo-router';
 import { ActivityIndicator, Text, View, useColorScheme } from 'react-native';
 import { useAuth } from '@/lib/auth';
 import { brand, useThemeColors } from '@/constants/theme';
+
+const TAB_ICONS = {
+  index: { active: 'home', inactive: 'home-outline' },
+  leave: { active: 'calendar', inactive: 'calendar-outline' },
+  attendance: { active: 'time', inactive: 'time-outline' },
+  people: { active: 'people', inactive: 'people-outline' },
+  more: { active: 'grid', inactive: 'grid-outline' },
+} as const;
 
 function TabLabel({ label, focused }: { label: string; focused: boolean }) {
   const scheme = useColorScheme();
@@ -53,6 +62,9 @@ export default function TabsLayout() {
         options={{
           title: 'Home',
           tabBarLabel: ({ focused }) => <TabLabel label="Home" focused={focused} />,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? TAB_ICONS.index.active : TAB_ICONS.index.inactive} color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -60,6 +72,9 @@ export default function TabsLayout() {
         options={{
           title: 'Leave',
           tabBarLabel: ({ focused }) => <TabLabel label="Leave" focused={focused} />,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? TAB_ICONS.leave.active : TAB_ICONS.leave.inactive} color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -69,6 +84,13 @@ export default function TabsLayout() {
           tabBarLabel: ({ focused }) => (
             <TabLabel label="Attendance" focused={focused} />
           ),
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons
+              name={focused ? TAB_ICONS.attendance.active : TAB_ICONS.attendance.inactive}
+              color={color}
+              size={size}
+            />
+          ),
         }}
       />
       <Tabs.Screen
@@ -76,6 +98,9 @@ export default function TabsLayout() {
         options={{
           title: 'People',
           tabBarLabel: ({ focused }) => <TabLabel label="People" focused={focused} />,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? TAB_ICONS.people.active : TAB_ICONS.people.inactive} color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -83,6 +108,9 @@ export default function TabsLayout() {
         options={{
           title: 'More',
           tabBarLabel: ({ focused }) => <TabLabel label="More" focused={focused} />,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? TAB_ICONS.more.active : TAB_ICONS.more.inactive} color={color} size={size} />
+          ),
         }}
       />
     </Tabs>

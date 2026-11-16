@@ -40,6 +40,12 @@ export type Holiday = {
   name: string;
 };
 
+export function ensureChristmas<T extends { date: string; name: string }>(items: T[]): T[] {
+  const date = `${new Date().getFullYear()}-12-25`;
+  if (items.some((item) => item.date.slice(0, 10) === date)) return items;
+  return [...items, { date, name: 'Christmas' } as T];
+}
+
 export type AttendanceDay = {
   date: string;
   status: AttendanceStatus;
@@ -195,6 +201,7 @@ export type EssProfile = {
   bankName: string;
   bankAccountNumber: string;
   bankBranch: string;
+  ifscCode: string;
   pfAccount: string;
   statutoryIds: ProfileStatutoryId[];
   family: ProfileFamilyMember[];
@@ -396,6 +403,7 @@ export function createInitialEssState(): EssState {
       bankName: 'Kotak Mahindra Bank',
       bankAccountNumber: 'XXXXXX8032',
       bankBranch: '',
+      ifscCode: '',
       pfAccount: 'Not covered under PF',
       statutoryIds: [
         { label: 'AADHAAR', value: '************', unverified: true },
@@ -468,7 +476,7 @@ export function createInitialEssState(): EssState {
         available: 10,
       },
       {
-        type: 'Optional - Birth Holiday',
+        type: 'Optional - Birthday Holiday',
         code: 'OBH',
         entitled: 1,
         used: 0,
@@ -1030,6 +1038,7 @@ export function workingDaysBetween(
   holidays: Holiday[],
   halfDayStart: boolean,
   halfDayEnd: boolean,
+  sandwich = false,
 ): number {
   const holidaySet = new Set(holidays.map((h) => h.date));
   const startDt = new Date(start + 'T12:00:00');
@@ -1048,25 +1057,26 @@ export function workingDaysBetween(
   }
 
   if (days === 0) return 0;
-  const sandwiched = new Date(startDt);
-  sandwiched.setDate(sandwiched.getDate() + 1);
-  while (sandwiched < endDt) {
-    const dow = sandwiched.getDay();
-    if (dow === 0 || dow === 6) {
-      const before = new Date(sandwiched);
-      before.setDate(before.getDate() - 1);
-      const after = new Date(sandwiched);
-      after.setDate(after.getDate() + 1);
-      if (hasWorkingDay(startDt, before, holidaySet) && hasWorkingDay(after, endDt, holidaySet)) {
-        days += 1;
-      }
-    }
+  if (sandwich) {
+    const sandwiched = new Date(startDt);
     sandwiched.setDate(sandwiched.getDate() + 1);
+    while (sandwiched < endDt) {
+      const dow = sandwiched.getDay();
+      if (dow === 0 || dow === 6) {
+        const before = new Date(sandwiched);
+        before.setDate(before.getDate() - 1);
+        const after = new Date(sandwiched);
+        after.setDate(after.getDate() + 1);
+        if (hasWorkingDay(startDt, before, holidaySet) && hasWorkingDay(after, endDt, holidaySet)) {
+          days += 1;
+        }
+      }
+      sandwiched.setDate(sandwiched.getDate() + 1);
+    }
   }
-  const oneHalf = halfDayStart !== halfDayEnd;
-  if (!oneHalf) return days;
-  if (start === end) return 0.5;
-  return Math.max(0.5, days - 0.5);
+  if (start === end) return halfDayStart !== halfDayEnd ? 0.5 : days;
+  const halves = Number(halfDayStart) + Number(halfDayEnd);
+  return Math.max(0, days - halves * 0.5);
 }
 
 const LOGIN_PHOTOS: Record<string, string> = {
@@ -1162,6 +1172,7 @@ export function profileForPerson(person: Person, richProfile: EssProfile): EssPr
     bankName: '',
     bankAccountNumber: '',
     bankBranch: '',
+    ifscCode: '',
     pfAccount: '',
     statutoryIds: [],
     family: [],

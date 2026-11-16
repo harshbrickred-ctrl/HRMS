@@ -20,6 +20,10 @@ export type LeaveRequestDto = {
   days: number;
   halfDayStart: boolean;
   halfDayEnd: boolean;
+  fromHalfStart?: boolean;
+  fromHalfEnd?: boolean;
+  toHalfStart?: boolean;
+  toHalfEnd?: boolean;
   reason: string;
   status: string;
   decisionNote: string;
@@ -41,12 +45,43 @@ export const LEAVE_TYPE_CATALOG: LeaveBalanceDto[] = [
   { code: 'EL', type: 'Earned Leave or Planned Leave', entitled: 0, used: 0, pending: 0, available: 0 },
   { code: 'CO', type: 'Comp-off', entitled: 0, used: 0, pending: 0, available: 0 },
   { code: 'WFH', type: 'Work From Home', entitled: 0, used: 0, pending: 0, available: 0 },
-  { code: 'OBH', type: 'Optional - Birth Holiday', entitled: 0, used: 0, pending: 0, available: 0 },
+  { code: 'OBH', type: 'Optional - Birthday Holiday', entitled: 0, used: 0, pending: 0, available: 0 },
   { code: 'LOP', type: 'Loss of Pay', entitled: 0, used: 0, pending: 0, available: 0 },
 ];
 
 export function fetchMyLeave() {
   return apiFetch<MyLeave>('/api/v1/leave/me');
+}
+
+export function leaveHalfLabel(request: {
+  startDate: string;
+  endDate: string;
+  halfDayStart?: boolean;
+  halfDayEnd?: boolean;
+  fromHalfStart?: boolean;
+  fromHalfEnd?: boolean;
+  toHalfStart?: boolean;
+  toHalfEnd?: boolean;
+}) {
+  const same = request.startDate.slice(0, 10) === request.endDate.slice(0, 10);
+  const fromStart = Boolean(request.fromHalfStart);
+  const fromEnd = Boolean(request.fromHalfEnd);
+  const toStart = Boolean(request.toHalfStart);
+  const toEnd = Boolean(request.toHalfEnd);
+  if (!fromStart && !fromEnd && !toStart && !toEnd) {
+    return request.halfDayStart || request.halfDayEnd ? 'Half day' : '';
+  }
+  if (same) {
+    if (fromStart) return 'Half Day Start';
+    if (fromEnd) return 'Half Day End';
+    return 'Half day';
+  }
+  const parts: string[] = [];
+  if (fromStart) parts.push('From Half Day Start');
+  if (fromEnd) parts.push('From Half Day End');
+  if (toStart) parts.push('To Half Day Start');
+  if (toEnd) parts.push('To Half Day End');
+  return parts.join(' · ');
 }
 
 export function applyLeaveRequest(input: {
@@ -55,6 +90,10 @@ export function applyLeaveRequest(input: {
   toDate: string;
   halfDayStart?: boolean;
   halfDayEnd?: boolean;
+  fromHalfStart?: boolean;
+  fromHalfEnd?: boolean;
+  toHalfStart?: boolean;
+  toHalfEnd?: boolean;
   reason: string;
 }) {
   return apiFetch<LeaveRequestDto>('/api/v1/leave/me/requests', {
@@ -73,6 +112,32 @@ export function fetchTeamLeave() {
 
 export function fetchCompanyLeave() {
   return apiFetch<{ requests: LeaveRequestDto[] }>('/api/v1/leave/company');
+}
+
+export function applyLeaveForEmployee(input: {
+  employeeId: string;
+  code: string;
+  fromDate: string;
+  toDate: string;
+  halfDayStart?: boolean;
+  halfDayEnd?: boolean;
+  fromHalfStart?: boolean;
+  fromHalfEnd?: boolean;
+  toHalfStart?: boolean;
+  toHalfEnd?: boolean;
+  reason: string;
+}) {
+  return apiFetch<LeaveRequestDto>('/api/v1/leave/company/requests', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function leaveDecisionToast(status: string) {
+  if (status === 'Rejected') {
+    return { message: 'Leave rejected.', tone: 'danger' as const };
+  }
+  return { message: 'Leave accepted.', tone: 'ok' as const };
 }
 
 export function decideLeaveRequest(id: string, status: 'Approved' | 'Rejected', note?: string) {

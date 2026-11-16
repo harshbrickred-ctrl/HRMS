@@ -12,7 +12,7 @@ export const LEAVE_CATALOG: LeaveSeed[] = [
   { code: 'CL', type: 'Casual Leave' },
   { code: 'EL', type: 'Earned Leave or Planned Leave' },
   { code: 'WFH', type: 'Work From Home' },
-  { code: 'OBH', type: 'Optional - Birth Holiday' },
+  { code: 'OBH', type: 'Optional - Birthday Holiday' },
   { code: 'SL', type: 'Sick Leave' },
 ];
 
@@ -25,3 +25,9 @@ export const HARSH_LEAVE: Record<string, { entitled: number; used: number; pendi
   OBH: { entitled: 1, used: 0, pending: 0 },
   SL: { entitled: 10, used: 1, pending: 0 },
 };
+
+export function leaveTypeName(code: string, stored?: string) {
+  const catalog = LEAVE_CATALOG.find((item) => item.code === code);
+  if (catalog) return catalog.type;
+  return (stored ?? '').replace('Birth Holiday', 'Birthday Holiday');
+}

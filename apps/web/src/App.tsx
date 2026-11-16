@@ -10,6 +10,7 @@ import { EssHomePage } from './ess/pages/EssHomePage';
 import { EssLeavePage } from './ess/pages/EssLeavePage';
 import { EssNotificationsPage } from './ess/pages/EssNotificationsPage';
 import { EssPeoplePage, EssPersonDetailPage } from './ess/pages/EssPeoplePage';
+import { EssPermissionsPage } from './ess/pages/EssPermissionsPage';
 import { EssProfilePage } from './ess/pages/EssProfilePage';
 import { EssSalaryPage } from './ess/pages/EssSalaryPage';
 import { EssSettingsPage } from './ess/pages/EssSettingsPage';
@@ -42,8 +43,18 @@ import {
   TeamDirectoryPage,
   TeamLeavePage,
 } from './workspace/RolePages';
+import { HrSalaryPage } from './workspace/HrSalaryPage';
+import { FinancePayoutPage } from './workspace/FinancePayoutPage';
 import { ItAssetsPage } from './workspace/ItAssetsPage';
 import { ItAssetTicketsPage } from './workspace/ItAssetTicketsPage';
+import {
+  ADMIN_ROLES,
+  FINANCE_ROLES,
+  HR_ROLES,
+  IT_ROLES,
+  LEADERSHIP_ROLES,
+  MANAGER_ROLES,
+} from './workspace/roleCatalog';
 
 function RoleOutlet({ roles }: { roles: string[] }) {
   return (
@@ -81,6 +92,7 @@ export default function App() {
               <Route path="people/:id" element={<EssPersonDetailPage />} />
               <Route path="documents" element={<EssDocumentsPage />} />
               <Route path="profile" element={<EssProfilePage />} />
+              <Route path="permissions" element={<EssPermissionsPage />} />
               <Route path="salary" element={<EssSalaryPage />} />
               <Route path="notifications" element={<EssNotificationsPage />} />
               <Route path="settings" element={<EssSettingsPage />} />
@@ -88,7 +100,7 @@ export default function App() {
               <Route path="assets" element={<EssAssetsPage />} />
             </Route>
 
-            <Route path="/manager" element={<RoleOutlet roles={['MANAGER']} />}>
+            <Route path="/manager" element={<RoleOutlet roles={[...MANAGER_ROLES]} />}>
               <Route index element={<ManagerOverviewPage />} />
               <Route path="inbox" element={<ManagerInboxPage />} />
               <Route path="team-leave" element={<TeamLeavePage />} />
@@ -96,23 +108,24 @@ export default function App() {
               <Route path="directory" element={<TeamDirectoryPage />} />
             </Route>
 
-            <Route path="/hr" element={<RoleOutlet roles={['HR_EXEC', 'HR_HEAD']} />}>
+            <Route
+              path="/hr"
+              element={<RoleOutlet roles={[...HR_ROLES, ...FINANCE_ROLES, ...ADMIN_ROLES]} />}
+            >
               <Route index element={<HrOverviewPage />} />
               <Route path="employees" element={<HrEmployeesPage />} />
               <Route path="organization" element={<HrOrganizationPage />} />
+              <Route path="directory" element={<TeamDirectoryPage scope="company" />} />
               <Route path="leave" element={<HrLeaveAdminPage />} />
               <Route path="attendance" element={<HrAttendanceAdminPage />} />
+              <Route path="salary" element={<HrSalaryPage />} />
               <Route path="documents" element={<HrDocumentsPage />} />
               <Route path="workflows" element={<HrWorkflowsPage />} />
             </Route>
 
-            <Route
-              path="/admin"
-              element={
-                <RoleOutlet roles={['SECURITY_ADMIN', 'IT_ADMIN']} />
-              }
-            >
+            <Route path="/admin" element={<RoleOutlet roles={[...ADMIN_ROLES, ...IT_ROLES]} />}>
               <Route index element={<AdminOverviewPage />} />
+              <Route path="employees" element={<HrEmployeesPage />} />
               <Route
                 path="roles"
                 element={
@@ -122,21 +135,34 @@ export default function App() {
                 }
               />
               <Route path="leave" element={<AdminLeavePage />} />
-              <Route path="audit" element={<AdminAuditPage />} />
+              <Route
+                path="audit"
+                element={
+                  <ProtectedRoute permission="audit.read">
+                    <AdminAuditPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="notifications" element={<AdminMailPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
               <Route path="jobs" element={<AdminJobsPage />} />
             </Route>
 
-            <Route path="/it" element={<RoleOutlet roles={['IT_ADMIN']} />}>
+            <Route path="/it" element={<RoleOutlet roles={[...IT_ROLES]} />}>
               <Route index element={<Navigate to="assets" replace />} />
               <Route path="assets" element={<ItAssetsPage />} />
               <Route path="tickets" element={<ItAssetTicketsPage />} />
             </Route>
 
+            <Route path="/finance" element={<RoleOutlet roles={[...FINANCE_ROLES, ...ADMIN_ROLES]} />}>
+              <Route index element={<Navigate to="payout" replace />} />
+              <Route path="payout" element={<FinancePayoutPage />} />
+              <Route path="salary" element={<Navigate to="/finance/payout" replace />} />
+            </Route>
+
             <Route
               path="/exec"
-              element={<RoleOutlet roles={['LEADERSHIP_READ']} />}
+              element={<RoleOutlet roles={[...LEADERSHIP_ROLES, ...FINANCE_ROLES]} />}
             >
               <Route index element={<LeadershipOverviewPage />} />
               <Route path="reports" element={<LeadershipReportsPage />} />

@@ -29,6 +29,9 @@ import {
 } from './dto/hr.dto';
 import { HrService } from './hr.service';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { memoryStorage } = require('multer') as { memoryStorage: () => unknown };
+
 type UploadFile = {
   originalname: string;
   buffer: Buffer;
@@ -142,7 +145,9 @@ export class HrController {
   }
 
   @Post('employees/:id/documents')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  @UseInterceptors(
+    FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }),
+  )
   upload(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,

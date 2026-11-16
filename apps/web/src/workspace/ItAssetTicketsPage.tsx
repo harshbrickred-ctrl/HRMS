@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StatusChip } from '../ess/components/StatusChip';
+import { showToast } from '../ui/toast';
 import { categoryLabel, fetchAssetTickets, updateAssetTicket, type AssetTicket } from './assetsApi';
 import './it-assets.css';
 
@@ -27,6 +28,7 @@ export function ItAssetTicketsPage() {
     try {
       await updateAssetTicket(ticket.id, status, notes[ticket.id]);
       setNotes((current) => ({ ...current, [ticket.id]: '' }));
+      showToast('Ticket updated.');
       load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not update the ticket.');

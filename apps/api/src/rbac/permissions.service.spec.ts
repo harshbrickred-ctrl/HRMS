@@ -64,6 +64,7 @@ describe('PermissionsService', () => {
     };
     const service = new PermissionsService(prisma as never);
     await expect(service.getEffectivePermissions('u1')).resolves.toEqual([
+      'assets.self',
       'attendance.self',
       'helpdesk.self',
       'leave.self',

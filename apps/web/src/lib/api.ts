@@ -1,6 +1,25 @@
 const ACCESS_KEY = 'peopleos_access';
 const REFRESH_KEY = 'peopleos_refresh';
 
+/** Local Vite proxies `/api`; production web talks to the API host directly. */
+function resolveApiBase() {
+  const configured = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  if (configured) return configured.replace(/\/$/, '');
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') return '';
+    if (host.includes('peopleos-api')) return '';
+    if (host.endsWith('vercel.app')) return 'https://peopleos-api.vercel.app';
+  }
+  return '';
+}
+
+function toApiUrl(path: string) {
+  if (/^https?:\/\//i.test(path)) return path;
+  const base = resolveApiBase();
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 export type Tokens = {
   accessToken: string;
   refreshToken: string;
@@ -71,7 +90,7 @@ let refreshPromise: Promise<boolean> | null = null;
 async function tryRefresh(): Promise<boolean> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
-  const res = await fetch('/api/v1/auth/refresh', {
+  const res = await fetch(toApiUrl('/api/v1/auth/refresh'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken }),
@@ -97,7 +116,7 @@ export async function apiFetch<T>(
   const access = getAccessToken();
   if (access) headers.set('Authorization', `Bearer ${access}`);
 
-  const res = await fetch(path, { ...init, headers });
+  const res = await fetch(toApiUrl(path), { ...init, headers });
 
   if (res.status === 401 && retry && !path.includes('/auth/login')) {
     if (!refreshPromise) {
@@ -210,7 +229,7 @@ export async function apiBlob(path: string): Promise<Blob> {
   const headers = new Headers();
   const access = getAccessToken();
   if (access) headers.set('Authorization', `Bearer ${access}`);
-  const res = await fetch(path, { headers });
+  const res = await fetch(toApiUrl(path), { headers });
   if (!res.ok) throw new Error(await parseError(res));
   return res.blob();
 }

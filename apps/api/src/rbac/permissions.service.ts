@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ROLE_PERMISSION_MATRIX } from './role-matrix';
+import { permissionsForRoleCode } from './role-matrix';
 
 @Injectable()
 export class PermissionsService {
@@ -9,23 +9,14 @@ export class PermissionsService {
   async getEffectivePermissions(userId: string): Promise<string[]> {
     const rows = await this.prisma.userRole.findMany({
       where: { userId },
-      include: {
-        role: {
-          include: {
-            permissions: { include: { permission: true } },
-          },
-        },
-      },
+      include: { role: true },
     });
 
     const set = new Set<string>();
     for (const ur of rows) {
-      for (const rp of ur.role.permissions) {
-        set.add(rp.permission.code);
-      }
-      // The live database can lag the role catalog. The role code still grants
-      // its matrix so punch, leave, and payslips work without a re-seed.
-      for (const code of ROLE_PERMISSION_MATRIX[ur.role.code] ?? []) {
+      // Matrix is the source of truth. Ignore stale RolePermission rows left
+      // from older role codes (e.g. IT_ADMIN → ITA still carrying rbac.assign).
+      for (const code of permissionsForRoleCode(ur.role.code)) {
         set.add(code);
       }
     }

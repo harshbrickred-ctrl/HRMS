@@ -12,7 +12,7 @@ describe('RbacService.updateUserRoles', () => {
     otherAdminCount?: number;
     roleFindResult?: { id: string; code: string }[];
   }) {
-    const previous = overrides.targetRoles ?? ['SECURITY_ADMIN'];
+    const previous = overrides.targetRoles ?? ['SYS'];
     const prisma = {
       user: {
         findFirst: jest.fn().mockResolvedValue({
@@ -30,7 +30,7 @@ describe('RbacService.updateUserRoles', () => {
                   id: `role-${i}`,
                   code,
                 }))
-              : [{ id: 'role-sa', code: 'SECURITY_ADMIN' }]),
+              : [{ id: 'role-sa', code: 'SYS' }]),
         ),
       },
       userRole: {
@@ -63,30 +63,28 @@ describe('RbacService.updateUserRoles', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('blocks removing the last SECURITY_ADMIN', async () => {
+  it('blocks removing the last SYS admin', async () => {
     const { service, prisma } = buildService({
-      targetRoles: ['SECURITY_ADMIN'],
+      targetRoles: ['SYS'],
       otherAdminCount: 0,
-      roleFindResult: [{ id: 'r1', code: 'EMPLOYEE' }],
+      roleFindResult: [{ id: 'r1', code: 'EMP' }],
     });
 
     await expect(
-      service.updateUserRoles(tenantId, actorUserId, targetUserId, [
-        'EMPLOYEE',
-      ]),
+      service.updateUserRoles(tenantId, actorUserId, targetUserId, ['EMP']),
     ).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(prisma.userRole.count).toHaveBeenCalled();
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('allows role update when another SECURITY_ADMIN remains', async () => {
+  it('allows role update when another SYS remains', async () => {
     const { service, prisma } = buildService({
-      targetRoles: ['SECURITY_ADMIN'],
+      targetRoles: ['SYS'],
       otherAdminCount: 1,
       roleFindResult: [
-        { id: 'r1', code: 'EMPLOYEE' },
-        { id: 'r2', code: 'MANAGER' },
+        { id: 'r1', code: 'EMP' },
+        { id: 'r2', code: 'MGR' },
       ],
     });
 
@@ -94,10 +92,10 @@ describe('RbacService.updateUserRoles', () => {
       tenantId,
       actorUserId,
       targetUserId,
-      ['EMPLOYEE', 'MANAGER'],
+      ['EMP', 'MGR'],
     );
 
-    expect(result.roles).toEqual(['EMPLOYEE', 'MANAGER']);
+    expect(result.roles).toEqual(['EMP', 'MGR']);
     expect(prisma.$transaction).toHaveBeenCalled();
   });
 });

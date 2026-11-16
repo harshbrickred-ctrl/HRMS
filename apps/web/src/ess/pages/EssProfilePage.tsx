@@ -6,6 +6,7 @@ import {
   Building2,
   CreditCard,
   IdCard,
+  KeyRound,
   MapPin,
   Shield,
   UserRound,
@@ -16,8 +17,9 @@ import { EmployeePhoto } from '../components/EmployeePhoto';
 import { useEssData } from '../mock/EssDataContext';
 import { ORGANIZATION, type EssProfile, type ProfileFamilyMember } from '../mock/essMock';
 import { categoryLabel, fetchMyAssets, type MyAsset } from '../../workspace/assetsApi';
+import { MyPermissionsPanel } from '../components/MyPermissionsPanel';
 
-type Section = 'overview' | 'personal' | 'accounts' | 'family' | 'employment' | 'assets';
+type Section = 'overview' | 'personal' | 'accounts' | 'family' | 'employment' | 'assets' | 'permissions';
 
 const SECTIONS: Array<{ id: Section; label: string; hint: string; icon: LucideIcon }> = [
   { id: 'overview', label: 'Overview', hint: 'At a glance', icon: UserRound },
@@ -26,6 +28,7 @@ const SECTIONS: Array<{ id: Section; label: string; hint: string; icon: LucideIc
   { id: 'family', label: 'Family', hint: 'Dependents', icon: Users },
   { id: 'employment', label: 'Employment', hint: 'Role & org', icon: Briefcase },
   { id: 'assets', label: 'Assets', hint: 'Access & devices', icon: Shield },
+  { id: 'permissions', label: 'Permissions', hint: 'What you can do', icon: KeyRound },
 ];
 
 function show(value: string) {
@@ -161,6 +164,7 @@ export function EssProfilePage() {
         />
       ) : null}
       {section === 'assets' ? <AssetsSection /> : null}
+      {section === 'permissions' ? <MyPermissionsPanel /> : null}
     </div>
   );
 }
@@ -352,8 +356,9 @@ function AccountsSection({ profile }: { profile: EssProfile }) {
         <FieldGrid
           rows={[
             ['Bank name', profile.bankName],
+            ['IFSC', profile.ifscCode],
             ['Account number', profile.bankAccountNumber],
-            ['Branch', profile.bankBranch],
+            ...(profile.bankBranch ? [['Branch', profile.bankBranch] as [string, string]] : []),
           ]}
         />
       </SectionCard>
