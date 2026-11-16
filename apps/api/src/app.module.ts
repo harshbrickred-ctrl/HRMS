@@ -13,6 +13,7 @@ import { HelpdeskModule } from './helpdesk/helpdesk.module';
 import { ReportsModule } from './reports/reports.module';
 import { PayslipsModule } from './payslips/payslips.module';
 import { AssetsModule } from './assets/assets.module';
+import { AlumniModule } from './alumni/alumni.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -30,6 +31,7 @@ import { HealthController } from './health.controller';
     ReportsModule,
     PayslipsModule,
     AssetsModule,
+    AlumniModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -23,6 +23,10 @@ npm run dev:mobile
 npm run dev:mobile:web
 ```
 
+Alumni Login
+http://localhost:5173/alumni/login
+
+
 Open http://localhost:5173/login — after login you land on **ESS** (`/ess`).  
 The sidebar shows **Me** for everyone, plus Team / HR / Admin / Leadership when roles allow.
 
@@ -39,7 +43,7 @@ The sidebar shows **Me** for everyone, plus Team / HR / Admin / Leadership when 
 | `employee@peopleos.local` | `EMPLOYEE` |
 | `manager@peopleos.local` | `MANAGER`, `EMPLOYEE` |
 | `hr@peopleos.local` | `HR_EXEC`, `EMPLOYEE` |
-| `it@peopleos.local` | `IT_ADMIN·EMPLOYEE`, `EMPLOYEE` |
+| `it@peopleos.local` | `IT_ADMIN·EMPLOYEE`,`EMPLOYEE` |
 
 Admin role UI: http://localhost:5173/admin/roles (requires `rbac.assign`)
 

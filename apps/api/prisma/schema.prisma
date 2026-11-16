@@ -1030,3 +1030,517 @@ model AssetMaintenance {
   @@index([tenantId, status])
   @@index([assetId])
 }
+
+// ─── Alumni portal ───────────────────────────────────────────────────────────
+// Alumni tables keep tenantId and employeeId as plain indexed columns (no Prisma
+// relations to Tenant/Employee/User) so the existing models stay unchanged.
+// Tenant scoping and ownership are enforced in apps/api/src/alumni.
+
+enum AlumniEligibility {
+  eligible
+  not_eligible
+  do_not_contact
+}
+
+enum AlumniAccountStatus {
+  active
+  /// HR set Do Not Contact; a new invitation is needed to come back.
+  revoked
+  /// The alumnus withdrew data-processing consent.
+  withdrawn
+}
+
+enum AlumniConsentType {
+  terms
+  data_processing
+  communications
+  directory
+}
+
+enum AlumniOtpPurpose {
+  password_reset
+  email_change
+}
+
+enum AlumniDocumentType {
+  experience_letter
+  relieving_letter
+  payslip
+  form16
+  fnf_statement
+  pf_details
+  other
+}
+
+enum AlumniDocumentRequestStatus {
+  submitted
+  under_review
+  approved
+  rejected
+  issued
+  cancelled
+}
+
+enum AlumniPostKind {
+  announcement
+  newsletter
+}
+
+enum AlumniPostStatus {
+  draft
+  published
+  archived
+}
+
+enum AlumniEventStatus {
+  draft
+  published
+  cancelled
+}
+
+enum AlumniRsvpResponse {
+  going
+  maybe
+  declined
+}
+
+enum AlumniJobStatus {
+  draft
+  open
+  closed
+}
+
+enum AlumniApplicationStatus {
+  applied
+  shortlisted
+  interviewing
+  offered
+  rehired
+  rejected
+  withdrawn
+}
+
+enum AlumniRehireStatus {
+  initiated
+  completed
+  cancelled
+}
+
+enum AlumniReferralStatus {
+  submitted
+  screening
+  interviewing
+  offered
+  hired
+  rejected
+  withdrawn
+}
+
+enum AlumniRewardStatus {
+  not_applicable
+  pending
+  approved
+  paid
+  cancelled
+}
+
+/// HR's record that an employee has left. When the exit is completed and F&F
+/// is settled, the Alumni record is created from it.
+model AlumniExitClosure {
+  id              String    @id @default(cuid())
+  tenantId        String
+  /// Employee.id of the person who left (the Employee row is never changed).
+  employeeId      String
+  joiningDate     DateTime  @db.Date
+  lastWorkingDay  DateTime  @db.Date
+  personalEmail   String
+  exitCompletedOn DateTime? @db.Date
+  fnfSettledOn    DateTime? @db.Date
+  fnfReference    String    @default("")
+  notes           String    @default("")
+  recordedById    String
+  updatedById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  alumni          Alumni?
+
+  @@unique([tenantId, employeeId])
+  @@index([tenantId])
+}
+
+/// One former employee. Details are copied from the Employee master at exit.
+model Alumni {
+  id                     String                  @id @default(cuid())
+  tenantId               String
+  /// Employee.id of the employment this record came from.
+  employeeId             String
+  exitClosureId          String?                 @unique
+  employeeCode           String
+  fullName               String
+  personalEmail          String
+  designation            String                  @default("")
+  departmentId           String?
+  departmentName         String                  @default("")
+  locationName           String                  @default("")
+  joiningDate            DateTime                @db.Date
+  lastWorkingDay         DateTime                @db.Date
+  tenureMonths           Int
+  eligibility            AlumniEligibility       @default(eligible)
+  eligibilityReason      String                  @default("")
+  eligibilityUpdatedById String?
+  eligibilityUpdatedAt   DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  exitClosure            AlumniExitClosure?      @relation(fields: [exitClosureId], references: [id], onDelete: SetNull)
+  account                AlumniAccount?
+  profile                AlumniProfile?
+  invitations            AlumniInvitation[]
+  consents               AlumniConsent[]
+  documents              AlumniDocument[]
+  documentRequests       AlumniDocumentRequest[]
+  rsvps                  AlumniEventRsvp[]
+  applications           AlumniJobApplication[]
+  rehires                AlumniRehire[]
+  referrals              AlumniReferral[]
+
+  @@unique([tenantId, employeeId])
+  @@index([tenantId, eligibility])
+  @@index([tenantId, personalEmail])
+}
+
+/// Alumni login, separate from User so alumni never hold an employee session.
+model AlumniAccount {
+  id                    String              @id @default(cuid())
+  tenantId              String
+  alumniId              String              @unique
+  email                 String
+  passwordHash          String
+  status                AlumniAccountStatus @default(active)
+  statusReason          String              @default("")
+  emailVerifiedAt       DateTime
+  failedLoginCount      Int                 @default(0)
+  lockedUntil           DateTime?
+  lastLoginAt           DateTime?
+  /// Current state of the communications consent (history in AlumniConsent).
+  communicationsConsent Boolean             @default(false)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  alumni                Alumni              @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+  sessions              AlumniSession[]
+  otps                  AlumniOtp[]
+
+  @@unique([tenantId, email])
+  @@index([email])
+}
+
+/// Refresh token of an alumni login session.
+model AlumniSession {
+  id        String        @id @default(cuid())
+  accountId String
+  tokenHash String        @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime      @default(now())
+  account   AlumniAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+}
+
+/// One-time code for a password reset or a login email change.
+model AlumniOtp {
+  id                    String           @id @default(cuid())
+  accountId             String
+  purpose               AlumniOtpPurpose
+  codeHash              String
+  /// New email address for an email change.
+  target                String           @default("")
+  expiresAt             DateTime
+  attemptCount          Int              @default(0)
+  consumedAt            DateTime?
+  resetSessionHash      String?          @unique
+  resetSessionExpiresAt DateTime?
+  createdAt             DateTime         @default(now())
+  account               AlumniAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, purpose])
+}
+
+/// Registration link sent to the personal email. Only the SHA-256 of the token is stored.
+model AlumniInvitation {
+  id           String    @id @default(cuid())
+  tenantId     String
+  alumniId     String
+  email        String
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  sentById     String
+  sentAt       DateTime  @default(now())
+  acceptedAt   DateTime?
+  revokedAt    DateTime?
+  revokeReason String    @default("")
+  alumni       Alumni    @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+
+  @@index([alumniId])
+}
+
+/// Append-only consent log: every grant and withdrawal with time, IP and browser.
+model AlumniConsent {
+  id         String            @id @default(cuid())
+  tenantId   String
+  alumniId   String
+  type       AlumniConsentType
+  version    String
+  granted    Boolean
+  ipAddress  String            @default("")
+  userAgent  String            @default("")
+  recordedAt DateTime          @default(now())
+  alumni     Alumni            @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+
+  @@index([alumniId, type, recordedAt])
+}
+
+model AlumniProfile {
+  id                 String    @id @default(cuid())
+  alumniId           String    @unique
+  currentEmployer    String    @default("")
+  currentDesignation String    @default("")
+  industry           String    @default("")
+  location           String    @default("")
+  phone              String    @default("")
+  contactEmail       String    @default("")
+  skills             String[]  @default([])
+  photoPath          String    @default("")
+  linkedinUrl        String    @default("")
+  /// Field key -> true when other alumni in the directory may see it.
+  visibility         Json      @default("{}")
+  directoryOptIn     Boolean   @default(false)
+  directoryOptInAt   DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  alumni             Alumni    @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+
+  @@index([directoryOptIn])
+}
+
+/// A file in the alumnus's own document vault.
+model AlumniDocument {
+  id               String                 @id @default(cuid())
+  tenantId         String
+  alumniId         String
+  type             AlumniDocumentType
+  title            String
+  /// e.g. 2026-03 for a payslip or FY 2025-26 for Form 16.
+  period           String                 @default("")
+  fileName         String
+  storagePath      String
+  /// hr_upload | payslip_copy | request
+  source           String                 @default("hr_upload")
+  requestId        String?                @unique
+  issuedById       String?
+  issuedAt         DateTime               @default(now())
+  revokedAt        DateTime?
+  downloadCount    Int                    @default(0)
+  lastDownloadedAt DateTime?
+  alumni           Alumni                 @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+  request          AlumniDocumentRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, alumniId])
+}
+
+/// Request for a document or a duplicate copy: HR reviews, decides, then issues.
+model AlumniDocumentRequest {
+  id             String                      @id @default(cuid())
+  tenantId       String
+  alumniId       String
+  type           AlumniDocumentType
+  period         String                      @default("")
+  reason         String
+  status         AlumniDocumentRequestStatus @default(submitted)
+  decisionNote   String                      @default("")
+  reviewedById   String?
+  decidedAt      DateTime?
+  issuedAt       DateTime?
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+  alumni         Alumni                      @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+  issuedDocument AlumniDocument?
+
+  @@index([tenantId, status])
+  @@index([alumniId])
+}
+
+model AlumniAnnouncement {
+  id          String           @id @default(cuid())
+  tenantId    String
+  kind        AlumniPostKind   @default(announcement)
+  title       String
+  body        String
+  /// Groups it is for: { departments, exitYears, joinYears, locations }; empty = everyone.
+  audience    Json             @default("{}")
+  status      AlumniPostStatus @default(draft)
+  publishedAt DateTime?
+  createdById String
+  updatedById String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([tenantId, status, publishedAt])
+}
+
+model AlumniEvent {
+  id          String            @id @default(cuid())
+  tenantId    String
+  title       String
+  description String            @default("")
+  startsAt    DateTime
+  endsAt      DateTime?
+  venue       String            @default("")
+  meetingUrl  String            @default("")
+  capacity    Int?
+  rsvpBy      DateTime?
+  /// Same shape as AlumniAnnouncement.audience.
+  audience    Json              @default("{}")
+  status      AlumniEventStatus @default(draft)
+  publishedAt DateTime?
+  createdById String
+  updatedById String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  rsvps       AlumniEventRsvp[]
+
+  @@index([tenantId, status, startsAt])
+}
+
+model AlumniEventRsvp {
+  id          String             @id @default(cuid())
+  eventId     String
+  alumniId    String
+  response    AlumniRsvpResponse
+  note        String             @default("")
+  respondedAt DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  event       AlumniEvent        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  alumni      Alumni             @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, alumniId])
+  @@index([alumniId])
+}
+
+model AlumniJob {
+  id             String                 @id @default(cuid())
+  tenantId       String
+  title          String
+  departmentName String                 @default("")
+  location       String                 @default("")
+  employmentType String                 @default("Full-time")
+  experience     String                 @default("")
+  description    String
+  status         AlumniJobStatus        @default(draft)
+  openedAt       DateTime?
+  closesOn       DateTime?              @db.Date
+  createdById    String
+  updatedById    String
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  applications   AlumniJobApplication[]
+  referrals      AlumniReferral[]
+
+  @@index([tenantId, status])
+}
+
+model AlumniJobApplication {
+  id        String                  @id @default(cuid())
+  tenantId  String
+  jobId     String
+  alumniId  String
+  note      String                  @default("")
+  status    AlumniApplicationStatus @default(applied)
+  /// Eligible alumni skip the first screening round.
+  fastTrack Boolean                 @default(false)
+  hrNote    String                  @default("")
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  job       AlumniJob               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  alumni    Alumni                  @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+  rehire    AlumniRehire?
+
+  @@unique([jobId, alumniId])
+  @@index([tenantId, status])
+}
+
+/// Fast-track rehire. Completing it creates a NEW Employee through HrService;
+/// the previous Employee row is never changed.
+model AlumniRehire {
+  id                 String                @id @default(cuid())
+  tenantId           String
+  alumniId           String
+  applicationId      String?               @unique
+  previousEmployeeId String
+  newEmployeeId      String?               @unique
+  status             AlumniRehireStatus    @default(initiated)
+  designation        String
+  departmentId       String?
+  locationId         String?
+  joiningDate        DateTime              @db.Date
+  workEmail          String
+  /// Copy of the previous employment as it was when the rehire started.
+  previousEmployment Json
+  notes              String                @default("")
+  createdById        String
+  completedById      String?
+  completedAt        DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  alumni             Alumni                @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+  application        AlumniJobApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([alumniId])
+}
+
+model AlumniReferral {
+  id              String               @id @default(cuid())
+  tenantId        String
+  alumniId        String
+  jobId           String?
+  candidateName   String
+  candidateEmail  String
+  candidatePhone  String               @default("")
+  relationship    String               @default("")
+  note            String               @default("")
+  resumeFileName  String               @default("")
+  resumePath      String               @default("")
+  status          AlumniReferralStatus @default(submitted)
+  hrNote          String               @default("")
+  rewardAmount    Decimal?             @db.Decimal(12, 2)
+  rewardCurrency  String               @default("INR")
+  rewardStatus    AlumniRewardStatus   @default(not_applicable)
+  rewardPaidOn    DateTime?            @db.Date
+  rewardReference String               @default("")
+  updatedById     String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  alumni          Alumni               @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+  job             AlumniJob?           @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([alumniId])
+}
+
+/// Status trail for document requests, job applications, referrals and rehires.
+model AlumniStatusHistory {
+  id         String   @id @default(cuid())
+  tenantId   String
+  /// document_request | job_application | referral | rehire
+  entityType String
+  entityId   String
+  fromStatus String   @default("")
+  toStatus   String
+  note       String   @default("")
+  /// hr | alumni | system
+  actorType  String
+  actorId    String   @default("")
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+}

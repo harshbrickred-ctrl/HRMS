@@ -62,6 +62,14 @@ import { ItAssetsPage } from './workspace/ItAssetsPage';
 import { ItAssetTicketsPage } from './workspace/ItAssetTicketsPage';
 import { ItAssetTransferPage } from './workspace/ItAssetTransferPage';
 import { ItEmployeeAssetsPage } from './workspace/ItEmployeeAssetsPage';
+import { AlumniForgotPasswordPage, AlumniLoginPage, AlumniRegisterPage } from './alumni/AlumniAuthPages';
+import { AlumniLayout } from './alumni/AlumniLayout';
+import { AlumniDirectoryPage, AlumniHomePage, AlumniPrivacyPage, AlumniProfilePage } from './alumni/AlumniPortalPages';
+import { AlumniDocumentsPage, AlumniEventsPage, AlumniJobsPage, AlumniReferralsPage } from './alumni/AlumniServicesPages';
+import { HrAlumniPage } from './workspace/HrAlumniPage';
+import { HrAlumniCareersPage, HrAlumniEngagementPage } from './workspace/HrAlumniProgramsPages';
+import { HrAlumniRecordPage } from './workspace/HrAlumniRecordPage';
+import { HrAlumniRequestsPage } from './workspace/HrAlumniRequestsPage';
 
 function RoleOutlet({ roles }: { roles: string[] }) {
   return (
@@ -80,6 +88,21 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPasswordRequestPage />} />
           <Route path="/forgot-password/otp" element={<ForgotPasswordOtpPage />} />
           <Route path="/forgot-password/reset" element={<ForgotPasswordResetPage />} />
+
+          {/* Alumni portal: its own login and session, outside the employee ProtectedRoute. */}
+          <Route path="/alumni/login" element={<AlumniLoginPage />} />
+          <Route path="/alumni/register" element={<AlumniRegisterPage />} />
+          <Route path="/alumni/forgot-password" element={<AlumniForgotPasswordPage />} />
+          <Route path="/alumni" element={<AlumniLayout />}>
+            <Route index element={<AlumniHomePage />} />
+            <Route path="profile" element={<AlumniProfilePage />} />
+            <Route path="directory" element={<AlumniDirectoryPage />} />
+            <Route path="documents" element={<AlumniDocumentsPage />} />
+            <Route path="events" element={<AlumniEventsPage />} />
+            <Route path="jobs" element={<AlumniJobsPage />} />
+            <Route path="referrals" element={<AlumniReferralsPage />} />
+            <Route path="privacy" element={<AlumniPrivacyPage />} />
+          </Route>
 
           <Route path="/" element={<Navigate to="/ess" replace />} />
 
@@ -127,6 +150,11 @@ export default function App() {
               <Route path="attendance" element={<HrAttendanceAdminPage />} />
               <Route path="documents" element={<HrDocumentsPage />} />
               <Route path="workflows" element={<HrWorkflowsPage />} />
+              <Route path="alumni" element={<HrAlumniPage />} />
+              <Route path="alumni/requests" element={<HrAlumniRequestsPage />} />
+              <Route path="alumni/engagement" element={<HrAlumniEngagementPage />} />
+              <Route path="alumni/careers" element={<HrAlumniCareersPage />} />
+              <Route path="alumni/:id" element={<HrAlumniRecordPage />} />
             </Route>
 
             <Route

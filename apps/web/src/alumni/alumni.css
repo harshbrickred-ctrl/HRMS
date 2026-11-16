@@ -1,0 +1,415 @@
+/* Alumni portal and HR alumni screens. Built on the shared theme variables and ess.css. */
+
+.al-shell {
+  min-height: 100vh;
+  background: var(--canvas);
+}
+
+.al-top {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 10px 24px;
+  background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+}
+
+.al-brand {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-size: 15px;
+}
+
+.al-brand span {
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  font-size: 12px;
+}
+
+.al-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  flex: 1 1 auto;
+}
+
+.al-nav a {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.al-nav a:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--iced-slate) 45%, transparent);
+}
+
+.al-nav a.is-active {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--key-lime) 55%, var(--surface));
+}
+
+.al-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.al-user-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.al-main {
+  display: grid;
+  gap: 16px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.al-page {
+  display: grid;
+  gap: 16px;
+}
+
+.al-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.al-grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .al-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .al-main {
+    padding: 16px;
+  }
+}
+
+.al-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.al-stat {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-elevated);
+  color: inherit;
+  text-decoration: none;
+}
+
+.al-stat strong {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.al-stat span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+a.al-stat:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+.al-card {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-elevated);
+}
+
+.al-card h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.al-card p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.al-meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.al-body {
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.al-person {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.al-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--key-lime) 45%, var(--iced-slate));
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.al-avatar-lg {
+  width: 88px;
+  height: 88px;
+  font-size: 26px;
+}
+
+.al-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.al-tag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.al-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.al-steps li::before {
+  content: '•';
+  margin-right: 6px;
+  color: var(--accent);
+}
+
+.al-visibility {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 6px 16px;
+}
+
+.al-visibility label,
+.al-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.al-consent-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.al-consent-row p {
+  margin: 2px 0 0;
+}
+
+.al-ok {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--chip-ok-line);
+  background: var(--chip-ok-bg);
+  color: var(--chip-ok-ink);
+  font-size: 13px;
+}
+
+.al-callout {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--chip-warn-line);
+  background: var(--chip-warn-bg);
+  color: var(--chip-warn-ink);
+  font-size: 13px;
+}
+
+.al-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.al-field-wide {
+  grid-column: 1 / -1;
+}
+
+.al-page .ess-field textarea,
+.al-modal-form textarea {
+  min-height: 80px;
+  padding: 8px 10px;
+  font: inherit;
+  resize: vertical;
+}
+
+.al-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Registration consent block inside the shared login form. */
+.al-consent {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.al-consent legend {
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.al-consent label {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.al-consent em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 12px;
+}
+
+.al-consent p,
+.al-auth-foot {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* HR screens */
+.al-hr-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.al-hr-tabs {
+  margin-bottom: 0;
+}
+
+.al-hr-tabs a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.al-hr-tabs a.is-active {
+  background: color-mix(in srgb, var(--key-lime) 55%, var(--surface));
+  color: var(--ink);
+}
+
+/* Stays a table cell; buttons sit side by side at the right. */
+.al-table-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.al-table-actions > * + * {
+  margin-left: 6px;
+}
+
+.al-linkbtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 3px;
+}
+
+.al-sub {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.al-modal-form {
+  display: grid;
+  gap: 10px;
+  min-width: min(460px, 80vw);
+}
+
+.ess-modal:has(.al-modal-form) {
+  width: min(560px, 100%);
+}
+
+.al-back {
+  justify-self: start;
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.al-back:hover {
+  color: var(--ink);
+}
+
+.al-form-row > .ess-field,
+.al-form-row > div > .ess-field {
+  align-content: start;
+}
