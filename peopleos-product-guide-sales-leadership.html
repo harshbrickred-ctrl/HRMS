@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PeopleOS — Simple Product Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a2332;
+    --muted: #5a6573;
+    --paper: #faf9f7;
+    --surface: #ffffff;
+    --line: #e4e1db;
+    --accent: #1f6b56;
+    --accent-soft: #e8f3ef;
+    --warm: #f0ebe3;
+    --serif: "Source Serif 4", Georgia, serif;
+    --sans: "DM Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.65;
+    font-size: 1.05rem;
+  }
+  a { color: var(--accent); }
+  a:hover { text-decoration: underline; }
+
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2.5rem 1.35rem 4rem;
+  }
+
+  header.hero {
+    padding: 0 0 2.25rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 2.5rem;
+  }
+  .kicker {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 0.75rem;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(1.85rem, 4vw, 2.35rem);
+    line-height: 1.2;
+    margin: 0 0 0.85rem;
+    letter-spacing: -0.02em;
+  }
+  .lead {
+    font-size: 1.15rem;
+    color: var(--muted);
+    margin: 0;
+    max-width: 36em;
+  }
+
+  nav.jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.85rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+  }
+  nav.jump a {
+    font-size: 0.88rem;
+    color: var(--muted);
+    text-decoration: none;
+  }
+  nav.jump a:hover { color: var(--accent); }
+
+  section {
+    margin: 0 0 2.75rem;
+  }
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 1.45rem;
+    margin: 0 0 0.9rem;
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin: 1.5rem 0 0.5rem;
+  }
+  p { margin: 0 0 0.85rem; }
+  p:last-child { margin-bottom: 0; }
+  ul, ol {
+    margin: 0 0 1rem;
+    padding-left: 1.2rem;
+  }
+  li { margin: 0 0 0.4rem; }
+  strong { font-weight: 600; }
+
+  .callout {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding: 0.9rem 1rem;
+    margin: 1rem 0;
+  }
+  .callout p { margin: 0; }
+  .soft {
+    background: var(--warm);
+    padding: 1rem 1.1rem;
+    margin: 1rem 0;
+  }
+  .soft p { margin: 0 0 0.5rem; }
+  .soft p:last-child { margin: 0; }
+
+  .roles {
+    display: grid;
+    gap: 0.75rem;
+    margin: 1rem 0 0;
+  }
+  .role {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 0.95rem 1.05rem;
+  }
+  .role h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1.02rem;
+  }
+  .role p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.98rem;
+  }
+
+  .flow {
+    counter-reset: step;
+    list-style: none;
+    padding: 0;
+    margin: 0.75rem 0 1.25rem;
+  }
+  .flow li {
+    position: relative;
+    padding: 0.55rem 0 0.55rem 2.4rem;
+    border-bottom: 1px solid var(--line);
+    margin: 0;
+  }
+  .flow li:last-child { border-bottom: none; }
+  .flow li::before {
+    counter-increment: step;
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0.55rem;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .story {
+    margin: 0 0 1.35rem;
+  }
+  .story h3 { margin-top: 0; }
+  .arrow {
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+
+  .split {
+    display: grid;
+    gap: 0.85rem;
+    margin: 1rem 0 0;
+  }
+  @media (min-width: 640px) {
+    .split { grid-template-columns: 1fr 1fr 1fr; }
+  }
+  .pill-box {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 1rem;
+  }
+  .pill-box h3 {
+    margin: 0 0 0.55rem;
+    font-size: 0.95rem;
+  }
+  .pill-box.ready { border-top: 3px solid var(--accent); }
+  .pill-box.careful { border-top: 3px solid #b8860b; }
+  .pill-box.later { border-top: 3px solid var(--muted); }
+  .pill-box ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    font-size: 0.92rem;
+    color: var(--muted);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    margin: 0.75rem 0 0;
+    background: var(--surface);
+  }
+  th, td {
+    text-align: left;
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    font-weight: 600;
+    background: var(--warm);
+  }
+  code {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 0.88em;
+    background: var(--warm);
+    padding: 0.1em 0.35em;
+  }
+
+  footer {
+    margin-top: 2.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <p class="kicker">PeopleOS</p>
+      <h1>A simple guide to the product</h1>
+      <p class="lead">For leadership and anyone new to PeopleOS. Plain language. No technical jargon.</p>
+      <nav class="jump" aria-label="Jump to section">
+        <a href="#what">What it is</a>
+        <a href="#idea">Big idea</a>
+        <a href="#can-do">What people can do</a>
+        <a href="#stories">How work flows</a>
+        <a href="#roles">Roles</a>
+        <a href="#ready">Ready vs coming</a>
+        <a href="#try">Try a demo</a>
+      </nav>
+    </header>
+
+    <section id="what">
+      <h2>1. What is PeopleOS?</h2>
+      <p>PeopleOS is the company’s <strong>HR and workplace app</strong>.</p>
+      <p>Employees use it for everyday needs: leave, attendance, payslips, documents, helpdesk, and company assets (like a laptop).</p>
+      <p>Managers, HR, and IT use the <strong>same app</strong> — they just see extra screens for approvals and admin work.</p>
+      <div class="callout">
+        <p><strong>In one line:</strong> one login for work life at the company, instead of chasing emails and spreadsheets.</p>
+      </div>
+      <div class="soft">
+        <p><strong>What it is not (for now):</strong> a full payroll calculator, performance reviews, training courses, or expenses.</p>
+        <p>Payslips are PDF files that HR uploads. People download them here. Salary calculation stays in the payroll system (for example greytHR).</p>
+      </div>
+    </section>
+
+    <section id="idea">
+      <h2>2. The big idea</h2>
+      <ol class="flow">
+        <li>Everyone signs in once and lands on <strong>Home</strong>.</li>
+        <li>The left menu always shows <strong>Me</strong> (self-service).</li>
+        <li>Extra menu sections appear based on the person’s job — Manager, HR, IT, Leadership, and so on.</li>
+        <li>There is no “switch portal” step. One place for day-to-day work.</li>
+      </ol>
+    </section>
+
+    <section id="can-do">
+      <h2>3. What people can do</h2>
+
+      <h3>Every employee (Me)</h3>
+      <ul>
+        <li>Apply for leave and see balances</li>
+        <li>See attendance and punch in/out when allowed</li>
+        <li>Download documents and payslip PDFs</li>
+        <li>See and request company assets</li>
+        <li>Raise a helpdesk ticket</li>
+        <li>Change password and screen theme</li>
+      </ul>
+
+      <h3>Managers</h3>
+      <ul>
+        <li>Approve or reject leave for their team</li>
+        <li>Approve or reject attendance corrections</li>
+        <li>Review team leave and attendance</li>
+      </ul>
+
+      <h3>HR</h3>
+      <ul>
+        <li>Keep employee records and the org structure up to date</li>
+        <li>Manage leave balances and attendance rules</li>
+        <li>Upload documents and payslips</li>
+        <li>See queues of work that is waiting</li>
+      </ul>
+
+      <h3>IT (and HR Head)</h3>
+      <ul>
+        <li>Track what the company owns (asset register)</li>
+        <li>Issue, return, and transfer assets</li>
+        <li>Handle fault and loss reports</li>
+        <li>Maintenance and asset reports</li>
+      </ul>
+
+      <h3>Security / Admin</h3>
+      <ul>
+        <li>Decide who gets which role in the system</li>
+        <li>Approve leave at company level when needed</li>
+      </ul>
+
+      <h3>Leadership</h3>
+      <ul>
+        <li>See live numbers: headcount, people on leave, exceptions, waiting approvals</li>
+      </ul>
+    </section>
+
+    <section id="stories">
+      <h2>4. How work flows</h2>
+      <p>Four everyday stories — follow the arrows.</p>
+
+      <div class="story">
+        <h3>Leave</h3>
+        <p class="arrow">Employee applies → Manager approves or rejects → Balance updates → Employee gets a notification</p>
+      </div>
+
+      <div class="story">
+        <h3>Attendance</h3>
+        <p class="arrow">Punch on the web or a biometric clock → If wrong, ask for a correction → Manager decides → HR can lock the month for payroll</p>
+      </div>
+
+      <div class="story">
+        <h3>Laptop / asset</h3>
+        <p class="arrow">Employee requests kit → Approvals → IT issues it → Employee acknowledges → Later: return, transfer, or report damage/loss</p>
+      </div>
+
+      <div class="story">
+        <h3>Access</h3>
+        <p class="arrow">Admin assigns a role (e.g. Manager) → Next login shows new menu → Person can start approving or administering</p>
+      </div>
+    </section>
+
+    <section id="roles">
+      <h2>5. Who sees what</h2>
+      <div class="roles">
+        <div class="role">
+          <h3>Employee</h3>
+          <p>Me only — self-service for leave, attendance, documents, assets, helpdesk.</p>
+        </div>
+        <div class="role">
+          <h3>Manager</h3>
+          <p>Me + Approvals and team time — decides for their team.</p>
+        </div>
+        <div class="role">
+          <h3>HR Executive</h3>
+          <p>Me + People, leave/attendance admin, documents — day-to-day HR.</p>
+        </div>
+        <div class="role">
+          <h3>HR Head</h3>
+          <p>Everything HR has, plus the full Assets area.</p>
+        </div>
+        <div class="role">
+          <h3>IT Admin</h3>
+          <p>Me + Assets and admin tools — owns company equipment.</p>
+        </div>
+        <div class="role">
+          <h3>Security Admin</h3>
+          <p>Me + Users &amp; Roles — controls who can do what.</p>
+        </div>
+        <div class="role">
+          <h3>Leadership</h3>
+          <p>Me + Leadership reports — sees the organisational pulse.</p>
+        </div>
+        <div class="role">
+          <h3>Finance (read)</h3>
+          <p>No separate Finance menu yet. Can read own payslips if given the role.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="ready">
+      <h2>6. Ready today vs still coming</h2>
+      <div class="split">
+        <div class="pill-box ready">
+          <h3>Ready to show</h3>
+          <ul>
+            <li>Sign-in &amp; forgot password</li>
+            <li>Leave apply &amp; approve</li>
+            <li>Attendance (web + clocks)</li>
+            <li>HR records &amp; org</li>
+            <li>Documents &amp; payslip PDFs</li>
+            <li>Assets (employee + IT)</li>
+            <li>Helpdesk (employee side)</li>
+            <li>Leadership numbers</li>
+            <li>Mobile attendance</li>
+          </ul>
+        </div>
+        <div class="pill-box careful">
+          <h3>Still thin</h3>
+          <ul>
+            <li>Some Home / Manager overview widgets</li>
+            <li>HR helpdesk desk screen</li>
+            <li>Admin audit / jobs / settings</li>
+            <li>Email for approvals (in-app works)</li>
+            <li>Mobile beyond attendance</li>
+          </ul>
+        </div>
+        <div class="pill-box later">
+          <h3>Not soon</h3>
+          <ul>
+            <li>Full payroll engine</li>
+            <li>Performance / OKR</li>
+            <li>Training (LMS)</li>
+            <li>Expenses</li>
+            <li>WhatsApp / AI agents</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="try">
+      <h2>7. Try a demo</h2>
+      <p>Open <a href="http://localhost:5173/login">http://localhost:5173/login</a>. Password for every demo user: <code>ChangeMe123!</code></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Sign in as</th>
+            <th>Best to show</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>employee@peopleos.local</code></td>
+            <td>Leave, attendance, assets, helpdesk</td>
+          </tr>
+          <tr>
+            <td><code>manager@peopleos.local</code></td>
+            <td>Approvals inbox</td>
+          </tr>
+          <tr>
+            <td><code>hr@peopleos.local</code></td>
+            <td>Employees, leave/attendance admin, documents</td>
+          </tr>
+          <tr>
+            <td><code>it@peopleos.local</code></td>
+            <td>Asset register and tickets</td>
+          </tr>
+          <tr>
+            <td><code>admin@peopleos.local</code></td>
+            <td>Users &amp; Roles</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>A 20-minute walkthrough</h3>
+      <ol>
+        <li><strong>Employee</strong> — apply leave, open attendance, open My Assets.</li>
+        <li><strong>Manager</strong> — approve that leave in Inbox.</li>
+        <li><strong>HR</strong> — show employees and a document.</li>
+        <li><strong>IT</strong> — show the asset register.</li>
+        <li><strong>Admin</strong> — assign Leadership; show Leadership numbers.</li>
+      </ol>
+    </section>
+
+    <footer>
+      Source: <a href="docs/36-product-guide-sales-leadership.md">docs/36-product-guide-sales-leadership.md</a>
+      · Deeper lists: <a href="docs/34-feature-catalog.md">feature catalog</a>
+      · This page is for understanding and demos — not a contract, and it does not invent ROI.
+    </footer>
+  </div>
+</body>
+</html>

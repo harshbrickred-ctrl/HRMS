@@ -12,6 +12,14 @@
 - [`../Decision.md`](../Decision.md) — decisions by user/agent + reasons  
 - [`../Progress.md`](../Progress.md) — Completed vs To Do features  
 
+**As-built product truth (keep in sync with `apps/`):**
+- [34-feature-catalog.md](34-feature-catalog.md) — Live / Partial / UI-only / Planned  
+- [33-implemented-workflow-catalog.md](33-implemented-workflow-catalog.md) — workflows that exist in code  
+- [36-product-guide-sales-leadership.md](36-product-guide-sales-leadership.md) — sales & leadership product guide  
+- [35-asset-module-data-model.md](35-asset-module-data-model.md) — asset module depth  
+
+Foundation docs 01–32 and ADRs remain the planning / approval baseline from programme kickoff; prefer 33–36 when answering “what does the running product do today?”
+
 ---
 
 ## Artifacts (quick share)
@@ -40,15 +48,16 @@ For 1–2 minute topic cards (meetings / email / onboarding), use the mirrored p
 
 ## Reading order
 
-### For CEO / Leadership (30–45 minutes)
+### For CEO / Leadership / Sales (30–60 minutes)
 
-1. [31-management-overview.md](31-management-overview.md) — **management presentation narrative (start here for meetings)**
-2. [32-manager-weekly-timeline.md](32-manager-weekly-timeline.md) — **simple weekly timeline with dates (share with manager)**
-3. [01-executive-proposal.md](01-executive-proposal.md) — **primary approval document**
-4. [02-market-analysis.md](02-market-analysis.md) — landscape, gaps, what we will / won’t build
-5. [23-risk-register.md](23-risk-register.md) — top risks
-6. [29-kpis-and-cost-strategy.md](29-kpis-and-cost-strategy.md) — costs & build-vs-buy
-7. [28-saas-roadmap.md](28-saas-roadmap.md) — long-term commercialization (do not fund prematurely)
+1. [36-product-guide-sales-leadership.md](36-product-guide-sales-leadership.md) — **product deep-dive, features, and role workflows (non-technical; start here for sales & leadership product understanding)**
+2. [31-management-overview.md](31-management-overview.md) — **management presentation narrative (programme / approval meetings)**
+3. [32-manager-weekly-timeline.md](32-manager-weekly-timeline.md) — **simple weekly timeline with dates (share with manager)**
+4. [01-executive-proposal.md](01-executive-proposal.md) — **primary approval document**
+5. [02-market-analysis.md](02-market-analysis.md) — landscape, gaps, what we will / won’t build
+6. [23-risk-register.md](23-risk-register.md) — top risks
+7. [29-kpis-and-cost-strategy.md](29-kpis-and-cost-strategy.md) — costs & build-vs-buy
+8. [28-saas-roadmap.md](28-saas-roadmap.md) — long-term commercialization (do not fund prematurely)
 
 ### For Product / HR / BA
 
@@ -59,7 +68,9 @@ For 1–2 minute topic cards (meetings / email / onboarding), use the mirrored p
 5. [07-user-stories.md](07-user-stories.md)
 6. [08-process-flows.md](08-process-flows.md) — intended process (spec)
 7. [33-implemented-workflow-catalog.md](33-implemented-workflow-catalog.md) — workflows present in the app today
-8. [09-ux-ui-specification.md](09-ux-ui-specification.md)
+8. [34-feature-catalog.md](34-feature-catalog.md) — Live / Partial / Planned feature inventory (authoritative vs codebase)
+9. [36-product-guide-sales-leadership.md](36-product-guide-sales-leadership.md) — stakeholder-facing product narrative
+10. [09-ux-ui-specification.md](09-ux-ui-specification.md)
 
 ### For Engineering / Architecture / Security
 
@@ -154,4 +165,4 @@ For 1–2 minute topic cards (meetings / email / onboarding), use the mirrored p
 
 ---
 
-*Last updated: documentation foundation pack for CEO approval.*
+*Last updated: 2026-11-13 — as-built catalogs (33–34) refreshed; sales/leadership product guide (36) added.*

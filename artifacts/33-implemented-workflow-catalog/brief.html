@@ -81,11 +81,11 @@
     <header>
       <p class="eyebrow">PeopleOS · Artifact brief</p>
       <h1>33 — Implemented workflow catalog</h1>
-      <p class="meta">Audience: General · Skim 1–2 minutes · Generated 2026-10-05</p>
+      <p class="meta">Audience: Product / HR / BA · Skim 1–2 minutes · Generated 2026-11-13</p>
     </header>
     <section>
       <h2>Thesis</h2>
-      <p>This catalog lists every workflow that exists in apps/web, apps/api, and apps/mobile. 08-process-flows names the process the product is meant to have. Where that document and the code disagree, this file follows the code. Specified processes that are missing or only mocked are…</p>
+      <p>This catalog lists workflows that exist in apps/web, apps/api, and apps/mobile. Where 08-process-flows and the code disagree, this file follows the code. Specified processes that are missing or only mocked are listed at the end.</p>
     </section>
     <section>
       <h2>Key takeaways</h2>
@@ -94,10 +94,10 @@
         <li>Session mock: Works in the UI. Stored only in browser state for this session.</li>
         <li>Static: A screen or list with no real state change.</li>
         <li>Specified only: Described in docs/ and not present in apps/.</li>
-        <li>EMPLOYEE: Overview, Time, Pay, Workplace, Account, Support — /ess/ — None — ESS self-service, password change, auth</li>
-        <li>MANAGER: ESS plus Approvals, team Time, Directory — /ess/, /manager/ — reports.read (never checked) — Inbox approve and reject, plus own ESS</li>
-        <li>HREXEC: ESS plus all HR sections, shared with HRHEAD — /ess/, /hr/ — None — Add a directory person, record a fake import. Cannot approve</li>
-        <li>HRHEAD: Same nav and buttons as HREXEC — /ess/, /hr/ — rbac.read, audit.read, reports.read (none open a screen) — Same as HREXEC. No seed user</li>
+        <li>EMPLOYEE: Me only (/ess/) — Leave apply/withdraw; attendance punch + correction; documents; helpdesk create; payslip download; My Assets request / fault / loss / acknowledge; change password</li>
+        <li>MANAGER: Me + Approvals + Team Time + Directory — Approve/reject leave and attendance corrections (Inbox, Team Leave, Team Attendance); own ESS</li>
+        <li>HREXEC: Me + People + Time + Programs — Employees, org, leave balances, attendance admin (shifts, holidays, devices, override, lock, register), Document Center + payslip upload, Workflows queues</li>
+        <li>HRHEAD: Same as HREXEC + Assets — All HREXEC actions plus full IT asset lifecycle</li>
       </ul>
     </section>
     <section>

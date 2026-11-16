@@ -1,16 +1,16 @@
 ---
 manual: false
-generated: 2026-10-05
+generated: 2026-11-13
 ---
 
 # 33 — Implemented workflow catalog
 
-**Audience:** General  
+**Audience:** Product / HR / BA  
 **Artifact type:** Quick brief (1–2 minute skim)
 
 ## Thesis
 
-This catalog lists every workflow that exists in apps/web, apps/api, and apps/mobile. 08-process-flows names the process the product is meant to have. Where that document and the code disagree, this file follows the code. Specified processes that are missing or only mocked are…
+This catalog lists workflows that exist in apps/web, apps/api, and apps/mobile. Where 08-process-flows and the code disagree, this file follows the code. Specified processes that are missing or only mocked are listed at the end.
 
 ## Key takeaways
 
@@ -18,10 +18,10 @@ This catalog lists every workflow that exists in apps/web, apps/api, and apps/mo
 - Session mock: Works in the UI. Stored only in browser state for this session.
 - Static: A screen or list with no real state change.
 - Specified only: Described in docs/ and not present in apps/.
-- EMPLOYEE: Overview, Time, Pay, Workplace, Account, Support — /ess/ — None — ESS self-service, password change, auth
-- MANAGER: ESS plus Approvals, team Time, Directory — /ess/, /manager/ — reports.read (never checked) — Inbox approve and reject, plus own ESS
-- HREXEC: ESS plus all HR sections, shared with HRHEAD — /ess/, /hr/ — None — Add a directory person, record a fake import. Cannot approve
-- HRHEAD: Same nav and buttons as HREXEC — /ess/, /hr/ — rbac.read, audit.read, reports.read (none open a screen) — Same as HREXEC. No seed user
+- EMPLOYEE: Me only (/ess/) — Leave apply/withdraw; attendance punch + correction; documents; helpdesk create; payslip download; My Assets request / fault / loss / acknowledge; change password
+- MANAGER: Me + Approvals + Team Time + Directory — Approve/reject leave and attendance corrections (Inbox, Team Leave, Team Attendance); own ESS
+- HREXEC: Me + People + Time + Programs — Employees, org, leave balances, attendance admin (shifts, holidays, devices, override, lock, register), Document Center + payslip upload, Workflows queues
+- HRHEAD: Same as HREXEC + Assets — All HREXEC actions plus full IT asset lifecycle
 
 ## Evidence labels
 

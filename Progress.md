@@ -1,12 +1,12 @@
 # Progress
 
 **Product:** PeopleOS (internal HRMS)  
-**Last updated:** 2026-10-19  
+**Last updated:** 2026-11-13  
 
 **Rule:** Set **Status** to **Completed** only when the feature is implemented and demoable (not when merely documented).  
-**Related:** [Decision.md](Decision.md) · [docs/05-product-requirements-mvp.md](docs/05-product-requirements-mvp.md) · [docs/34-feature-catalog.md](docs/34-feature-catalog.md) · [docs/32-manager-weekly-timeline.md](docs/32-manager-weekly-timeline.md)
+**Related:** [Decision.md](Decision.md) · [docs/05-product-requirements-mvp.md](docs/05-product-requirements-mvp.md) · [docs/34-feature-catalog.md](docs/34-feature-catalog.md) · [docs/33-implemented-workflow-catalog.md](docs/33-implemented-workflow-catalog.md) · [docs/36-product-guide-sales-leadership.md](docs/36-product-guide-sales-leadership.md) · [docs/32-manager-weekly-timeline.md](docs/32-manager-weekly-timeline.md)
 
-**Authoritative feature status:** use [docs/34-feature-catalog.md](docs/34-feature-catalog.md) for Live / Partial / Planned. Rows below that still say “Demo mock” for leave, attendance, helpdesk, notifications, reports, Core HR, etc. are **stale** — those modules are largely live in Postgres as of Oct 2026.
+**Authoritative feature status:** use [docs/34-feature-catalog.md](docs/34-feature-catalog.md) for Live / Partial / Planned. This tracker summarises programme completion; do not treat older “Demo mock” wording in historical notes as current truth.
 
 | ID | Feature | Status | Notes |
 |----|---------|--------|-------|
@@ -25,42 +25,40 @@
 | C-013 | Shell UX depth (collapse + icons) | Completed | 2026-09-23. D-030; Lucide nav icons; section dividers; elevated main pad |
 | C-014 | Expo mobile app + web Mobile preview | Completed | 2026-09-23. D-031; Design44 in-web demo from login icon + `/mobile`; Expo ESS client |
 | C-015 | Signed-in password change | Completed | 2026-09-29. `POST /api/v1/auth/password/change`; Settings screen calls it and revokes other sessions |
+| C-016 | As-built docs refresh + sales/leadership product guide | Completed | 2026-11-13. Rewrote `docs/33`, `docs/34`; added `docs/36`; updated `docs/00-README` |
+| C-017 | Core HR — org + employee master in Postgres | Completed | Live: departments, teams, locations, employee CRUD (`/hr/*`) |
+| C-018 | Leave apply / withdraw / approve + balances | Completed | Live ESS + manager inbox/team leave; HR leave admin |
+| C-019 | Attendance SoR (web punch, corrections, HR admin, eSSL path) | Completed | Live; PeopleOS is attendance system of record |
+| C-020 | Documents + payslip PDF upload/download | Completed | Live Document Center + ESS documents/salary PDFs |
+| C-021 | In-app notifications | Completed | Live inbox; email still password-reset only |
+| C-022 | Helpdesk (employee self-service) | Completed | Live create/list; HR manage UI still Partial |
+| C-023 | IT asset lifecycle + My Assets | Completed | Live register, requests, allocate/return, maintenance, tickets; no exit clearance |
+| C-024 | Leadership live report KPIs | Completed | `/exec` + `/api/v1/reports/summary` |
 | T-001 | Confirm CEO APPROVE WITH CONDITIONS in writing | To-Do | P0, Week 1 |
 | T-002 | HR workshops + P0 scope freeze sign-off | To-Do | P0, Week 1–2 |
-| T-003 | greytHR export discovery (employees, org, leave balances, attendance sample) | To-Do | P0, Week 1–2 |
-| T-004 | UX wireframes: ESS home, leave request, manager inbox, employee profile | To-Do | P0, Week 2 |
-| T-006 | CI pipeline (lint/test/build) on GitHub Actions free tier | To-Do | P0, Week 3–4 |
-| T-007 | OpenAPI baseline | To-Do | P0, Week 3–4 |
-| T-012 | Audit log for sensitive actions | To-Do | P0, Week 4. Login, password reset, and role changes write `AuditEvent`; no query API. Admin audit screen is mock |
-| T-013 | Core HR — org (dept, designation, location) | To-Do | P0, Week 5. Demo mock — departments and teams on HR Organization; not in Postgres |
-| T-014 | Core HR — employee master + manager hierarchy + search | To-Do | P0, Week 5. Demo mock — directory, organization ids (`HY213`), department → team → manager. No employee API |
-| T-015 | Leave — policies/types, balances, holidays | To-Do | P0, Week 6. Demo mock — balances, meters, and a month-grouped holiday calendar |
-| T-016 | Leave — apply / approve / reject | To-Do | P0, Week 6–7. Demo mock — apply, withdraw, and approve in the manager inbox for this browser session only |
-| T-017 | Workflow engine v1 (sequential + role/manager approvers) | To-Do | P0, Week 7. HR Workflows is a static list. Approver is hardcoded as the team manager in the mock |
-| T-018 | Manager approvals inbox | To-Do | P0, Week 7. Demo mock — inbox, team leave, and team attendance filter to the signed-in manager’s team |
-| T-019 | Workflow reminders (pending approvals) | To-Do | P0, Week 7–9. Admin Jobs is a static list |
-| T-020 | Attendance — daily mark | To-Do | P0, Week 8. Demo mock — month calendar, register, and mark-present for the demo day |
-| T-021 | Attendance — CSV import hook | To-Do | P0, Week 8. HR Migration only pretends to accept a file |
-| T-022 | Attendance — correction request + approval | To-Do | P0, Week 8. Demo mock — correction goes to the team manager in this browser session |
-| T-023 | Me / ESS modules (home + leave/attendance/docs/people/profile) | To-Do | P0, Week 9. Demo UI done, APIs open — home, leave, attendance, salary (payslip, YTD, PF), documents, people, profile, notifications, settings, helpdesk, My Team |
-| T-024 | Team / manager modules (inbox + team views) | To-Do | P0, Week 9. Demo UI done, APIs open — manager overview, inbox, team leave, team attendance, directory. Placeholders removed |
-| T-025 | Documents — upload, version metadata, ACL download | To-Do | P0, Week 9–10. Demo mock — mine/policies list and a local upload. No file storage or ACL |
-| T-026 | Notifications — in-app + email | To-Do | P0, Week 10. In-app list is mock. Email exists only for password reset via Mailpit |
-| T-027 | Reports — headcount, leave utilization, attendance summary, basic attrition | To-Do | P0, Week 10. Demo mock — HR Reports and Leadership screens use fixed figures |
-| T-028 | greytHR-oriented CSV/Excel migration + reconciliation report | To-Do | P0, Week 11. Screen only |
-| T-029 | Security hardening + UAT with HR | To-Do | P0, Week 11 |
-| T-030 | Pilot go-live (subset of users) + training + KPI baseline | To-Do | P0, Week 12 |
+| T-003 | greytHR export discovery (employees, org, leave balances, attendance sample) | To-Do | Optional one-time import only; continuous punch sync out of scope |
+| T-004 | UX wireframes: ESS home, leave request, manager inbox, employee profile | To-Do | P0; much of UI already shipped — close out formally |
+| T-006 | CI pipeline (lint/test/build) on GitHub Actions free tier | To-Do | P0 |
+| T-007 | OpenAPI baseline | To-Do | P0 |
+| T-012 | Audit log query API + real Admin audit UI | To-Do | P0. Events are written; Admin Audit screen still mock |
+| T-017 | Workflow engine v1 (sequential + role/manager approvers) | To-Do | P0/P1. Today = live queue dashboard only (`/hr/workflows`) |
+| T-019 | Workflow reminders (pending approvals) | To-Do | P0. Admin Jobs still static |
+| T-021 | Attendance — CSV import hook / bulk migration | To-Do | P0. Optional; product is independent SoR |
+| T-026b | Email for leave / attendance decisions | To-Do | P0. Beyond password-reset Mailpit path |
+| T-027b | Wire HR helpdesk manage UI to existing APIs | To-Do | P0. APIs + `helpdesk.manage` exist |
+| T-028 | greytHR-oriented CSV/Excel migration + reconciliation report | To-Do | P0. Thin / planned |
+| T-029 | Security hardening + UAT with HR | To-Do | P0 |
+| T-030 | Pilot go-live (subset of users) + training + KPI baseline | To-Do | P0 |
 | T-040 | Workflow escalation / SLA reassignment | To-Do | P1, after P0 |
 | T-041 | Workflow delegation | To-Do | P1, after P0 |
 | T-042 | Light ATS (requisition → candidate → status) | To-Do | P1, after P0 |
 | T-043 | Onboarding checklists | To-Do | P1, after P0 |
-| T-044 | IT asset assignment | To-Do | P1, after P0 |
-| T-045 | Simple HR helpdesk tickets | To-Do | P1, after P0. Demo mock — ESS Helpdesk creates tickets in browser state only |
+| T-044b | Asset exit clearance (needs exit / F&F) | To-Do | P1. Core asset module Completed as C-023 |
 | T-090 | Full Indian statutory payroll engine | To-Do | P2, deferred |
 | T-091 | Performance / OKR suite | To-Do | P2, deferred |
 | T-092 | LMS / training engine | To-Do | P2, deferred |
 | T-093 | Expenses engine | To-Do | P2, deferred |
-| T-094 | Native mobile apps (store shipping) | To-Do | P2, deferred. Expo ESS client (C-014) has login plus mock home, leave, attendance, people, profile, documents, and notifications. Store, push, and offline still open |
+| T-094 | Native mobile apps (store shipping) | To-Do | P2. Expo: login + attendance Live; leave/docs/etc. still mock |
 | T-095 | WhatsApp / AI agents | To-Do | P2, deferred |
 | T-096 | Commercial billing / SCIM / marketplace | To-Do | P2, deferred |
 | T-097 | AKS / microservices split | To-Do | P2, deferred |
