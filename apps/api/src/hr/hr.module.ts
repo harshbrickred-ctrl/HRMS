@@ -8,5 +8,6 @@ import { HrService } from './hr.service';
   imports: [RbacModule, AttendanceModule],
   controllers: [HrController, HrSelfController],
   providers: [HrService],
+  exports: [HrService],
 })
 export class HrModule {}

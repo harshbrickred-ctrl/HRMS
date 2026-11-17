@@ -207,6 +207,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: '/hr/documents', label: 'Document Center', icon: 'hrDocuments' },
       { to: '/hr/workflows', label: 'Workflows', icon: 'workflows' },
+      { to: '/hr/alumni', label: 'Alumni', icon: 'people' },
     ],
   },
   {
