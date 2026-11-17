@@ -16,7 +16,7 @@ import {
 import { EmployeePhoto } from '../components/EmployeePhoto';
 import { useEssData } from '../mock/EssDataContext';
 import { ORGANIZATION, type EssProfile, type ProfileFamilyMember } from '../mock/essMock';
-import { categoryLabel, fetchMyAssets, type MyAsset } from '../../workspace/assetsApi';
+import { fetchMyAssets, type MyAsset } from '../../workspace/assetsApi';
 import { MyPermissionsPanel } from '../components/MyPermissionsPanel';
 
 type Section = 'overview' | 'personal' | 'accounts' | 'family' | 'employment' | 'assets' | 'permissions';

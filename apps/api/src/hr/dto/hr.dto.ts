@@ -157,6 +157,13 @@ export class CreateEmployeeDto {
   @IsInt()
   @Min(0)
   leaveEncashment?: number;
+
+  /** Annual CTC. When sent without component fields, the API splits it into the monthly structure. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  ctc?: number;
 }
 
 export class UpdateEmployeeDto {
@@ -265,6 +272,13 @@ export class UpdateEmployeeDto {
   @IsInt()
   @Min(0)
   leaveEncashment?: number;
+
+  /** Annual CTC. When sent without component fields, the API splits it into the monthly structure. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  ctc?: number;
 }
 
 export class LeaveBalanceInput {

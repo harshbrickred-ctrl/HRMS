@@ -159,13 +159,9 @@ export function ItAssetsPage() {
     setExporting(true);
     setError(null);
     try {
-      await returnAsset(asset.id, next, note[asset.id]);
-      setMessage(`${asset.assetTag} marked ${next.replace('_', ' ')}.`);
-      showToast(`${asset.assetTag} updated.`);
-      setOpenHistory(null);
-      load();
       const current = Object.fromEntries(FILTER_KEYS.map((key) => [key, params.get(key) ?? '']));
       downloadSheet(`asset-register-${todayIso()}.csv`, await fetchAssetSheet(current));
+      showToast('Asset register exported.');
     } catch (err: unknown) {
       setError(assetMessage(err));
     } finally {

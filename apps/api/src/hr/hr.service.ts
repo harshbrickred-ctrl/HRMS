@@ -82,6 +82,7 @@ type PayInput = {
   dailyAllowance?: number;
   gratuity?: number;
   leaveEncashment?: number;
+  ctc?: number;
 };
 
 function rupee(value: number | undefined) {
@@ -90,6 +91,29 @@ function rupee(value: number | undefined) {
     throw new BadRequestException('Salary amounts cannot be negative.');
   }
   return amount;
+}
+
+/** Match the live web CTC splitter used when the form only posts annual CTC. */
+function splitAnnualCtc(ctc: number) {
+  const annual = Math.round(Math.max(0, ctc));
+  const monthly = Math.round(annual / 12);
+  const basic = Math.round(monthly * 0.5);
+  const hra = Math.round(basic * 0.5);
+  const statutoryBonus = 1400;
+  const pf = Math.round((Math.min(basic, 25_000) * 12) / 100);
+  const special = Math.round(monthly - basic - pf - statutoryBonus);
+  if (annual > 0 && special < 0) {
+    throw new BadRequestException('CTC is too low for the standard salary split.');
+  }
+  return {
+    basic,
+    hra,
+    special: Math.max(0, special),
+    statutoryBonus,
+    dailyAllowance: 0,
+    gratuityMonthly: Math.round((basic / 30) * 26),
+    leaveEncashment: Math.round((basic / 20) * 10),
+  };
 }
 
 function bankData(dto: PayInput, required: boolean) {
@@ -110,6 +134,21 @@ function bankData(dto: PayInput, required: boolean) {
 }
 
 function payAmounts(dto: PayInput, required: boolean) {
+  const hasComponents =
+    dto.basic !== undefined ||
+    dto.hra !== undefined ||
+    dto.specialAllowance !== undefined ||
+    dto.statutoryBonus !== undefined ||
+    dto.dailyAllowance !== undefined ||
+    dto.gratuity !== undefined ||
+    dto.leaveEncashment !== undefined;
+
+  if (!hasComponents && dto.ctc !== undefined) {
+    const split = splitAnnualCtc(rupee(dto.ctc));
+    if (required && split.basic <= 0) throw new BadRequestException('Enter CTC.');
+    return split;
+  }
+
   const basic = rupee(dto.basic);
   const hra = rupee(dto.hra);
   const special = rupee(dto.specialAllowance);
@@ -429,6 +468,7 @@ export class HrService {
     const touchesBank =
       dto.bankName !== undefined || dto.ifscCode !== undefined || dto.bankAccountNumber !== undefined;
     const touchesPay =
+      dto.ctc !== undefined ||
       dto.basic !== undefined ||
       dto.hra !== undefined ||
       dto.specialAllowance !== undefined ||
