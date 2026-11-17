@@ -10,6 +10,9 @@ module.exports = (options, webpack) => {
     externals: {
       '@prisma/client': 'commonjs @prisma/client',
       '.prisma/client': 'commonjs .prisma/client',
+      '@prisma/adapter-neon': 'commonjs @prisma/adapter-neon',
+      '@neondatabase/serverless': 'commonjs @neondatabase/serverless',
+      ws: 'commonjs ws',
     },
     output: {
       ...options.output,

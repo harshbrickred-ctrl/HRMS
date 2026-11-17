@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { confirmPasswordReset } from '../lib/api';
+import { showToast } from '../ui/toast';
 import { ForgotPasswordLayout } from './ForgotPasswordLayout';
 
 type LocState = { resetToken?: string; email?: string };
@@ -35,6 +36,7 @@ export function ForgotPasswordResetPage() {
     setSubmitting(true);
     try {
       await confirmPasswordReset(resetToken!, password);
+      showToast('Password updated. Sign in with the new password.');
       navigate('/login?reset=1', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to update password');

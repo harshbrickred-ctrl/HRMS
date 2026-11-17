@@ -3,6 +3,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsIn,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -99,6 +100,63 @@ export class CreateEmployeeDto {
   @IsOptional()
   @IsIn(['ACTIVE', 'DISABLED'])
   status?: 'ACTIVE' | 'DISABLED';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  bankName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(11)
+  ifscCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(18)
+  bankAccountNumber?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  basic?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  hra?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  specialAllowance?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  statutoryBonus?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  dailyAllowance?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  gratuity?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  leaveEncashment?: number;
 }
 
 export class UpdateEmployeeDto {
@@ -150,6 +208,63 @@ export class UpdateEmployeeDto {
   @MinLength(8)
   @MaxLength(80)
   password?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  bankName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(11)
+  ifscCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(18)
+  bankAccountNumber?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  basic?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  hra?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  specialAllowance?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  statutoryBonus?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  dailyAllowance?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  gratuity?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  leaveEncashment?: number;
 }
 
 export class LeaveBalanceInput {

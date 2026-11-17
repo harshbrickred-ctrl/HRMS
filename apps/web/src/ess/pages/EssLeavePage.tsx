@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   CalendarDays,
   CheckCircle2,
@@ -10,15 +11,18 @@ import {
   Undo2,
   type LucideIcon,
 } from 'lucide-react';
+import { showToast } from '../../ui/toast';
 import {
   applyLeaveRequest,
   fetchMyLeave,
+  leaveHalfLabel,
   withdrawLeaveRequest,
   type LeaveBalanceDto,
   type LeaveRequestDto,
 } from '../../workspace/leaveApi';
 import { StatusChip } from '../components/StatusChip';
-import { workingDaysBetween } from '../mock/essMock';
+import { localToday } from '../mock/EssDataContext';
+import { ensureChristmas, workingDaysBetween } from '../mock/essMock';
 
 type Section = 'apply' | 'requests' | 'balances' | 'calendar';
 
@@ -58,28 +62,55 @@ function rangeLabel(start: string, end: string) {
   return `${formatShort(start)} – ${formatDate(end)}`;
 }
 
+function isSection(value: string | null): value is Section {
+  return value === 'apply' || value === 'requests' || value === 'balances' || value === 'calendar';
+}
+
 export function EssLeavePage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const querySection = searchParams.get('section');
+  const section: Section = isSection(querySection) ? querySection : 'apply';
   const [balances, setBalances] = useState<LeaveBalanceDto[]>([]);
   const [requests, setRequests] = useState<LeaveRequestDto[]>([]);
   const [holidays, setHolidays] = useState<Array<{ date: string; name: string }>>([]);
-  const [section, setSection] = useState<Section>('apply');
   const [typeCode, setTypeCode] = useState('CL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [halfDayStart, setHalfDayStart] = useState(false);
-  const [halfDayEnd, setHalfDayEnd] = useState(false);
+  const [fromHalfStart, setFromHalfStart] = useState(false);
+  const [fromHalfEnd, setFromHalfEnd] = useState(false);
+  const [toHalfStart, setToHalfStart] = useState(false);
+  const [toHalfEnd, setToHalfEnd] = useState(false);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [requestTab, setRequestTab] = useState<'Pending' | 'Approved' | 'Withdrawn' | 'Rejected'>(
+    'Pending',
+  );
+  const sameDay = Boolean(startDate) && (!endDate || startDate === endDate);
+  const fromIsHalf = fromHalfStart !== fromHalfEnd;
+  const toIsHalf = !sameDay && toHalfStart !== toHalfEnd;
+  useEffect(() => {
+    if (sameDay && (toHalfStart || toHalfEnd)) {
+      setToHalfStart(false);
+      setToHalfEnd(false);
+    }
+  }, [sameDay, toHalfStart, toHalfEnd]);
+
+  function openSection(next: Section) {
+    const nextParams = new URLSearchParams(searchParams);
+    if (next === 'apply') nextParams.delete('section');
+    else nextParams.set('section', next);
+    setSearchParams(nextParams, { replace: true });
+  }
 
   function load() {
     fetchMyLeave()
       .then((data) => {
         setBalances(data.balances);
         setRequests(data.requests);
-        setHolidays(data.holidays);
+        setHolidays(ensureChristmas(data.holidays));
         setTypeCode((current) => {
           if (current && data.balances.some((item) => item.code === current)) return current;
           return data.balances[0]?.code ?? 'CL';
@@ -96,8 +127,8 @@ export function EssLeavePage() {
 
   const previewDays = useMemo(() => {
     if (!startDate || !endDate) return 0;
-    return workingDaysBetween(startDate, endDate, holidays, halfDayStart, halfDayEnd);
-  }, [startDate, endDate, holidays, halfDayStart, halfDayEnd]);
+    return workingDaysBetween(startDate, endDate, holidays, fromIsHalf, toIsHalf, typeCode === 'EL');
+  }, [startDate, endDate, holidays, fromIsHalf, toIsHalf, typeCode]);
 
   const selectedBalance = balances.find((balance) => balance.code === typeCode);
   const casual = balances.find((balance) => balance.code === 'CL');
@@ -106,18 +137,19 @@ export function EssLeavePage() {
   const uncapped = selectedBalance?.code === 'LOP';
   const balanceAfter =
     !selectedBalance || uncapped ? null : Math.max(0, selectedBalance.available - previewDays);
-  const today = new Date().toISOString().slice(0, 10);
-  const nextHoliday = [...holidays]
-    .filter((holiday) => holiday.date >= today)
-    .sort((a, b) => a.date.localeCompare(b.date))[0];
+  const today = localToday();
+  const upcomingHolidays = holidays
+    .filter((holiday) => holiday.date.slice(0, 10) >= today)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const nextHoliday = upcomingHolidays[0];
   const totalAvailable = balances
     .filter((item) => item.code !== 'LOP')
     .reduce((sum, item) => sum + item.available, 0);
 
   const months = useMemo(() => {
     const groups = new Map<string, { date: string; name: string }[]>();
-    for (const holiday of [...holidays].sort((a, b) => a.date.localeCompare(b.date))) {
-      const label = new Date(`${holiday.date}T12:00:00`).toLocaleDateString('en-IN', {
+    for (const holiday of upcomingHolidays) {
+      const label = new Date(`${holiday.date.slice(0, 10)}T12:00:00`).toLocaleDateString('en-IN', {
         month: 'long',
         year: 'numeric',
       });
@@ -126,7 +158,7 @@ export function EssLeavePage() {
       groups.set(label, list);
     }
     return [...groups.entries()];
-  }, [holidays]);
+  }, [upcomingHolidays]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -137,17 +169,24 @@ export function EssLeavePage() {
         code: typeCode,
         fromDate: startDate,
         toDate: endDate || startDate,
-        halfDayStart,
-        halfDayEnd,
+        halfDayStart: fromIsHalf,
+        halfDayEnd: toIsHalf,
+        fromHalfStart,
+        fromHalfEnd,
+        toHalfStart: sameDay ? false : toHalfStart,
+        toHalfEnd: sameDay ? false : toHalfEnd,
         reason,
       });
       setStartDate('');
       setEndDate('');
       setReason('');
-      setHalfDayStart(false);
-      setHalfDayEnd(false);
-      setSection('requests');
+      setFromHalfStart(false);
+      setFromHalfEnd(false);
+      setToHalfStart(false);
+      setToHalfEnd(false);
+      openSection('requests');
       load();
+      showToast('Leave request submitted.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not submit leave.');
     } finally {
@@ -161,7 +200,8 @@ export function EssLeavePage() {
       const data = await withdrawLeaveRequest(id);
       setBalances(data.balances);
       setRequests(data.requests);
-      setHolidays(data.holidays);
+      setHolidays(ensureChristmas(data.holidays));
+      showToast('Leave request withdrawn.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not withdraw leave.');
     } finally {
@@ -218,7 +258,7 @@ export function EssLeavePage() {
           <p>No upcoming holidays on the company calendar.</p>
         )}
         {pending.length > 0 ? (
-          <button type="button" className="ess-btn ess-btn-ghost" onClick={() => setSection('requests')}>
+          <button type="button" className="ess-btn ess-btn-ghost" onClick={() => openSection('requests')}>
             Review pending
           </button>
         ) : null}
@@ -237,7 +277,7 @@ export function EssLeavePage() {
               role="tab"
               aria-selected={active}
               className={`ess-leave-tab${active ? ' is-active' : ''}`}
-              onClick={() => setSection(id)}
+              onClick={() => openSection(id)}
             >
               <span className="ess-leave-tab-icon" aria-hidden>
                 <Icon size={16} strokeWidth={2.1} />
@@ -297,6 +337,7 @@ export function EssLeavePage() {
                 <input
                   id="leave-start"
                   type="date"
+                  min={typeCode === 'SL' ? undefined : today}
                   value={startDate}
                   onChange={(event) => {
                     const value = event.target.value;
@@ -319,34 +360,78 @@ export function EssLeavePage() {
               </div>
             </div>
 
-            <div className="ess-leave-halfdays">
-              <button
-                type="button"
-                className={`ess-leave-toggle${halfDayStart ? ' is-on' : ''}`}
-                aria-pressed={halfDayStart}
-                onClick={() => setHalfDayStart((value) => !value)}
-              >
-                Half day start
-              </button>
-              <button
-                type="button"
-                className={`ess-leave-toggle${halfDayEnd ? ' is-on' : ''}`}
-                aria-pressed={halfDayEnd}
-                onClick={() => setHalfDayEnd((value) => !value)}
-              >
-                Half day end
-              </button>
+            <div className="ess-leave-dates">
+              <div>
+                <span className="ess-leave-half-label">From half day</span>
+                <div className="ess-leave-halfdays">
+                  <button
+                    type="button"
+                    className={`ess-leave-toggle${fromHalfStart ? ' is-on' : ''}`}
+                    aria-pressed={fromHalfStart}
+                    onClick={() => {
+                      setFromHalfStart((value) => !value);
+                      setFromHalfEnd(false);
+                    }}
+                  >
+                    Half Day Start
+                  </button>
+                  <button
+                    type="button"
+                    className={`ess-leave-toggle${fromHalfEnd ? ' is-on' : ''}`}
+                    aria-pressed={fromHalfEnd}
+                    onClick={() => {
+                      setFromHalfEnd((value) => !value);
+                      setFromHalfStart(false);
+                    }}
+                  >
+                    Half Day End
+                  </button>
+                </div>
+              </div>
+              <div>
+                <span className="ess-leave-half-label">To half day</span>
+                <div className="ess-leave-halfdays">
+                  <button
+                    type="button"
+                    className={`ess-leave-toggle${toHalfStart ? ' is-on' : ''}`}
+                    aria-pressed={toHalfStart}
+                    disabled={sameDay}
+                    onClick={() => {
+                      setToHalfStart((value) => !value);
+                      setToHalfEnd(false);
+                    }}
+                  >
+                    Half Day Start
+                  </button>
+                  <button
+                    type="button"
+                    className={`ess-leave-toggle${toHalfEnd ? ' is-on' : ''}`}
+                    aria-pressed={toHalfEnd}
+                    disabled={sameDay}
+                    onClick={() => {
+                      setToHalfEnd((value) => !value);
+                      setToHalfStart(false);
+                    }}
+                  >
+                    Half Day End
+                  </button>
+                </div>
+              </div>
             </div>
+            <p className="ess-muted">
+              {sameDay
+                ? 'On one day, choose Half Day Start or Half Day End on From.'
+                : 'From and To each have their own Half Day Start and Half Day End. Pick one half per date.'}
+            </p>
 
             <div className="ess-field">
-              <label htmlFor="leave-reason">Reason</label>
+              <label htmlFor="leave-reason">Reason (optional)</label>
               <textarea
                 id="leave-reason"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
                 placeholder="Briefly explain why you need this leave"
                 rows={3}
-                required
               />
             </div>
 
@@ -361,8 +446,10 @@ export function EssLeavePage() {
                   setStartDate('');
                   setEndDate('');
                   setReason('');
-                  setHalfDayStart(false);
-                  setHalfDayEnd(false);
+                  setFromHalfStart(false);
+                  setFromHalfEnd(false);
+                  setToHalfStart(false);
+                  setToHalfEnd(false);
                 }}
               >
                 Clear
@@ -397,15 +484,25 @@ export function EssLeavePage() {
                   : `${formatDays(balanceAfter)} left`}
               </strong>
             </div>
-            {(halfDayStart || halfDayEnd) && (
+            {leaveHalfLabel({
+              startDate: startDate || endDate || 'x',
+              endDate: endDate || startDate || 'x',
+              fromHalfStart,
+              fromHalfEnd,
+              toHalfStart: sameDay ? false : toHalfStart,
+              toHalfEnd: sameDay ? false : toHalfEnd,
+            }) ? (
               <p className="ess-leave-summary-note ess-muted">
-                {halfDayStart && halfDayEnd
-                  ? 'Half day on start and end dates.'
-                  : halfDayStart
-                    ? 'Half day on the first day.'
-                    : 'Half day on the last day.'}
+                {leaveHalfLabel({
+                  startDate: startDate || endDate || 'x',
+                  endDate: endDate || startDate || 'x',
+                  fromHalfStart,
+                  fromHalfEnd,
+                  toHalfStart: sameDay ? false : toHalfStart,
+                  toHalfEnd: sameDay ? false : toHalfEnd,
+                })}
               </p>
-            )}
+            ) : null}
             <p className="ess-leave-summary-note ess-muted">
               Weekends and holidays are excluded from the day count.
             </p>
@@ -423,50 +520,36 @@ export function EssLeavePage() {
             <div className="ess-leave-empty">
               <Clock3 size={20} aria-hidden />
               <p>No leave requests yet. Apply when you need time off.</p>
-              <button type="button" className="ess-btn ess-btn-primary" onClick={() => setSection('apply')}>
+              <button type="button" className="ess-btn ess-btn-primary" onClick={() => openSection('apply')}>
                 Apply leave
               </button>
             </div>
           ) : (
-            <ul className="ess-leave-request-list">
-              {requests.map((request) => (
-                <li key={request.id} className={`ess-leave-request is-${request.status.toLowerCase()}`}>
-                  <div className="ess-leave-request-head">
-                    <div>
-                      <strong>{request.type}</strong>
-                      <span className="ess-leave-request-code">{request.code || request.typeCode}</span>
-                    </div>
-                    <StatusChip status={request.status} />
-                  </div>
-                  <p className="ess-leave-request-range">{rangeLabel(request.startDate, request.endDate)}</p>
-                  <p className="ess-muted">
-                    {formatDays(request.days)} day(s)
-                    {request.halfDayStart || request.halfDayEnd ? ' · half day' : ''}
-                    {' · '}
-                    {request.reason}
-                  </p>
-                  {request.decisionNote ? (
-                    <p className="ess-leave-decision">
-                      <CheckCircle2 size={14} aria-hidden />
-                      {request.decisionNote}
-                    </p>
-                  ) : null}
-                  {request.status === 'Pending' ? (
-                    <div className="ess-leave-request-actions">
-                      <button
-                        type="button"
-                        className="ess-btn"
-                        disabled={withdrawingId === request.id}
-                        onClick={() => void onWithdraw(request.id)}
-                      >
-                        <Undo2 size={14} aria-hidden />
-                        {withdrawingId === request.id ? 'Withdrawing…' : 'Withdraw'}
-                      </button>
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            <>
+              <div className="ess-tabs" role="tablist" aria-label="Request status">
+                {(['Pending', 'Approved', 'Withdrawn', 'Rejected'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    role="tab"
+                    aria-selected={requestTab === tab}
+                    className={requestTab === tab ? 'ess-tab is-active' : 'ess-tab'}
+                    onClick={() => setRequestTab(tab)}
+                  >
+                    {tab === 'Withdrawn' ? 'Withdraw' : tab}
+                  </button>
+                ))}
+              </div>
+              {requests.filter((request) => request.status === requestTab).length === 0 ? (
+                <p className="ess-empty">No {requestTab.toLowerCase()} leave.</p>
+              ) : (
+                <RequestList
+                  requests={requests.filter((request) => request.status === requestTab)}
+                  withdrawingId={withdrawingId}
+                  onWithdraw={onWithdraw}
+                />
+              )}
+            </>
           )}
         </section>
       ) : null}
@@ -516,10 +599,10 @@ export function EssLeavePage() {
         <section className="ess-panel ess-leave-calendar">
           <div className="ess-panel-head">
             <h2>Holiday calendar</h2>
-            <span className="ess-muted">{holidays.length} days</span>
+            <span className="ess-muted">{upcomingHolidays.length} upcoming</span>
           </div>
           {months.length === 0 ? (
-            <p className="ess-empty">No holidays are configured yet.</p>
+            <p className="ess-empty">No upcoming holidays.</p>
           ) : (
             <div className="ess-leave-months">
               {months.map(([label, list]) => (
@@ -545,5 +628,56 @@ export function EssLeavePage() {
         </section>
       ) : null}
     </div>
+  );
+}
+
+function RequestList({
+  requests,
+  withdrawingId,
+  onWithdraw,
+}: {
+  requests: LeaveRequestDto[];
+  withdrawingId: string | null;
+  onWithdraw: (id: string) => void;
+}) {
+  return (
+    <ul className="ess-leave-request-list">
+      {requests.map((request) => (
+        <li key={request.id} className={`ess-leave-request is-${request.status.toLowerCase()}`}>
+          <div className="ess-leave-request-head">
+            <div>
+              <strong>{request.type}</strong>
+              <span className="ess-leave-request-code">{request.code || request.typeCode}</span>
+            </div>
+            <StatusChip status={request.status} />
+          </div>
+          <p className="ess-leave-request-range">{rangeLabel(request.startDate, request.endDate)}</p>
+          <p className="ess-muted">
+            {formatDays(request.days)} day(s)
+            {leaveHalfLabel(request) ? ` · ${leaveHalfLabel(request)}` : ''}
+            {request.reason ? ` · ${request.reason}` : ''}
+          </p>
+          {request.decisionNote ? (
+            <p className="ess-leave-decision">
+              <CheckCircle2 size={14} aria-hidden />
+              {request.decisionNote}
+            </p>
+          ) : null}
+          {request.status === 'Pending' ? (
+            <div className="ess-leave-request-actions">
+              <button
+                type="button"
+                className="ess-btn"
+                disabled={withdrawingId === request.id}
+                onClick={() => onWithdraw(request.id)}
+              >
+                <Undo2 size={14} aria-hidden />
+                {withdrawingId === request.id ? 'Withdrawing…' : 'Withdraw'}
+              </button>
+            </div>
+          ) : null}
+        </li>
+      ))}
+    </ul>
   );
 }

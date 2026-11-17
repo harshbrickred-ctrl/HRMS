@@ -13,11 +13,14 @@ import {
   ytdTotals,
 } from '../mock/salaryMock';
 import { StatusChip } from '../components/StatusChip';
+import { showToast } from '../../ui/toast';
 import {
   downloadMyPayslip,
   fetchMyPayslips,
   type PayslipDto,
 } from '../../workspace/payslipApi';
+import { downloadSalarySlip, fetchMySalary, formatSalary, type MySalary } from '../../workspace/salaryApi';
+import { SalarySheet } from '../../workspace/SalarySheet';
 
 type Section =
   | 'payslips'
@@ -29,8 +32,17 @@ type Section =
   | 'proofs'
   | 'revision';
 
+function slipMonth(month: string) {
+  const [year, m] = month.split('-').map(Number);
+  const name = new Date(Date.UTC(year, (m || 1) - 1, 1)).toLocaleString('en-US', {
+    month: 'long',
+    timeZone: 'UTC',
+  });
+  return `${name} ${year}`;
+}
+
 const SECTIONS: Array<{ id: Section; label: string }> = [
-  { id: 'payslips', label: 'Payslips' },
+  { id: 'payslips', label: 'Payroll' },
   { id: 'ytd', label: 'YTD Reports' },
   { id: 'statement', label: 'IT Statement' },
   { id: 'declaration', label: 'IT Declaration' },
@@ -43,6 +55,7 @@ const SECTIONS: Array<{ id: Section; label: string }> = [
 export function EssSalaryPage() {
   const [section, setSection] = useState<Section>('payslips');
   const [payslips, setPayslips] = useState<PayslipDto[]>([]);
+  const [payroll, setPayroll] = useState<MySalary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const totals = ytdTotals(SALARY_YTD.months);
@@ -54,6 +67,9 @@ export function EssSalaryPage() {
         setError(null);
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load payslips.'));
+    fetchMySalary()
+      .then(setPayroll)
+      .catch(() => setPayroll(null));
   }, []);
 
   return (
@@ -65,7 +81,7 @@ export function EssSalaryPage() {
           </p>
           <h1>Salary</h1>
           <p className="ess-lead">
-            Payslip PDFs are the files HR uploaded. The other sections are sample figures for FY {SALARY_FY} and are not calculated here.
+            Payroll, year-to-date and the Form 130 preview use the salary Finance generated. PDF files are separate. Sections without a generated payslip still show sample figures for FY {SALARY_FY}.
           </p>
         </div>
       </header>
@@ -87,8 +103,37 @@ export function EssSalaryPage() {
 
       {section === 'payslips' ? (
         <section className="ess-panel">
-          <h2>Payslips</h2>
-          <p className="ess-muted">Download the PDF for a month. PeopleOS does not calculate pay.</p>
+          <h2>Payroll</h2>
+          <p className="ess-muted">Your payslip is ready to download after salary is marked paid.</p>
+          {payroll?.lines.length ? (
+            <ul className="ess-list">
+              {payroll.lines.map((line) => (
+                <li key={line.id} className="ess-list-item">
+                  <strong>Payslip {slipMonth(line.month)}</strong>
+                  <button
+                    type="button"
+                    className="ess-btn ess-btn-primary"
+                    onClick={() => {
+                      void downloadSalarySlip(line.month)
+                        .then(() => {
+                          setMessage('Payslip download started.');
+                          showToast('Payslip download started.');
+                        })
+                        .catch((err: unknown) =>
+                          setError(err instanceof Error ? err.message : 'Could not download the payslip.'),
+                        );
+                    }}
+                  >
+                    <Download size={16} /> Download payslip
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="ess-empty">Your payslip appears here after salary is marked paid.</p>
+          )}
+          {payroll?.statement ? <SalarySheet statement={payroll.statement} /> : null}
+          <h2>Payslip PDFs</h2>
           {error ? <p className="ess-alert">{error}</p> : null}
           {message ? <p className="ess-muted">{message}</p> : null}
           {payslips.length === 0 ? (
@@ -107,7 +152,10 @@ export function EssSalaryPage() {
                     className="ess-btn ess-btn-primary"
                     onClick={() => {
                       void downloadMyPayslip(slip.id, slip.fileName)
-                        .then(() => setMessage('Download started.'))
+                        .then(() => {
+                          setMessage('Download started.');
+                          showToast('Download started.');
+                        })
                         .catch((err: unknown) =>
                           setError(err instanceof Error ? err.message : 'Download failed.'),
                         );
@@ -122,10 +170,43 @@ export function EssSalaryPage() {
         </section>
       ) : null}
 
-      {section === 'ytd' ? (
+      {section === 'ytd' && payroll?.statement ? (
+        <section className="ess-panel">
+          <h2>Year to date</h2>
+          <p className="ess-muted">Built from generated payroll lines. A correction is a new line, not an overwritten total.</p>
+          <div className="ess-table-wrap">
+            <table className="ess-table">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Earnings</th>
+                  <th>Deductions</th>
+                  <th>Net</th>
+                  <th>PF</th>
+                  <th>TDS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payroll.statement.ytdMonths.map((month) => (
+                  <tr key={month.month}>
+                    <th>{month.month}</th>
+                    <td>{formatSalary(month.gross)}</td>
+                    <td>{formatSalary(month.deductions)}</td>
+                    <td>{formatSalary(month.net)}</td>
+                    <td>{formatSalary(month.pf)}</td>
+                    <td>{formatSalary(month.tds)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
+      {section === 'ytd' && !payroll?.statement ? (
         <section className="ess-panel">
           <h2>Year to date · FY {SALARY_FY}</h2>
-          <p className="ess-muted">Sample totals for April to September.</p>
+          <p className="ess-muted">Sample totals until Finance generates payroll.</p>
           <dl className="ess-salary-metrics">
             <div>
               <dt>Earnings</dt>
@@ -177,7 +258,15 @@ export function EssSalaryPage() {
         </section>
       ) : null}
 
-      {section === 'statement' ? (
+      {section === 'statement' && payroll?.statement ? (
+        <AmountList
+          title="Form 130 preview"
+          note="From salary paid this year. The official certificate is issued after March."
+          rows={payroll.statement.form130.map((row) => ({ label: `${row.id} ${row.label}`, amount: row.amount }))}
+        />
+      ) : null}
+
+      {section === 'statement' && !payroll?.statement ? (
         <AmountList title="IT statement" note="Sample annual tax summary. Not a Form 16." rows={IT_STATEMENT} />
       ) : null}
 

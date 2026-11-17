@@ -1,3 +1,13 @@
+import {
+  ADMIN_ROLES,
+  FINANCE_ROLES,
+  HR_ROLES,
+  IT_ROLES,
+  LEADERSHIP_ROLES,
+  MANAGER_ROLES,
+  userHasAnyRole,
+} from '../workspace/roleCatalog';
+
 export type NavIconId =
   | 'home'
   | 'leave'
@@ -6,6 +16,7 @@ export type NavIconId =
   | 'myTeam'
   | 'documents'
   | 'profile'
+  | 'permissions'
   | 'salary'
   | 'notifications'
   | 'helpdesk'
@@ -54,7 +65,8 @@ export type NavSectionId =
   | 'hr-programs'
   | 'admin-access'
   | 'admin-platform'
-  | 'leadership';
+  | 'leadership'
+  | 'finance';
 
 export type NavEmphasis = 'subtle' | 'clear';
 
@@ -111,6 +123,7 @@ const NAV_SECTIONS: NavSection[] = [
     roles: [],
     items: [
       { to: '/ess/profile', label: 'Profile', icon: 'profile' },
+      { to: '/ess/permissions', label: 'My permissions', icon: 'permissions' },
       { to: '/ess/notifications', label: 'Notifications', icon: 'notifications' },
       { to: '/ess/settings', label: 'Settings', icon: 'settings' },
     ],
@@ -126,7 +139,7 @@ const NAV_SECTIONS: NavSection[] = [
     id: 'team-approvals',
     label: 'Approvals',
     emphasis: 'clear',
-    roles: ['MANAGER'],
+    roles: [...MANAGER_ROLES],
     items: [
       { to: '/manager', label: 'Overview', icon: 'overview', end: true },
       { to: '/manager/inbox', label: 'Inbox', icon: 'inbox' },
@@ -136,7 +149,7 @@ const NAV_SECTIONS: NavSection[] = [
     id: 'team-time',
     label: 'Time',
     emphasis: 'clear',
-    roles: ['MANAGER'],
+    roles: [...MANAGER_ROLES],
     items: [
       { to: '/manager/team-leave', label: 'Team Leave', icon: 'teamLeave' },
       {
@@ -150,7 +163,7 @@ const NAV_SECTIONS: NavSection[] = [
     id: 'team-directory',
     label: 'Directory',
     emphasis: 'clear',
-    roles: ['MANAGER'],
+    roles: [...MANAGER_ROLES],
     items: [
       {
         to: '/manager/directory',
@@ -163,18 +176,20 @@ const NAV_SECTIONS: NavSection[] = [
     id: 'hr-people',
     label: 'People',
     emphasis: 'clear',
-    roles: ['HR_EXEC', 'HR_HEAD'],
+    roles: [...HR_ROLES],
     items: [
       { to: '/hr', label: 'Overview', icon: 'overview', end: true },
       { to: '/hr/employees', label: 'Employees', icon: 'employees' },
+      { to: '/hr/salary', label: 'Salary', icon: 'salary' },
       { to: '/hr/organization', label: 'Organization', icon: 'organization' },
+      { to: '/hr/directory', label: 'Team Directory', icon: 'teamDirectory' },
     ],
   },
   {
     id: 'hr-time',
     label: 'Time',
     emphasis: 'clear',
-    roles: ['HR_EXEC', 'HR_HEAD'],
+    roles: [...HR_ROLES],
     items: [
       { to: '/hr/leave', label: 'Leave Admin', icon: 'leaveAdmin' },
       {
@@ -188,19 +203,31 @@ const NAV_SECTIONS: NavSection[] = [
     id: 'hr-programs',
     label: 'Programs',
     emphasis: 'clear',
-    roles: ['HR_EXEC', 'HR_HEAD'],
+    roles: [...HR_ROLES],
     items: [
       { to: '/hr/documents', label: 'Document Center', icon: 'hrDocuments' },
       { to: '/hr/workflows', label: 'Workflows', icon: 'workflows' },
     ],
   },
   {
+    id: 'finance',
+    label: 'Finance',
+    emphasis: 'clear',
+    roles: [...FINANCE_ROLES],
+    items: [
+      { to: '/finance/payout', label: 'Payout', icon: 'salary' },
+      { to: '/hr/documents', label: 'Payslips & documents', icon: 'hrDocuments' },
+      { to: '/exec/reports', label: 'Cost reports', icon: 'reports' },
+    ],
+  },
+  {
     id: 'admin-access',
     label: 'Access',
     emphasis: 'clear',
-    roles: ['SECURITY_ADMIN', 'IT_ADMIN'],
+    roles: [...ADMIN_ROLES],
     items: [
       { to: '/admin', label: 'Overview', icon: 'overview', end: true },
+      { to: '/admin/employees', label: 'Employees', icon: 'employees' },
       { to: '/admin/leave', label: 'Leave approvals', icon: 'leaveAdmin' },
       { to: '/admin/roles', label: 'Users & Roles', icon: 'roles' },
       { to: '/admin/audit', label: 'Audit log', icon: 'audit' },
@@ -210,7 +237,7 @@ const NAV_SECTIONS: NavSection[] = [
     id: 'admin-platform',
     label: 'Platform',
     emphasis: 'clear',
-    roles: ['SECURITY_ADMIN', 'IT_ADMIN'],
+    roles: [...ADMIN_ROLES],
     items: [
       {
         to: '/admin/notifications',
@@ -241,7 +268,7 @@ const NAV_SECTIONS: NavSection[] = [
     id: 'leadership',
     label: 'Leadership',
     emphasis: 'clear',
-    roles: ['LEADERSHIP_READ'],
+    roles: [...LEADERSHIP_ROLES],
     items: [
       { to: '/exec', label: 'Overview', icon: 'leadership', end: true },
       {
@@ -266,8 +293,9 @@ function canAccessSection(
   userRoles: string[] | undefined,
 ): boolean {
   if (section.roles.length === 0) return true;
-  if (!userRoles?.length) return false;
-  return section.roles.some((r) => userRoles.includes(r));
+  // System admin sees the full sidebar.
+  if (userHasAnyRole(userRoles, ADMIN_ROLES)) return true;
+  return userHasAnyRole(userRoles, section.roles);
 }
 
 export function navSectionsForUser(

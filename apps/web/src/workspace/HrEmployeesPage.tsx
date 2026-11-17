@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useAuth } from '../auth/AuthContext';
 import { EmployeePhoto } from '../ess/components/EmployeePhoto';
+import {
+  assignableRoles,
+  canAssignRole,
+  rolesSeniorToActor,
+} from './roleCatalog';
 import {
   createHrEmployee,
   fetchHrEmployees,
@@ -10,6 +16,7 @@ import {
   type HrOrg,
   type HrRole,
 } from './hrApi';
+import { showToast } from '../ui/toast';
 import './hr-master.css';
 
 type Draft = {
@@ -24,15 +31,27 @@ type Draft = {
   teamId: string;
   managerId: string;
   status: 'ACTIVE' | 'DISABLED';
+  bankName: string;
+  ifscCode: string;
+  bankAccountNumber: string;
+  basic: string;
+  hra: string;
+  specialAllowance: string;
+  statutoryBonus: string;
+  dailyAllowance: string;
+  gratuity: string;
+  leaveEncashment: string;
 };
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'DISABLED';
 
-const STEPS = ['Person', 'Placement', 'Access', 'Review'] as const;
+const STEPS = ['Person', 'Placement', 'Bank', 'Salary', 'Access', 'Review'] as const;
 
 const STEP_COPY = [
   'Name, work email, and the password you will share with them.',
   'Where they sit in the organization. You can leave a field unassigned.',
+  'Bank name, IFSC and the account where salary is credited.',
+  'Monthly salary structure. Basic is required. The other amounts can be zero.',
   'Roles decide which sections this account can open.',
   'Check the record, then create the account.',
 ];
@@ -43,16 +62,31 @@ const emptyDraft = (): Draft => ({
   email: '',
   password: '',
   designation: '',
-  roleCodes: ['EMPLOYEE'],
+  roleCodes: ['EMP'],
   departmentId: '',
   locationId: '',
   teamId: '',
   managerId: '',
   status: 'ACTIVE',
+  bankName: '',
+  ifscCode: '',
+  bankAccountNumber: '',
+  basic: '',
+  hra: '',
+  specialAllowance: '',
+  statutoryBonus: '',
+  dailyAllowance: '',
+  gratuity: '',
+  leaveEncashment: '',
 });
 
 function messageOf(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong';
+}
+
+function rupees(raw: string) {
+  const value = amount(raw) ?? 0;
+  return `₹${value.toLocaleString('en-IN')}`;
 }
 
 function fullName(person: { firstName: string; lastName: string }) {
@@ -76,6 +110,66 @@ function draftFrom(person: HrEmployee): Draft {
     teamId: person.teamId ?? '',
     managerId: person.managerId ?? '',
     status: person.status,
+    bankName: person.bankName ?? '',
+    ifscCode: person.ifscCode ?? '',
+    bankAccountNumber: person.bankAccountNumber ?? '',
+    basic: person.salary ? String(person.salary.basic) : '',
+    hra: person.salary ? String(person.salary.hra) : '',
+    specialAllowance: person.salary ? String(person.salary.special) : '',
+    statutoryBonus: person.salary ? String(person.salary.statutoryBonus) : '',
+    dailyAllowance: person.salary ? String(person.salary.dailyAllowance) : '',
+    gratuity: person.salary ? String(person.salary.gratuity) : '',
+    leaveEncashment: person.salary ? String(person.salary.leaveEncashment) : '',
+  };
+}
+
+function amount(raw: string) {
+  const trimmed = raw.trim();
+  if (!trimmed) return 0;
+  if (!/^\d+$/.test(trimmed)) return null;
+  return Number(trimmed);
+}
+
+function bankError(form: Draft, required: boolean) {
+  const name = form.bankName.trim();
+  const ifsc = form.ifscCode.trim().toUpperCase();
+  const account = form.bankAccountNumber.replace(/\s/g, '');
+  if (!required && !name && !ifsc && !account) return null;
+  if (!name) return 'Enter the bank name.';
+  if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) return 'Enter a valid 11-character IFSC code.';
+  if (!/^\d{9,18}$/.test(account)) return 'Enter the bank account number, 9 to 18 digits.';
+  return null;
+}
+
+function salaryError(form: Draft, required: boolean) {
+  const fields: Array<[string, string]> = [
+    ['Basic salary', form.basic],
+    ['HRA', form.hra],
+    ['Special allowance', form.specialAllowance],
+    ['Statutory bonus', form.statutoryBonus],
+    ['Daily allowance', form.dailyAllowance],
+    ['Gratuity', form.gratuity],
+    ['Leave encashment', form.leaveEncashment],
+  ];
+  for (const [label, raw] of fields) {
+    if (raw.trim() && amount(raw) == null) return `${label} must be a whole number of rupees.`;
+  }
+  if (required && (amount(form.basic) ?? 0) <= 0) return 'Enter basic salary.';
+  return null;
+}
+
+function payPayload(form: Draft) {
+  return {
+    bankName: form.bankName.trim(),
+    ifscCode: form.ifscCode.trim().toUpperCase(),
+    bankAccountNumber: form.bankAccountNumber.replace(/\s/g, ''),
+    basic: amount(form.basic) ?? 0,
+    hra: amount(form.hra) ?? 0,
+    specialAllowance: amount(form.specialAllowance) ?? 0,
+    statutoryBonus: amount(form.statutoryBonus) ?? 0,
+    dailyAllowance: amount(form.dailyAllowance) ?? 0,
+    gratuity: amount(form.gratuity) ?? 0,
+    leaveEncashment: amount(form.leaveEncashment) ?? 0,
   };
 }
 
@@ -95,6 +189,7 @@ function accessError(form: Draft) {
 }
 
 export function HrEmployeesPage() {
+  const { user } = useAuth();
   const [org, setOrg] = useState<HrOrg | null>(null);
   const [roles, setRoles] = useState<HrRole[]>([]);
   const [employees, setEmployees] = useState<HrEmployee[]>([]);
@@ -113,11 +208,26 @@ export function HrEmployeesPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const selected = employees.find((person) => person.id === selectedId) ?? null;
-  const teams = useMemo(
-    () => org?.teams.filter((team) => team.departmentId === form.departmentId) ?? [],
-    [org, form.departmentId],
+  const actorRoles = user?.roles ?? [];
+  const visibleRoles = useMemo(
+    () => assignableRoles(actorRoles, roles),
+    [actorRoles, roles],
   );
-  const managers = employees.filter((person) => person.id !== selectedId);
+  const roleChangesLocked = rolesSeniorToActor(actorRoles, form.roleCodes).length > 0;
+  const teams = useMemo(() => {
+    const all = [...(org?.teams ?? [])].sort((left, right) =>
+      `${left.departmentName} ${left.name}`.localeCompare(`${right.departmentName} ${right.name}`),
+    );
+    if (!form.departmentId) return all;
+    const matched = all.filter((team) => team.departmentId === form.departmentId);
+    const others = all.filter((team) => team.departmentId !== form.departmentId);
+    return [...matched, ...others];
+  }, [org, form.departmentId]);
+  const managers = employees.filter(
+    (person) =>
+      person.id !== selectedId &&
+      (person.roles ?? []).some((role) => role === 'MGR' || role === 'MANAGER'),
+  );
 
   async function reload() {
     const [nextOrg, nextRoles, nextEmployees] = await Promise.all([
@@ -175,6 +285,7 @@ export function HrEmployeesPage() {
   }
 
   function toggleRole(code: string) {
+    if (!canAssignRole(actorRoles, code)) return;
     setForm((current) => ({
       ...current,
       roleCodes: current.roleCodes.includes(code)
@@ -184,7 +295,16 @@ export function HrEmployeesPage() {
   }
 
   function advance() {
-    const problem = step === 0 ? personError(form, false) : step === 2 ? accessError(form) : null;
+    const problem =
+      step === 0
+        ? personError(form, false)
+        : step === 2
+          ? bankError(form, true)
+          : step === 3
+            ? salaryError(form, true)
+            : step === 4
+              ? accessError(form)
+              : null;
     if (problem) {
       setError(problem);
       return;
@@ -203,7 +323,7 @@ export function HrEmployeesPage() {
   }
 
   async function createAccount() {
-    const problem = personError(form, false) ?? accessError(form);
+    const problem = personError(form, false) ?? bankError(form, true) ?? salaryError(form, true) ?? accessError(form);
     if (problem) {
       setError(problem);
       return;
@@ -223,11 +343,13 @@ export function HrEmployeesPage() {
         teamId: form.teamId || undefined,
         managerId: form.managerId || undefined,
         status: form.status,
+        ...payPayload(form),
       });
       const rows = await reload();
       const fresh = rows.find((person) => person.id === created.id) ?? created;
       startRecord(fresh);
       setMessage(`Account created for ${fresh.email}. Employee code ${fresh.employeeCode}.`);
+      showToast(`Account created for ${fresh.email}. Employee code ${fresh.employeeCode}.`);
     } catch (err) {
       setError(messageOf(err));
     } finally {
@@ -238,7 +360,7 @@ export function HrEmployeesPage() {
   async function saveRecord(event: FormEvent) {
     event.preventDefault();
     if (!selected) return;
-    const problem = personError(form, true) ?? accessError(form);
+    const problem = personError(form, true) ?? bankError(form, false) ?? salaryError(form, false) ?? accessError(form);
     if (problem) {
       setError(problem);
       setMessage(null);
@@ -252,15 +374,17 @@ export function HrEmployeesPage() {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         designation: form.designation.trim(),
-        roleCodes: form.roleCodes,
+        ...(roleChangesLocked ? {} : { roleCodes: form.roleCodes }),
         ...placement(),
         status: form.status,
         password: form.password.trim() || undefined,
+        ...payPayload(form),
       });
       const rows = await reload();
       const fresh = rows.find((person) => person.id === updated.id) ?? updated;
       startRecord(fresh);
       setMessage('Employee saved.');
+      showToast('Employee saved.');
     } catch (err) {
       setError(messageOf(err));
     } finally {
@@ -310,7 +434,8 @@ export function HrEmployeesPage() {
     org,
     teams,
     managers,
-    roles,
+    roles: visibleRoles,
+    roleChangesLocked,
     emailLocked: mode === 'record',
     passwordRequired: mode === 'add',
     onToggleRole: toggleRole,
@@ -370,8 +495,10 @@ export function HrEmployeesPage() {
             ) : null}
             {step === 0 ? fields.person : null}
             {step === 1 ? fields.placement : null}
-            {step === 2 ? fields.access : null}
-            {step === 3 ? (
+            {step === 2 ? fields.bank : null}
+            {step === 3 ? fields.salary : null}
+            {step === 4 ? fields.access : null}
+            {step === 5 ? (
               <Review
                 form={form}
                 department={labelOf(form.departmentId, org?.departments)}
@@ -458,6 +585,14 @@ export function HrEmployeesPage() {
             <section className="hr-panel hr-section">
               <h3>Placement</h3>
               {fields.placement}
+            </section>
+            <section className="hr-panel hr-section">
+              <h3>Bank</h3>
+              {fields.bank}
+            </section>
+            <section className="hr-panel hr-section">
+              <h3>Salary structure</h3>
+              {fields.salary}
             </section>
             <section className="hr-panel hr-section">
               <h3>Access</h3>
@@ -559,6 +694,7 @@ export function HrEmployeesPage() {
                 <th>Employee id</th>
                 <th>Department</th>
                 <th>Location</th>
+                <th>Team</th>
                 <th>Manager</th>
                 <th>Status</th>
               </tr>
@@ -588,6 +724,7 @@ export function HrEmployeesPage() {
                   <td data-label="Employee id">{person.employeeCode}</td>
                   <td data-label="Department">{person.departmentName ?? '—'}</td>
                   <td data-label="Location">{person.locationName ?? '—'}</td>
+                  <td data-label="Team">{person.teamName ?? '—'}</td>
                   <td data-label="Manager">{person.managerName ?? '—'}</td>
                   <td data-label="Status">
                     <span className="hr-status">
@@ -621,6 +758,7 @@ function EmployeeFields({
   teams,
   managers,
   roles,
+  roleChangesLocked,
   emailLocked,
   passwordRequired,
   onToggleRole,
@@ -631,6 +769,7 @@ function EmployeeFields({
   teams: HrOrg['teams'];
   managers: HrEmployee[];
   roles: HrRole[];
+  roleChangesLocked: boolean;
   emailLocked: boolean;
   passwordRequired: boolean;
   onToggleRole: (code: string) => void;
@@ -714,13 +853,24 @@ function EmployeeFields({
           id="emp-team"
           label="Team"
           value={form.teamId}
-          hint={form.departmentId ? undefined : 'Choose a department to see its teams.'}
-          onChange={(value) => setForm((current) => ({ ...current, teamId: value }))}
+          hint={
+            teams.length
+              ? 'Every team is listed with its department. Choosing a team sets that department.'
+              : 'No teams yet. Add a team in Organization, inside a department.'
+          }
+          onChange={(value) => {
+            const team = teams.find((item) => item.id === value);
+            setForm((current) => ({
+              ...current,
+              teamId: value,
+              departmentId: team?.departmentId || current.departmentId,
+            }));
+          }}
         >
           <option value="">Unassigned</option>
           {teams.map((team) => (
             <option key={team.id} value={team.id}>
-              {team.name}
+              {team.name} · {team.departmentName}
             </option>
           ))}
         </SelectField>
@@ -739,9 +889,86 @@ function EmployeeFields({
         </SelectField>
       </div>
     ),
+    bank: (
+      <div className="hr-grid">
+        <TextField
+          id="emp-bank"
+          label="Bank name"
+          value={form.bankName}
+          required
+          onChange={(value) => setForm((current) => ({ ...current, bankName: value }))}
+        />
+        <TextField
+          id="emp-ifsc"
+          label="IFSC code"
+          value={form.ifscCode}
+          required
+          onChange={(value) => setForm((current) => ({ ...current, ifscCode: value.toUpperCase() }))}
+        />
+        <TextField
+          id="emp-account"
+          label="Bank account number"
+          value={form.bankAccountNumber}
+          required
+          wide
+          onChange={(value) => setForm((current) => ({ ...current, bankAccountNumber: value }))}
+        />
+      </div>
+    ),
+    salary: (
+      <div className="hr-grid">
+        <TextField
+          id="emp-basic"
+          label="Basic salary"
+          value={form.basic}
+          required
+          onChange={(value) => setForm((current) => ({ ...current, basic: value }))}
+        />
+        <TextField
+          id="emp-hra"
+          label="HRA"
+          value={form.hra}
+          onChange={(value) => setForm((current) => ({ ...current, hra: value }))}
+        />
+        <TextField
+          id="emp-special"
+          label="Special allowance"
+          value={form.specialAllowance}
+          onChange={(value) => setForm((current) => ({ ...current, specialAllowance: value }))}
+        />
+        <TextField
+          id="emp-bonus"
+          label="Statutory bonus"
+          value={form.statutoryBonus}
+          onChange={(value) => setForm((current) => ({ ...current, statutoryBonus: value }))}
+        />
+        <TextField
+          id="emp-daily"
+          label="Daily allowance"
+          value={form.dailyAllowance}
+          onChange={(value) => setForm((current) => ({ ...current, dailyAllowance: value }))}
+        />
+        <TextField
+          id="emp-gratuity"
+          label="Gratuity"
+          value={form.gratuity}
+          onChange={(value) => setForm((current) => ({ ...current, gratuity: value }))}
+        />
+        <TextField
+          id="emp-leave"
+          label="Leave encashment"
+          value={form.leaveEncashment}
+          onChange={(value) => setForm((current) => ({ ...current, leaveEncashment: value }))}
+        />
+        <p className="hr-hint is-wide">
+          Amounts are monthly rupees. Blank means zero. Monthly gross is basic, HRA, special allowance, statutory bonus, and daily allowance.
+          Gratuity and leave encashment are not added to that gross.
+        </p>
+      </div>
+    ),
     access: (
       <div className="hr-grid">
-        <fieldset className="hr-roles is-wide">
+        <fieldset className="hr-roles is-wide" disabled={roleChangesLocked}>
           <legend>Roles</legend>
           {roles.map((role) => (
             <label key={role.code} className="hr-role">
@@ -749,6 +976,7 @@ function EmployeeFields({
                 type="checkbox"
                 checked={form.roleCodes.includes(role.code)}
                 onChange={() => onToggleRole(role.code)}
+                disabled={roleChangesLocked}
               />
               <span>{role.name}</span>
             </label>
@@ -898,6 +1126,16 @@ function Review({
     ['Manager', manager],
     ['Roles', roles || 'None'],
     ['Account', form.status === 'ACTIVE' ? 'Active' : 'Inactive'],
+    ['Bank', form.bankName.trim() || 'Not set'],
+    ['IFSC', form.ifscCode.trim().toUpperCase() || 'Not set'],
+    ['Account number', form.bankAccountNumber.replace(/\s/g, '') || 'Not set'],
+    ['Basic salary', rupees(form.basic)],
+    ['HRA', rupees(form.hra)],
+    ['Special allowance', rupees(form.specialAllowance)],
+    ['Statutory bonus', rupees(form.statutoryBonus)],
+    ['Daily allowance', rupees(form.dailyAllowance)],
+    ['Gratuity', rupees(form.gratuity)],
+    ['Leave encashment', rupees(form.leaveEncashment)],
     ['Password', 'Will be set on this account'],
   ];
   return (

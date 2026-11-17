@@ -16,7 +16,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { EmployeePhoto } from '../components/EmployeePhoto';
 import { StatusChip } from '../components/StatusChip';
 import { localToday, useEssData } from '../mock/EssDataContext';
-import type { AttendanceDay, Payslip } from '../mock/essMock';
+import { ensureChristmas, type AttendanceDay, type Payslip } from '../mock/essMock';
 
 function lineTotal(lines: { amount: number }[]) {
   return lines.reduce((sum, line) => sum + line.amount, 0);
@@ -87,7 +87,7 @@ type Shortcut = {
 };
 
 export function EssHomePage() {
-  const { hasRole } = useAuth();
+  const { hasRole, can } = useAuth();
   const {
     profile,
     leaveBalances,
@@ -140,10 +140,15 @@ export function EssHomePage() {
   const latestDeductions = latestPayslip ? lineTotal(latestPayslip.deductions) : 0;
   const deductionShare = latestGross === 0 ? 0 : (latestDeductions / latestGross) * 100;
   const paidDays = latestPayslip ? paidDaysFor(latestPayslip.month, attendance) : 0;
-  const upcomingHolidays = holidays
-    .filter((holiday) => holiday.date >= today)
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, 4);
+  const upcomingSorted = ensureChristmas(holidays)
+    .filter((holiday) => holiday.date.slice(0, 10) >= today)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const upcomingSlice = upcomingSorted.slice(0, 4);
+  const christmas = upcomingSorted.find((holiday) => holiday.date.slice(5) === '12-25');
+  const upcomingHolidays =
+    christmas && !upcomingSlice.some((holiday) => holiday.date === christmas.date)
+      ? [...upcomingSlice.slice(0, 3), christmas]
+      : upcomingSlice;
   const monthKey = today.slice(0, 7);
   const presentDays = attendance.filter(
     (day) =>
@@ -152,10 +157,12 @@ export function EssHomePage() {
       (day.status === 'Present' || day.status === 'PendingCorrection'),
   ).length;
 
-  const isManager = hasRole('MANAGER');
-  const isHr = hasRole('HR_EXEC') || hasRole('HR_HEAD');
-  const isAdmin = hasRole('SECURITY_ADMIN') || hasRole('IT_ADMIN');
-  const isLeadership = hasRole('LEADERSHIP_READ');
+  const isManager = hasRole('MGR') || hasRole('MANAGER');
+  const isHr = hasRole('HRA') || hasRole('HRH') || hasRole('HRBP') || hasRole('HR_EXEC') || hasRole('HR_HEAD');
+  const isAdmin = hasRole('SYS') || hasRole('SECURITY_ADMIN');
+  const isIt = hasRole('ITA') || hasRole('IT_ADMIN') || hasRole('ADM');
+  const canAssignRoles = can('rbac.assign');
+  const isLeadership = hasRole('EXEC') || hasRole('LEADERSHIP_READ');
 
   const teamInboxCount = isManager ? 3 : 0;
   const teamOnLeaveToday = isManager ? 2 : 0;
@@ -203,10 +210,23 @@ export function EssHomePage() {
             label: 'Admin overview',
             icon: LayoutDashboard,
           },
+        ]
+      : []),
+    ...(canAssignRoles
+      ? [
           {
             to: '/admin/roles',
             label: 'Users & Roles',
             icon: Shield,
+          },
+        ]
+      : []),
+    ...(isIt
+      ? [
+          {
+            to: '/it/assets',
+            label: 'Asset register',
+            icon: LayoutDashboard,
           },
         ]
       : []),
@@ -302,7 +322,7 @@ export function EssHomePage() {
           >
             Punch out
           </button>
-          <Link to="/ess/leave" className="ess-btn">
+          <Link to="/ess/leave?section=apply" className="ess-btn">
             Apply leave
           </Link>
           {punchError ? <p className="ess-alert">{punchError}</p> : null}
@@ -345,7 +365,7 @@ export function EssHomePage() {
             <ul className="ess-list">
               {pendingLeave.slice(0, 2).map((request) => (
                 <li key={request.id}>
-                  <Link to="/ess/leave" className="ess-list-item">
+                  <Link to="/ess/leave?section=requests" className="ess-list-item">
                     <strong>
                       {request.type} · {request.days} day{request.days === 1 ? '' : 's'}
                     </strong>
@@ -451,7 +471,7 @@ export function EssHomePage() {
         <section className="ess-panel">
           <div className="ess-panel-head">
             <h2>Upcoming holidays</h2>
-            <Link to="/ess/leave" className="ess-dash-arrow" aria-label="Open leave calendar">
+            <Link to="/ess/leave?section=calendar" className="ess-dash-arrow" aria-label="Open leave calendar">
               <ArrowRight size={16} />
             </Link>
           </div>
@@ -463,13 +483,15 @@ export function EssHomePage() {
                 const when = holidayWhen(holiday.date);
                 return (
                   <li key={holiday.date}>
-                    <p className="ess-holiday-when">
-                      <strong>
-                        {when.day} {when.month}
-                      </strong>
-                      <span>{when.weekday}</span>
-                    </p>
-                    <p className="ess-muted">{holiday.name}</p>
+                    <Link to="/ess/leave?section=calendar" className="ess-holiday-link">
+                      <p className="ess-holiday-when">
+                        <strong>
+                          {when.day} {when.month}
+                        </strong>
+                        <span>{when.weekday}</span>
+                      </p>
+                      <p className="ess-muted">{holiday.name}</p>
+                    </Link>
                   </li>
                 );
               })}
@@ -489,7 +511,7 @@ export function EssHomePage() {
               </span>
               <Clock size={18} aria-hidden />
             </Link>
-            <Link to="/ess/leave" className="ess-track-item">
+            <Link to="/ess/leave?section=balances" className="ess-track-item">
               <span>
                 <strong>{leaveAvailable}</strong>
                 <span>Leave left</span>
@@ -502,13 +524,13 @@ export function EssHomePage() {
         <section className="ess-panel">
           <div className="ess-panel-head">
             <h2>Leave balances</h2>
-            <Link to="/ess/leave" className="ess-btn ess-btn-ghost">
+            <Link to="/ess/leave?section=balances" className="ess-btn ess-btn-ghost">
               View
             </Link>
           </div>
           <div className="ess-stat-row">
             {leaveBalances.map((balance) => (
-              <div key={balance.code} className="ess-stat-item">
+              <Link key={balance.code} to="/ess/leave?section=balances" className="ess-stat-item">
                 <span>
                   {balance.type}
                   {balance.pending > 0 ? (
@@ -516,7 +538,7 @@ export function EssHomePage() {
                   ) : null}
                 </span>
                 <strong>{balance.available}</strong>
-              </div>
+              </Link>
             ))}
           </div>
         </section>

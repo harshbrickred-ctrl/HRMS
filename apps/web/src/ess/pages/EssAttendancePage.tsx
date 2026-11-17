@@ -10,6 +10,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
+import { showToast } from '../../ui/toast';
 import {
   fetchMyAttendance,
   punchMe,
@@ -285,8 +286,9 @@ export function EssAttendancePage() {
   async function onPunch(direction: 'IN' | 'OUT') {
     setError(null);
     try {
-      await punchMe(direction);
+      await punchMe(direction, selectedDate);
       setReloadKey((value) => value + 1);
+      showToast(direction === 'IN' ? 'Punched in.' : 'Punched out.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Punch failed.');
     }
@@ -304,6 +306,7 @@ export function EssAttendancePage() {
       setCorrReason('');
       setRegularizing(false);
       setReloadKey((value) => value + 1);
+      showToast('Correction submitted.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Correction failed.');
     }
@@ -549,10 +552,9 @@ export function EssAttendancePage() {
             shiftLabel={shiftLabel}
             onPunchIn={() => void onPunch('IN')}
             onPunchOut={() => void onPunch('OUT')}
-            canPunchIn={webPunchEnabled && selectedDate === today && !selected?.record?.checkIn}
+            canPunchIn={webPunchEnabled && !selected?.record?.checkIn}
             canPunchOut={
               webPunchEnabled &&
-              selectedDate === today &&
               Boolean(selected?.record?.checkIn) &&
               !selected?.record?.checkOut
             }

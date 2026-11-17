@@ -5,13 +5,16 @@
   "private": true,
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web --port 8081",
+    "apk": "powershell -NoProfile -ExecutionPolicy Bypass -File ./build-apk.ps1",
     "lint": "expo lint"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "9.1.0",
     "expo": "~57.0.24",
     "expo-constants": "~57.0.19",
     "expo-font": "~57.0.4",

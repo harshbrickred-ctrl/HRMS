@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { StatusChip } from '../ess/components/StatusChip';
-import { decideLeaveRequest, fetchCompanyLeave, type LeaveRequestDto } from './leaveApi';
+import { showToast } from '../ui/toast';
+import { decideLeaveRequest, fetchCompanyLeave, leaveDecisionToast, type LeaveRequestDto } from './leaveApi';
+import { RejectLeaveButton } from './RejectLeaveButton';
 
 function messageOf(error: unknown) {
   return error instanceof Error ? error.message : 'Could not update that leave.';
@@ -24,12 +26,14 @@ export function LeaveApprovalsPanel() {
     load();
   }, []);
 
-  async function onDecide(id: string, status: 'Approved' | 'Rejected') {
+  async function onDecide(id: string, status: 'Approved' | 'Rejected', note?: string) {
     setBusyId(id);
     setError(null);
     try {
-      await decideLeaveRequest(id, status);
+      const saved = await decideLeaveRequest(id, status, note);
       load();
+      const toast = leaveDecisionToast(saved.status === 'Rejected' || status === 'Rejected' ? 'Rejected' : saved.status);
+      showToast(toast.message, toast.tone);
     } catch (err: unknown) {
       setError(messageOf(err));
     } finally {
@@ -64,14 +68,10 @@ export function LeaveApprovalsPanel() {
               >
                 Approve
               </button>
-              <button
-                type="button"
-                className="ess-btn ess-btn-danger"
-                disabled={busyId === item.id}
-                onClick={() => void onDecide(item.id, 'Rejected')}
-              >
-                Reject
-              </button>
+              <RejectLeaveButton
+                busy={busyId === item.id}
+                onReject={(note) => void onDecide(item.id, 'Rejected', note)}
+              />
             </div>
           </li>
         ))}

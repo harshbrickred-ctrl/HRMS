@@ -16,6 +16,7 @@ import {
   logout as apiLogout,
 } from '../lib/api';
 import type { AuthUser } from '../lib/api';
+import { userHasAnyRole } from '../workspace/roleCatalog';
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -94,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const hasRole = useCallback(
-    (code: string) => !!user?.roles.includes(code),
+    (code: string) => userHasAnyRole(user?.roles, [code]),
     [user],
   );
 

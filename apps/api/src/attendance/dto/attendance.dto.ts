@@ -3,6 +3,10 @@ import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinL
 export class PunchDto {
   @IsIn(['IN', 'OUT'])
   direction!: 'IN' | 'OUT';
+
+  @IsOptional()
+  @IsString()
+  date?: string;
 }
 
 export class CorrectionDto {

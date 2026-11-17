@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { changePassword } from '../../lib/api';
+import { showToast } from '../../ui/toast';
 import { preferenceLabel, type ThemePreference } from '../../theme/theme';
 import { useTheme } from '../../theme/ThemeContext';
 
@@ -41,6 +42,7 @@ export function EssSettingsPage() {
       setNewPassword('');
       setConfirmPassword('');
       setSaved(true);
+      showToast('Password updated.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to update password');
     } finally {

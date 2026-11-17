@@ -46,6 +46,7 @@ export function ItAssetTicketsPage() {
     try {
       await updateAssetTicket(ticket.id, status, notes[ticket.id]);
       setNotes((current) => ({ ...current, [ticket.id]: '' }));
+      showToast('Ticket updated.');
       load();
     } catch (err: unknown) {
       setError(assetMessage(err));

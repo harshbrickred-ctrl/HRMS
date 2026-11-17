@@ -55,6 +55,18 @@ export type HrEmployee = {
   teamName: string | null;
   managerId: string | null;
   managerName: string | null;
+  bankName: string;
+  ifscCode: string;
+  bankAccountNumber: string;
+  salary: {
+    basic: number;
+    hra: number;
+    special: number;
+    statutoryBonus: number;
+    dailyAllowance: number;
+    gratuity: number;
+    leaveEncashment: number;
+  } | null;
   leaveBalances?: HrLeaveBalance[];
   documents?: HrDocument[];
 };
@@ -163,6 +175,16 @@ export function createHrEmployee(input: {
   teamId?: string;
   managerId?: string;
   status?: 'ACTIVE' | 'DISABLED';
+  bankName?: string;
+  ifscCode?: string;
+  bankAccountNumber?: string;
+  basic?: number;
+  hra?: number;
+  specialAllowance?: number;
+  statutoryBonus?: number;
+  dailyAllowance?: number;
+  gratuity?: number;
+  leaveEncashment?: number;
 }) {
   return apiFetch<HrEmployee>('/api/v1/hr/employees', {
     method: 'POST',
@@ -183,6 +205,16 @@ export function updateHrEmployee(
     managerId?: string | null;
     status?: 'ACTIVE' | 'DISABLED';
     password?: string;
+    bankName?: string;
+    ifscCode?: string;
+    bankAccountNumber?: string;
+    basic?: number;
+    hra?: number;
+    specialAllowance?: number;
+    statutoryBonus?: number;
+    dailyAllowance?: number;
+    gratuity?: number;
+    leaveEncashment?: number;
   },
 ) {
   return apiFetch<HrEmployee>(`/api/v1/hr/employees/${id}`, {

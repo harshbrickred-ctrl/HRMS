@@ -103,7 +103,7 @@ export function EssTeamPage() {
             {open.map((item) => (
               <li key={item.id} className="ess-list-item">
                 <div className="ess-leave-request-head">
-                  <Link to={item.kind === 'Leave' ? '/ess/leave' : '/ess/attendance'}>
+                  <Link to={item.kind === 'Leave' ? '/ess/leave?section=requests' : '/ess/attendance'}>
                     <strong>{item.kind}</strong>
                   </Link>
                   <StatusChip status={item.status} />

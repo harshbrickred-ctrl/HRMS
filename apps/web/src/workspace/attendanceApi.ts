@@ -100,10 +100,10 @@ export function fetchMyAttendance(year: number, month: number) {
   return apiFetch<MyAttendance>(`/api/v1/attendance/me?year=${year}&month=${month}`);
 }
 
-export function punchMe(direction: 'IN' | 'OUT') {
+export function punchMe(direction: 'IN' | 'OUT', date?: string) {
   return apiFetch<{ duplicate: boolean; day: AttendanceDayDto | null }>(
     '/api/v1/attendance/me/punches',
-    { method: 'POST', body: JSON.stringify({ direction }) },
+    { method: 'POST', body: JSON.stringify({ direction, date }) },
   );
 }
 
@@ -132,6 +132,27 @@ export function decideCorrection(id: string, status: 'Approved' | 'Rejected', no
     method: 'POST',
     body: JSON.stringify({ status, note }),
   });
+}
+
+export type AttendancePayRow = {
+  employeeId: string;
+  employeeCode: string;
+  name: string;
+  workingDays: number;
+  present: number;
+  paidLeave: number;
+  unpaidLeave: number;
+  payableDays: number;
+  unmarkedDays: number;
+  missingPunchDays: number;
+  pendingLeaveDays: number;
+  note: string;
+};
+
+export function fetchAttendancePay(year: number, month: number) {
+  return apiFetch<{ month: string; rows: AttendancePayRow[] }>(
+    `/api/v1/attendance/pay?year=${year}&month=${month}`,
+  );
 }
 
 export function fetchAttendanceExceptions(year: number, month: number) {

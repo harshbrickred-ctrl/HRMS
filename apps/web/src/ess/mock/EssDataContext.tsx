@@ -22,7 +22,6 @@ import {
   profileForPerson,
   workingDaysBetween,
   type AttendanceDay,
-  type AttendanceStatus,
   type CorrectionRequest,
   type EssDocument,
   type EssState,
@@ -150,18 +149,6 @@ function clockNow() {
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 }
 
-const PUNCH_BLOCKED = new Set<AttendanceStatus>([
-  'Holiday',
-  'Weekend',
-  'Leave',
-  'PendingCorrection',
-]);
-
-function punchBlockMessage(status: AttendanceStatus, action: 'in' | 'out') {
-  const label = status === 'PendingCorrection' ? 'pending correction' : status.toLowerCase();
-  return `Cannot punch ${action} on a ${label} day.`;
-}
-
 export function formatInr(amount: number) {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -276,9 +263,6 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
       if (input.endDate < input.startDate) {
         return { ok: false, error: 'End date cannot be before start date.' };
       }
-      if (!input.reason.trim()) {
-        return { ok: false, error: 'Reason is required.' };
-      }
 
       const days = workingDaysBetween(
         input.startDate,
@@ -286,6 +270,7 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
         state.holidays,
         input.halfDayStart,
         input.halfDayEnd,
+        input.typeCode === 'EL',
       );
       if (days <= 0) {
         return { ok: false, error: 'Selected range has no working days.' };
@@ -403,9 +388,6 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
   const punchIn = useCallback((date: string) => {
     setState((prev) => {
       const existing = prev.attendance.find((d) => d.date === date);
-      if (existing && PUNCH_BLOCKED.has(existing.status)) {
-        return { ...prev, toast: punchBlockMessage(existing.status, 'in') };
-      }
       if (existing?.checkIn) {
         return { ...prev, toast: `Already punched in at ${existing.checkIn}.` };
       }
@@ -431,9 +413,6 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
   const punchOut = useCallback((date: string) => {
     setState((prev) => {
       const existing = prev.attendance.find((d) => d.date === date);
-      if (existing && PUNCH_BLOCKED.has(existing.status)) {
-        return { ...prev, toast: punchBlockMessage(existing.status, 'out') };
-      }
       if (!existing?.checkIn) {
         return { ...prev, toast: 'Punch in before punching out.' };
       }
@@ -616,6 +595,9 @@ export function EssDataProvider({ children }: { children: ReactNode }) {
             teamName: employment.teamName ?? '',
             managerName: employment.managerName ?? '',
             workEmail: employment.email,
+            bankName: employment.bankName,
+            ifscCode: employment.ifscCode,
+            bankAccountNumber: employment.bankAccountNumber,
           }
         : base;
       return {

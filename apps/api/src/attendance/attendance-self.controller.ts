@@ -32,7 +32,7 @@ export class AttendanceSelfController {
 
   @Post('punches')
   punch(@CurrentUser() user: AuthUser, @Body() dto: PunchDto) {
-    return this.attendance.punchWeb(user.userId, dto.direction);
+    return this.attendance.punchWeb(user.userId, dto.direction, dto.date);
   }
 
   @Post('corrections')

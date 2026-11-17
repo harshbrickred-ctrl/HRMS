@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Bell, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { EssDataProvider } from '../ess/mock/EssDataContext';
@@ -19,6 +19,7 @@ import './AppShell.css';
 export function AppShell() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => readSidebarCollapsed());
 
@@ -31,6 +32,16 @@ export function AppShell() {
   useEffect(() => {
     writeSidebarCollapsed(collapsed);
   }, [collapsed]);
+
+  useEffect(() => {
+    const reset = () => {
+      mainRef.current?.scrollTo(0, 0);
+      window.scrollTo(0, 0);
+    };
+    reset();
+    const frame = requestAnimationFrame(reset);
+    return () => cancelAnimationFrame(frame);
+  }, [location.pathname, location.search]);
 
   function toggleCollapsed() {
     setCollapsed((v) => !v);
@@ -144,7 +155,7 @@ export function AppShell() {
           </div>
         </aside>
 
-        <main className="app-shell-main" role="main">
+        <main ref={mainRef} className="app-shell-main" role="main">
           <div className="app-shell-main-inner">
             {location.pathname === '/ess' ? null : (
               <header className="app-shell-pagehead">

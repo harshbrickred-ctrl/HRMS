@@ -1,11 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { showToast } from '../ui/toast';
 import { decideCorrection, fetchTeamAttendance } from './attendanceApi';
-import { decideLeaveRequest, fetchTeamLeave } from './leaveApi';
+import { decideLeaveRequest, fetchTeamLeave, leaveDecisionToast } from './leaveApi';
+import { RejectLeaveButton } from './RejectLeaveButton';
 import { fetchReportSummary } from './reportsApi';
 import { Link } from 'react-router-dom';
-import { EmployeePhoto } from '../ess/components/EmployeePhoto';
 import { StatusChip } from '../ess/components/StatusChip';
-import { teams } from '../ess/mock/essMock';
+import { useAuth } from '../auth/AuthContext';
+import { fetchDirectory, type DirectoryPerson } from './hrApi';
 import {
   auditLog,
   jobs,
@@ -26,15 +28,36 @@ export {
 } from './HrPages';
 
 
-function Insights({ items }: { items: Array<[string, string | number]> }) {
+function Insights({
+  items,
+  active,
+  onSelect,
+}: {
+  items: Array<[string, string | number]>;
+  active?: string;
+  onSelect?: (label: string) => void;
+}) {
   return (
     <div className="ess-insights">
-      {items.map(([label, value]) => (
-        <article key={label} className="ess-panel ess-insight">
-          <p className="ess-muted">{label}</p>
-          <p className="ess-insight-value">{value}</p>
-        </article>
-      ))}
+      {items.map(([label, value]) =>
+        onSelect ? (
+          <button
+            key={label}
+            type="button"
+            className={`ess-panel ess-insight${active === label ? ' is-active' : ''}`}
+            aria-pressed={active === label}
+            onClick={() => onSelect(label)}
+          >
+            <p className="ess-muted">{label}</p>
+            <p className="ess-insight-value">{value}</p>
+          </button>
+        ) : (
+          <article key={label} className="ess-panel ess-insight">
+            <p className="ess-muted">{label}</p>
+            <p className="ess-insight-value">{value}</p>
+          </article>
+        ),
+      )}
     </div>
   );
 }
@@ -126,9 +149,11 @@ export function ManagerInboxPage() {
     load();
   }, []);
 
-  async function onLeave(id: string, status: 'Approved' | 'Rejected') {
+  async function onLeave(id: string, status: 'Approved' | 'Rejected', note?: string) {
     try {
-      await decideLeaveRequest(id, status);
+      const saved = await decideLeaveRequest(id, status, note);
+      const toast = leaveDecisionToast(saved.status === 'Rejected' || status === 'Rejected' ? 'Rejected' : saved.status);
+      showToast(toast.message, toast.tone);
       load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not decide leave.');
@@ -138,6 +163,7 @@ export function ManagerInboxPage() {
   async function onCorrection(id: string, status: 'Approved' | 'Rejected') {
     try {
       await decideCorrection(id, status);
+      showToast(status === 'Approved' ? 'Correction approved.' : 'Correction rejected.');
       load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not decide correction.');
@@ -172,9 +198,7 @@ export function ManagerInboxPage() {
                 <button type="button" className="ess-btn ess-btn-primary" onClick={() => void onLeave(item.id, 'Approved')}>
                   Approve
                 </button>
-                <button type="button" className="ess-btn ess-btn-danger" onClick={() => void onLeave(item.id, 'Rejected')}>
-                  Reject
-                </button>
+                <RejectLeaveButton onReject={(note) => void onLeave(item.id, 'Rejected', note)} />
               </div>
             </li>
           ))}
@@ -219,6 +243,7 @@ export function TeamLeavePage() {
     }>
   >([]);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<'Pending' | 'Approved'>('Pending');
 
   function load() {
     fetchTeamLeave()
@@ -233,30 +258,42 @@ export function TeamLeavePage() {
     load();
   }, []);
 
-  async function onDecide(id: string, status: 'Approved' | 'Rejected') {
+  async function onDecide(id: string, status: 'Approved' | 'Rejected', note?: string) {
     try {
-      await decideLeaveRequest(id, status);
+      const saved = await decideLeaveRequest(id, status, note);
+      const toast = leaveDecisionToast(saved.status === 'Rejected' || status === 'Rejected' ? 'Rejected' : saved.status);
+      showToast(toast.message, toast.tone);
       load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not decide leave.');
     }
   }
 
+  const visible = requests.filter((item) => item.status === tab);
+
   return (
     <div className="ess-section-stack">
-      <Insights
-        items={[
-          ['Requests', requests.length],
-          ['Pending', requests.filter((item) => item.status === 'Pending').length],
-          ['Approved', requests.filter((item) => item.status === 'Approved').length],
-        ]}
-      />
+      <div className="ess-insights">
+        {(['Pending', 'Approved'] as const).map((label) => (
+          <button
+            key={label}
+            type="button"
+            className={tab === label ? 'ess-panel ess-insight is-active' : 'ess-panel ess-insight'}
+            onClick={() => setTab(label)}
+          >
+            <p className="ess-muted">{label}</p>
+            <p className="ess-insight-value">
+              {requests.filter((item) => item.status === label).length}
+            </p>
+          </button>
+        ))}
+      </div>
       {error ? <p className="ess-alert">{error}</p> : null}
       <section className="ess-panel">
         <h2>Team leave</h2>
-        {requests.length === 0 ? <p className="ess-empty">No leave has been sent to you.</p> : null}
+        {visible.length === 0 ? <p className="ess-empty">No {tab.toLowerCase()} team leave.</p> : null}
         <ul className="ess-list">
-          {requests.map((item) => (
+          {visible.map((item) => (
             <li key={item.id} className="ess-list-item">
               <div className="ess-leave-request-head">
                 <strong>{item.person?.name ?? 'Employee'}</strong>
@@ -271,9 +308,7 @@ export function TeamLeavePage() {
                   <button type="button" className="ess-btn ess-btn-primary" onClick={() => void onDecide(item.id, 'Approved')}>
                     Approve
                   </button>
-                  <button type="button" className="ess-btn ess-btn-danger" onClick={() => void onDecide(item.id, 'Rejected')}>
-                    Reject
-                  </button>
+                  <RejectLeaveButton onReject={(note) => void onDecide(item.id, 'Rejected', note)} />
                 </div>
               ) : null}
             </li>
@@ -313,6 +348,7 @@ export function TeamAttendancePage() {
   async function onDecide(id: string, status: 'Approved' | 'Rejected') {
     try {
       await decideCorrection(id, status);
+      showToast(status === 'Approved' ? 'Correction approved.' : 'Correction rejected.');
       load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not decide this correction.');
@@ -375,30 +411,137 @@ export function TeamAttendancePage() {
   );
 }
 
-export function TeamDirectoryPage() {
-  const { directReports } = useWorkspace();
+function personName(person: DirectoryPerson) {
+  return `${person.firstName} ${person.lastName}`.trim();
+}
+
+type DirectoryView = 'Direct reports' | 'Departments' | 'Locations';
+
+export function TeamDirectoryPage({ scope = 'team' }: { scope?: 'team' | 'company' }) {
+  const { user } = useAuth();
+  const [people, setPeople] = useState<DirectoryPerson[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<DirectoryView>('Direct reports');
+
+  useEffect(() => {
+    fetchDirectory()
+      .then((rows) => {
+        setPeople(rows);
+        setError(null);
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load the directory.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const me = people.find((person) => person.email.toLowerCase() === user?.email?.toLowerCase());
+  const visible = scope === 'company' ? people : people.filter((person) => me && person.managerId === me.id);
+  const reports = visible.filter((person) => person.managerId);
+  const departmentRows = groupDirectory(visible, (person) => person.departmentName || 'Unassigned');
+  const locationRows = groupDirectory(visible, (person) => person.locationName || 'Unassigned');
+
   return (
     <div className="ess-section-stack">
       <Insights
+        active={view}
+        onSelect={(label) => setView(label as DirectoryView)}
         items={[
-          ['Direct reports', directReports.length],
-          ['Departments', new Set(directReports.map((person) => person.department)).size],
-          ['Locations', new Set(directReports.map((person) => person.location)).size],
+          ['Direct reports', reports.length],
+          ['Departments', departmentRows.filter((row) => row.name !== 'Unassigned').length],
+          ['Locations', locationRows.filter((row) => row.name !== 'Unassigned').length],
         ]}
       />
-      <div className="ess-person-grid">
-        {directReports.map((person) => (
-          <article key={person.id} className="ess-person-card">
-            <EmployeePhoto src={person.photo} name={person.name} />
-            <h3>{person.name}</h3>
-            <span className="ess-muted">{person.title}</span>
-            <span className="ess-muted">
-              {person.employeeCode} · {person.department}
-              {person.teamId ? ` · ${teams.find((team) => team.id === person.teamId)?.name}` : ''}
-            </span>
-          </article>
-        ))}
-      </div>
+      <section className="ess-panel">
+        {error ? <p className="ess-alert">{error}</p> : null}
+        {loading ? <p className="ess-empty">Loading the directory…</p> : null}
+        {!loading && !error && visible.length === 0 ? (
+          <p className="ess-empty">
+            {scope === 'company' ? 'No employees in the directory yet.' : 'Nobody reports to you yet.'}
+          </p>
+        ) : null}
+        {!loading && visible.length > 0 && view === 'Direct reports' ? (
+          reports.length === 0 ? (
+            <p className="ess-empty">No one has a manager yet.</p>
+          ) : (
+            <DirectoryTable
+              columns={['Employee', 'Reports to', 'Department', 'Location']}
+              rows={reports.map((person) => [
+                personLabel(person),
+                person.managerName || '—',
+                person.departmentName || '—',
+                person.locationName || '—',
+              ])}
+            />
+          )
+        ) : null}
+        {!loading && visible.length > 0 && view === 'Departments' ? (
+          <DirectoryTable
+            columns={['Department', 'Employees', 'People', 'Locations']}
+            rows={departmentRows.map((row) => [
+              row.name,
+              String(row.people.length),
+              row.people.map(personName).join(', '),
+              uniqueNames(row.people.map((person) => person.locationName)),
+            ])}
+          />
+        ) : null}
+        {!loading && visible.length > 0 && view === 'Locations' ? (
+          <DirectoryTable
+            columns={['Location', 'Employees', 'People', 'Departments']}
+            rows={locationRows.map((row) => [
+              row.name,
+              String(row.people.length),
+              row.people.map(personName).join(', '),
+              uniqueNames(row.people.map((person) => person.departmentName)),
+            ])}
+          />
+        ) : null}
+      </section>
+    </div>
+  );
+}
+
+function personLabel(person: DirectoryPerson) {
+  return `${personName(person)} · ${person.employeeCode}`;
+}
+
+function uniqueNames(values: Array<string | null>) {
+  const names = [...new Set(values.filter((value): value is string => Boolean(value)))];
+  return names.length ? names.join(', ') : '—';
+}
+
+function groupDirectory(people: DirectoryPerson[], labelOf: (person: DirectoryPerson) => string) {
+  const groups = new Map<string, DirectoryPerson[]>();
+  for (const person of people) {
+    const label = labelOf(person);
+    groups.set(label, [...(groups.get(label) ?? []), person]);
+  }
+  return [...groups.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, members]) => ({ name, people: members }));
+}
+
+function DirectoryTable({ columns, rows }: { columns: string[]; rows: string[][] }) {
+  return (
+    <div className="ess-table-wrap">
+      <table className="ess-table">
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th key={column}>{column}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={`${row[0]}-${index}`}>
+              {row.map((cell, cellIndex) => (
+                <td key={columns[cellIndex]}>{cellIndex === 0 ? <strong>{cell}</strong> : cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -411,6 +554,7 @@ export function HrMigrationPage() {
     event.preventDefault();
     if (!name.trim()) return;
     addImport(name.trim());
+    showToast('Import recorded.');
   }
 
   return (

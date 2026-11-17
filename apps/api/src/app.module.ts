@@ -12,6 +12,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { HelpdeskModule } from './helpdesk/helpdesk.module';
 import { ReportsModule } from './reports/reports.module';
 import { PayslipsModule } from './payslips/payslips.module';
+import { SalaryModule } from './salary/salary.module';
 import { AssetsModule } from './assets/assets.module';
 import { HealthController } from './health.controller';
 
@@ -29,6 +30,7 @@ import { HealthController } from './health.controller';
     HelpdeskModule,
     ReportsModule,
     PayslipsModule,
+    SalaryModule,
     AssetsModule,
   ],
   controllers: [HealthController],

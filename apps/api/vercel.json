@@ -1,10 +1,12 @@
 {
-  "buildCommand": "npm install --no-save typescript && npx prisma generate && npx nest build",
+  "regions": ["iad1"],
+  "buildCommand": "npm install --no-save typescript@5.7.3 && npx prisma generate && npx nest build",
   "installCommand": "npm install --legacy-peer-deps",
   "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
   "functions": {
     "api/index.js": {
-      "includeFiles": "node_modules/.prisma/**"
+      "includeFiles": "{node_modules/.prisma/**,node_modules/@prisma/adapter-neon/**,node_modules/@neondatabase/**,node_modules/ws/**}",
+      "regions": ["iad1"]
     }
   }
 }

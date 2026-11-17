@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { showToast } from '../../ui/toast';
 import { createTicket, fetchMyTickets, type HelpdeskTicketDto } from '../../workspace/helpdeskApi';
 import { StatusChip } from '../components/StatusChip';
 
@@ -31,6 +32,7 @@ export function EssHelpdeskPage() {
       setSubject('');
       setBody('');
       load();
+      showToast('Ticket submitted.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not create the ticket.');
     }

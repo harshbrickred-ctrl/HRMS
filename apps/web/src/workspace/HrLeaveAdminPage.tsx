@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Search } from 'lucide-react';
 import { EmployeePhoto } from '../ess/components/EmployeePhoto';
+import { ensureChristmas } from '../ess/mock/essMock';
 import { holidays } from './workspaceMock';
+import { LEAVE_TYPE_CATALOG, applyLeaveForEmployee } from './leaveApi';
 import {
   fetchHrEmployee,
   fetchHrEmployees,
@@ -10,6 +12,7 @@ import {
   type HrLeaveBalance,
 } from './hrApi';
 import { LeaveApprovalsPanel } from './LeaveApprovalsPanel';
+import { showToast } from '../ui/toast';
 import './hr-leave.css';
 
 const TYPE_ORDER = ['CL', 'SL', 'EL', 'CO', 'WFH', 'OBH', 'LOP'];
@@ -20,7 +23,7 @@ const TYPE_NOTES: Record<string, string> = {
   EL: 'Planned leave earned through the year.',
   CO: 'Time off earned from extra work.',
   WFH: 'Remote days counted on this balance.',
-  OBH: 'Optional birthday holiday.',
+  OBH: 'Optional - Birthday Holiday.',
   LOP: 'Unpaid. It does not reduce another balance.',
 };
 
@@ -101,6 +104,23 @@ export function HrLeaveAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [applyCode, setApplyCode] = useState('CL');
+  const [applyFrom, setApplyFrom] = useState('');
+  const [applyTo, setApplyTo] = useState('');
+  const [applyReason, setApplyReason] = useState('');
+  const [applyFromHalfStart, setApplyFromHalfStart] = useState(false);
+  const [applyFromHalfEnd, setApplyFromHalfEnd] = useState(false);
+  const [applyToHalfStart, setApplyToHalfStart] = useState(false);
+  const [applyToHalfEnd, setApplyToHalfEnd] = useState(false);
+  const [applyBusy, setApplyBusy] = useState(false);
+  const applySameDay = Boolean(applyFrom) && (!applyTo || applyFrom === applyTo);
+
+  useEffect(() => {
+    if (applySameDay && (applyToHalfStart || applyToHalfEnd)) {
+      setApplyToHalfStart(false);
+      setApplyToHalfEnd(false);
+    }
+  }, [applySameDay, applyToHalfStart, applyToHalfEnd]);
 
   useEffect(() => {
     void fetchHrEmployees()
@@ -168,7 +188,7 @@ export function HrLeaveAdminPage() {
     };
   }, [draft]);
 
-  const holidayGroups = useMemo(() => groupHolidays(holidays), []);
+  const holidayGroups = useMemo(() => groupHolidays(ensureChristmas(holidays)), []);
   const upcomingCount = holidayGroups.upcoming;
 
   function selectEmployee(id: string) {
@@ -199,6 +219,42 @@ export function HrLeaveAdminPage() {
     setError(null);
   }
 
+  async function onApplyForEmployee(event: FormEvent) {
+    event.preventDefault();
+    if (!detail || !applyFrom) return;
+    setApplyBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await applyLeaveForEmployee({
+        employeeId: detail.id,
+        code: applyCode,
+        fromDate: applyFrom,
+        toDate: applyTo || applyFrom,
+        halfDayStart: applyFromHalfStart !== applyFromHalfEnd,
+        halfDayEnd: !applySameDay && applyToHalfStart !== applyToHalfEnd,
+        fromHalfStart: applyFromHalfStart,
+        fromHalfEnd: applyFromHalfEnd,
+        toHalfStart: applySameDay ? false : applyToHalfStart,
+        toHalfEnd: applySameDay ? false : applyToHalfEnd,
+        reason: applyReason,
+      });
+      setApplyFrom('');
+      setApplyTo('');
+      setApplyReason('');
+      setApplyFromHalfStart(false);
+      setApplyFromHalfEnd(false);
+      setApplyToHalfStart(false);
+      setApplyToHalfEnd(false);
+      setMessage(`Leave applied for ${fullName(detail)}, including back dates. It is pending approval.`);
+      showToast(`Leave applied for ${fullName(detail)}.`);
+    } catch (err) {
+      setError(messageOf(err));
+    } finally {
+      setApplyBusy(false);
+    }
+  }
+
   async function onSave(event: FormEvent) {
     event.preventDefault();
     if (!detail || !dirty) return;
@@ -220,6 +276,7 @@ export function HrLeaveAdminPage() {
       setDraft(balances);
       setSaved(balances);
       setMessage('Leave balances saved.');
+      showToast('Leave balances saved.');
     } catch (err) {
       setError(messageOf(err));
     } finally {
@@ -243,6 +300,95 @@ export function HrLeaveAdminPage() {
         </p>
       ) : null}
       <LeaveApprovalsPanel />
+      {detail ? (
+        <form className="ess-panel" onSubmit={(event) => void onApplyForEmployee(event)}>
+          <h2>Apply leave for {fullName(detail)}</h2>
+          <p className="ess-muted">
+            HR and admin can apply leave for this person on a past date. Employees still cannot apply back-dated leave themselves.
+          </p>
+          <div className="ess-leave-dates">
+            <label className="ess-field">
+              <span>Type</span>
+              <select value={applyCode} onChange={(event) => setApplyCode(event.target.value)}>
+                {LEAVE_TYPE_CATALOG.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.type}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="ess-field">
+              <span>From</span>
+              <input type="date" value={applyFrom} onChange={(event) => setApplyFrom(event.target.value)} required />
+            </label>
+            <label className="ess-field">
+              <span>To</span>
+              <input type="date" value={applyTo} min={applyFrom || undefined} onChange={(event) => setApplyTo(event.target.value)} required />
+            </label>
+          </div>
+          <div className="ess-leave-dates">
+            <div>
+              <span className="ess-leave-half-label">From half day</span>
+              <div className="ess-leave-halfdays">
+                <button
+                  type="button"
+                  className={`ess-leave-toggle${applyFromHalfStart ? ' is-on' : ''}`}
+                  onClick={() => {
+                    setApplyFromHalfStart((value) => !value);
+                    setApplyFromHalfEnd(false);
+                  }}
+                >
+                  Half Day Start
+                </button>
+                <button
+                  type="button"
+                  className={`ess-leave-toggle${applyFromHalfEnd ? ' is-on' : ''}`}
+                  onClick={() => {
+                    setApplyFromHalfEnd((value) => !value);
+                    setApplyFromHalfStart(false);
+                  }}
+                >
+                  Half Day End
+                </button>
+              </div>
+            </div>
+            <div>
+              <span className="ess-leave-half-label">To half day</span>
+              <div className="ess-leave-halfdays">
+                <button
+                  type="button"
+                  className={`ess-leave-toggle${applyToHalfStart ? ' is-on' : ''}`}
+                  disabled={applySameDay}
+                  onClick={() => {
+                    setApplyToHalfStart((value) => !value);
+                    setApplyToHalfEnd(false);
+                  }}
+                >
+                  Half Day Start
+                </button>
+                <button
+                  type="button"
+                  className={`ess-leave-toggle${applyToHalfEnd ? ' is-on' : ''}`}
+                  disabled={applySameDay}
+                  onClick={() => {
+                    setApplyToHalfEnd((value) => !value);
+                    setApplyToHalfStart(false);
+                  }}
+                >
+                  Half Day End
+                </button>
+              </div>
+            </div>
+          </div>
+          <label className="ess-field">
+            <span>Reason (optional)</span>
+            <textarea value={applyReason} onChange={(event) => setApplyReason(event.target.value)} rows={2} />
+          </label>
+          <button type="submit" className="ess-btn ess-btn-primary" disabled={applyBusy || !applyFrom}>
+            {applyBusy ? 'Applying…' : 'Apply leave'}
+          </button>
+        </form>
+      ) : null}
       <div className="hr-leave-workspace">
         <aside className="hr-leave-rail" aria-label="Employees">
           <div className="hr-leave-rail-head">
@@ -452,6 +598,17 @@ function BalanceCard({
   );
 }
 
+function canonicalDayText(raw: string) {
+  const trimmed = raw.trim();
+  if (trimmed === '' || trimmed === '.') return trimmed;
+  if (trimmed.endsWith('.')) {
+    const head = Number(trimmed.slice(0, -1));
+    return Number.isFinite(head) ? `${head}.` : trimmed;
+  }
+  const value = Number(trimmed);
+  return Number.isFinite(value) ? String(value) : trimmed;
+}
+
 function DayField({
   label,
   value,
@@ -463,6 +620,11 @@ function DayField({
 }) {
   const [text, setText] = useState<string | null>(null);
 
+  function commit(next: number) {
+    setText(null);
+    onChange(next);
+  }
+
   return (
     <label>
       <span>{label}</span>
@@ -470,31 +632,29 @@ function DayField({
         <button
           type="button"
           aria-label={`Decrease ${label}`}
-          onClick={() => onChange(value - 0.5)}
+          onClick={() => commit(value - 0.5)}
           disabled={value <= 0}
         >
           −
         </button>
         <input
-          type="number"
-          min={0}
-          step={0.5}
           inputMode="decimal"
           aria-label={label}
-          value={text ?? value}
+          value={text ?? String(value)}
           onFocus={() => setText(String(value))}
           onBlur={(event) => {
-            if (event.currentTarget.value.trim() === '') onChange(0);
+            const raw = event.currentTarget.value.trim();
+            onChange(raw === '' || raw === '.' ? 0 : Number(canonicalDayText(raw)));
             setText(null);
           }}
           onChange={(event) => {
-            const raw = event.target.value;
-            setText(raw);
-            if (raw.trim() === '') return;
-            onChange(Number(raw));
+            const shown = canonicalDayText(event.target.value);
+            setText(shown);
+            if (shown === '' || shown === '.' || shown.endsWith('.')) return;
+            onChange(Number(shown));
           }}
         />
-        <button type="button" aria-label={`Increase ${label}`} onClick={() => onChange(value + 0.5)}>
+        <button type="button" aria-label={`Increase ${label}`} onClick={() => commit(value + 0.5)}>
           +
         </button>
       </span>

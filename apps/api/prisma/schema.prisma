@@ -39,6 +39,12 @@ model Tenant {
   notifications        Notification[]
   helpdeskTickets      HelpdeskTicket[]
   payslips             Payslip[]
+  salaryStructures     SalaryStructure[]
+  salaryLines          SalaryLine[]
+  payrollMonths        PayrollMonth[]
+  bankConnection       BankConnection?
+  transferBatches      SalaryTransferBatch[]
+  bankApiLogs          BankApiLog[]
   assets               Asset[]
   assetAssignments     AssetAssignment[]
   assetTickets         AssetTicket[]
@@ -227,8 +233,11 @@ model Employee {
   employeeCode String
   firstName    String
   lastName     String
-  designation  String             @default("")
-  photo        String             @default("")
+  designation       String             @default("")
+  photo             String             @default("")
+  bankName          String             @default("")
+  ifscCode          String             @default("")
+  bankAccountNumber String             @default("")
   departmentId String?
   locationId   String?
   teamId       String?
@@ -254,6 +263,8 @@ model Employee {
   enrollments  DeviceEnrollment[]
   helpdeskTickets HelpdeskTicket[]
   payslips     Payslip[]
+  salaryStructure SalaryStructure?
+  salaryLines  SalaryLine[]
   assetAssignments AssetAssignment[]
   assetTickets AssetTicket[]
   headOfDepartments Department[] @relation("DepartmentHead")
@@ -297,6 +308,10 @@ model LeaveRequest {
   days               Float
   halfDayStart       Boolean            @default(false)
   halfDayEnd         Boolean            @default(false)
+  fromHalfStart      Boolean            @default(false)
+  fromHalfEnd        Boolean            @default(false)
+  toHalfStart        Boolean            @default(false)
+  toHalfEnd          Boolean            @default(false)
   reason             String
   status             LeaveRequestStatus @default(Pending)
   approverEmployeeId String?
@@ -380,6 +395,174 @@ model Payslip {
 
   @@unique([tenantId, employeeId, month])
   @@index([tenantId, employeeId])
+}
+
+model SalaryStructure {
+  id               String   @id @default(cuid())
+  tenantId         String
+  employeeId       String   @unique
+  monthlyGross     Int
+  basic            Int
+  hra              Int
+  da               Int      @default(0)
+  otherAllowances  Int      @default(0)
+  statutoryBonus   Int      @default(0)
+  dailyAllowance   Int      @default(0)
+  gratuityMonthly  Int      @default(0)
+  leaveEncashment  Int      @default(0)
+  pfOnActual       Boolean  @default(false)
+  taxRegime        String   @default("new")
+  ptMonthly        Int      @default(0)
+  annualDeductions Int      @default(0)
+  ytdTaxable       Int      @default(0)
+  ytdTds           Int      @default(0)
+  ytdPt            Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee         Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model SalaryLine {
+  id              String   @id @default(cuid())
+  tenantId        String
+  employeeId      String
+  month           String
+  monthDays       Int
+  paidDays        Int
+  lopDays         Int      @default(0)
+  basic           Int
+  hra             Int
+  da              Int
+  special         Int
+  otherAllowances Int
+  bonus           Int      @default(0)
+  statutoryBonus  Int      @default(0)
+  dailyAllowance  Int      @default(0)
+  overtime        Int      @default(0)
+  incentive       Int      @default(0)
+  arrears         Int      @default(0)
+  leaveEncashment Int      @default(0)
+  fixedGross      Int
+  gross           Int
+  pfWages         Int
+  eePf            Int
+  erPf            Int
+  erEps           Int
+  erEpf           Int
+  erEdli          Int
+  erAdmin         Int
+  eeEsi           Int
+  erEsi           Int
+  pt              Int
+  tds             Int
+  tdsRegular      Int
+  tdsExtra        Int
+  loanRecovery    Int      @default(0)
+  advanceRecovery Int      @default(0)
+  otherDeduction  Int      @default(0)
+  netPay          Int
+  gratuityAccrual Int
+  employerCost    Int
+  status             String   @default("draft")
+  submittedToFinance Boolean @default(false)
+  payoutGenerated    Boolean @default(false)
+  paymentStatus      String  @default("pending")
+  utr                String  @default("")
+  warning            String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, employeeId, month])
+  @@index([tenantId, month])
+}
+
+model PayrollMonth {
+  id         String    @id @default(cuid())
+  tenantId   String
+  month      String
+  approved   Boolean   @default(false)
+  approvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, month])
+}
+
+model BankConnection {
+  id                  String   @id @default(cuid())
+  tenantId            String   @unique
+  bankCode            String
+  corporateId         String
+  corporateUserCipher String
+  accountCipher       String
+  accountLast4        String
+  mode                String   @default("mock")
+  status              String   @default("mock_connected")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model SalaryTransferBatch {
+  id              String                      @id @default(cuid())
+  tenantId        String
+  month           String
+  reference       String
+  status          String                      @default("pending")
+  createdById     String
+  initiatedAt     DateTime?
+  authorisedById  String?
+  authorisedAt    DateTime?
+  providerRef     String                      @default("")
+  otpHash         String                      @default("")
+  otpExpiresAt    DateTime?
+  willPayCount    Int
+  skippedCount    Int
+  totalAmount     Int
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+  tenant          Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions    SalaryTransferTransaction[]
+
+  @@unique([tenantId, reference])
+  @@index([tenantId, month])
+}
+
+model SalaryTransferTransaction {
+  id             String              @id @default(cuid())
+  tenantId       String
+  batchId        String
+  employeeId     String
+  month          String
+  amount         Int
+  status         String
+  skipReason       String              @default("")
+  utr              String              @default("")
+  providerPayoutId String              @default("")
+  idempotencyKey   String              @unique
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  batch          SalaryTransferBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, month])
+}
+
+model BankApiLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  batchId   String   @default("")
+  action    String
+  summary   String
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
 }
 
 model EmployeeDocument {

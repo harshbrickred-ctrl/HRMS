@@ -29,6 +29,7 @@ import {
   type AssetSheetImport,
   type AssetStatus,
 } from './assetsApi';
+import { showToast } from '../ui/toast';
 import { printAssetLabels } from './assetLabels';
 import { downloadSheet, downloadSheetSample, readSheet } from './assetSheet';
 import './it-assets.css';
@@ -158,6 +159,11 @@ export function ItAssetsPage() {
     setExporting(true);
     setError(null);
     try {
+      await returnAsset(asset.id, next, note[asset.id]);
+      setMessage(`${asset.assetTag} marked ${next.replace('_', ' ')}.`);
+      showToast(`${asset.assetTag} updated.`);
+      setOpenHistory(null);
+      load();
       const current = Object.fromEntries(FILTER_KEYS.map((key) => [key, params.get(key) ?? '']));
       downloadSheet(`asset-register-${todayIso()}.csv`, await fetchAssetSheet(current));
     } catch (err: unknown) {

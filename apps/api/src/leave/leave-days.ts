@@ -21,6 +21,7 @@ export function workingDaysBetween(
   holidayDates: string[],
   halfDayStart: boolean,
   halfDayEnd: boolean,
+  sandwich = false,
 ): number {
   const holidaySet = new Set(holidayDates);
   if (end < start) return 0;
@@ -31,21 +32,32 @@ export function workingDaysBetween(
     cursor = addDays(cursor, 1);
   }
   if (days === 0) return 0;
-  cursor = addDays(start, 1);
-  while (cursor < end) {
-    if (
-      isWeekend(cursor) &&
-      hasWorkingDay(start, addDays(cursor, -1), holidaySet) &&
-      hasWorkingDay(addDays(cursor, 1), end, holidaySet)
-    ) {
-      days += 1;
+  if (sandwich) {
+    cursor = addDays(start, 1);
+    while (cursor < end) {
+      if (
+        isWeekend(cursor) &&
+        hasWorkingDay(start, addDays(cursor, -1), holidaySet) &&
+        hasWorkingDay(addDays(cursor, 1), end, holidaySet)
+      ) {
+        days += 1;
+      }
+      cursor = addDays(cursor, 1);
     }
-    cursor = addDays(cursor, 1);
   }
-  const oneHalf = halfDayStart !== halfDayEnd;
-  if (!oneHalf) return days;
-  if (start === end) return 0.5;
-  return Math.max(0.5, days - 0.5);
+  return chargeHalfDays(days, start, end, halfDayStart, halfDayEnd);
+}
+
+function chargeHalfDays(
+  days: number,
+  start: string,
+  end: string,
+  halfDayStart: boolean,
+  halfDayEnd: boolean,
+) {
+  if (start === end) return halfDayStart !== halfDayEnd ? 0.5 : days;
+  const halves = Number(halfDayStart) + Number(halfDayEnd);
+  return Math.max(0, days - halves * 0.5);
 }
 
 export function eachWorkingDate(

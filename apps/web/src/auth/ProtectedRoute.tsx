@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { userHasAnyRole } from '../workspace/roleCatalog';
 import type { ReactNode } from 'react';
 
 export function ProtectedRoute({
@@ -12,7 +13,7 @@ export function ProtectedRoute({
   /** Allow if user has any of these roles */
   roles?: string[];
 }) {
-  const { user, loading, can, hasRole } = useAuth();
+  const { user, loading, can } = useAuth();
 
   if (loading) {
     return (
@@ -32,7 +33,7 @@ export function ProtectedRoute({
     return <Navigate to="/login" replace />;
   }
 
-  if (roles?.length && !roles.some((r) => hasRole(r))) {
+  if (roles?.length && !userHasAnyRole(user.roles, roles)) {
     return <Navigate to="/ess" replace />;
   }
 

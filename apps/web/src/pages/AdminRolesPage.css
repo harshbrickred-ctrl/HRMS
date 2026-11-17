@@ -73,8 +73,22 @@
 
 .admin-roles-checks {
   display: grid;
-  gap: 6px;
+  gap: 14px;
   margin-bottom: 12px;
+}
+
+.admin-roles-dept {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-roles-dept-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .admin-roles-check {
@@ -103,6 +117,61 @@
   font-style: normal;
   color: var(--muted);
   font-size: 12px;
+}
+
+.admin-roles-check.is-on {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--key-lime) 55%, var(--surface));
+}
+
+.admin-roles-perms {
+  display: grid;
+  gap: 12px;
+  margin: 4px 0 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 70%, var(--canvas, var(--surface-elevated)));
+}
+
+.admin-roles-perms-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.admin-roles-perms-head h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.admin-roles-perms-head span,
+.admin-roles-perm-group p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-roles-perm-group {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-roles-perm-group div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-roles-perm-group span {
+  border-radius: 999px;
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .admin-roles-save {
@@ -145,6 +214,45 @@
 
 .admin-roles-muted {
   color: var(--muted);
+}
+
+.admin-roles-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(380px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.admin-roles-toast.is-ok {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--key-lime) 70%, var(--surface));
+}
+
+.admin-roles-toast.is-err {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.admin-roles-toast button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
 }
 
 @media (max-width: 760px) {
