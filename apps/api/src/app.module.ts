@@ -13,6 +13,8 @@ import { HelpdeskModule } from './helpdesk/helpdesk.module';
 import { ReportsModule } from './reports/reports.module';
 import { PayslipsModule } from './payslips/payslips.module';
 import { SalaryModule } from './salary/salary.module';
+import { ReimbursementModule } from './reimbursement/reimbursement.module';
+import { TaxModule } from './tax/tax.module';
 import { AssetsModule } from './assets/assets.module';
 import { HealthController } from './health.controller';
 
@@ -31,6 +33,8 @@ import { HealthController } from './health.controller';
     ReportsModule,
     PayslipsModule,
     SalaryModule,
+    ReimbursementModule,
+    TaxModule,
     AssetsModule,
   ],
   controllers: [HealthController],

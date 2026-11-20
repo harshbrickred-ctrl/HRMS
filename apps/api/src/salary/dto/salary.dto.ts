@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
@@ -21,6 +21,18 @@ export class SaveStructureDto {
   @IsInt()
   @Min(0)
   monthlyGross!: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  ctc?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  insurance?: number;
 
   @IsOptional()
   @Type(() => Number)
@@ -88,6 +100,18 @@ export class SaveStructureDto {
   @IsInt()
   @Min(0)
   annualDeductions?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' || value == null ? undefined : Number(value)))
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  rentPaidAnnual?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true' || value === 1 || value === '1')
+  @IsBoolean()
+  isMetro?: boolean;
 
   @IsOptional()
   @Type(() => Number)

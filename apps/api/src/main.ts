@@ -43,7 +43,8 @@ async function bootstrapServer(): Promise<Express> {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
+      // Webpack can desync class-validator metadata; strip unknowns instead of 400.
+      forbidNonWhitelisted: false,
       transform: true,
     }),
   );

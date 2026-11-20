@@ -7,11 +7,13 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AttendanceService } from '../attendance/attendance.service';
+import { ReimbursementService } from '../reimbursement/reimbursement.service';
 import {
   computeSalary,
   fyPosition,
   presentPayLine,
   resolveStructure,
+  specialAllowanceFromCtc,
   statutoryOutsideFixed,
   type MonthAdjustments,
   type PriorPay,
@@ -32,16 +34,25 @@ type StructureRow = {
   taxRegime: string;
   ptMonthly: number;
   annualDeductions: number;
+  rentPaidAnnual: number;
+  isMetro: boolean;
   ytdTaxable: number;
   ytdTds: number;
   ytdPt: number;
 };
+
+const PAYROLL_CONTROL_ROLES = ['HRH', 'HR_HEAD', 'SYS', 'SECURITY_ADMIN'];
+
+function canControlPayroll(roles: string[]) {
+  return roles.some((role) => PAYROLL_CONTROL_ROLES.includes(role));
+}
 
 @Injectable()
 export class SalaryService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly attendance: AttendanceService,
+    private readonly reimbursements: ReimbursementService,
   ) {}
 
   async onModuleInit() {
@@ -55,10 +66,11 @@ export class SalaryService implements OnModuleInit {
       orderBy: { employeeCode: 'asc' },
     });
     const { fyStart } = fyPosition(month);
-    const [lines, history, attendanceByEmployee] = await Promise.all([
+    const [lines, history, attendanceByEmployee, reimbursementByEmployee] = await Promise.all([
       this.prisma.salaryLine.findMany({ where: { tenantId, month } }),
       this.prisma.salaryLine.findMany({ where: { tenantId, month: { gte: fyStart, lte: month } } }),
       this.attendance.payByEmployee(tenantId, month),
+      this.reimbursements.amountsForMonth(tenantId, month),
     ]);
     const byEmployee = new Map(lines.map((line) => [line.employeeId, line]));
     const historyByEmployee = new Map<string, typeof lines>();
@@ -67,13 +79,18 @@ export class SalaryService implements OnModuleInit {
       bucket.push(line);
       historyByEmployee.set(line.employeeId, bucket);
     }
-    return employees.map((employee) => {
+    return {
+      employees: employees.map((employee) => {
       const stored = byEmployee.get(employee.id) ?? null;
       const structure = employee.salaryStructure;
       const structureStatutory = structure?.statutoryBonus ?? 0;
-      const line = stored ? presentPayLine(stored, structureStatutory) : null;
-      const historyLines = (historyByEmployee.get(employee.id) ?? []).map((item) =>
-        presentPayLine(item, structureStatutory),
+      const historyStored = historyByEmployee.get(employee.id) ?? [];
+      const attendance = attendanceByEmployee.get(employee.id) ?? null;
+      const reimbursement = reimbursementByEmployee.get(employee.id) ?? 0;
+      const storedLine = freshenUnpaidLine(structure, stored, month, attendance, historyStored, reimbursement);
+      const line = storedLine ?? previewPayLine(structure, month, attendance, historyStored, reimbursement);
+      const historyLines = historyStored.map((item) =>
+        item.month === month && line ? line : presentPayLine(item, structureStatutory),
       );
       return {
         employeeId: employee.id,
@@ -91,19 +108,36 @@ export class SalaryService implements OnModuleInit {
                 structure.taxRegime === 'old' ? 'old' : 'new',
                 structure.annualDeductions,
                 structure.pfOnActual,
+                {
+                  rentPaidAnnual: structure.rentPaidAnnual,
+                  isMetro: structure.isMetro,
+                  monthlyBasic: structure.basic,
+                  monthlyHra: structure.hra,
+                  monthlyDa: structure.da,
+                },
               )
             : null,
       };
-    });
+    }),
+      approved: Boolean(
+        (
+          await this.prisma.payrollMonth.findUnique({
+            where: { tenantId_month: { tenantId, month } },
+          })
+        )?.approved,
+      ),
+      locked: lines.length > 0 && lines.every((line) => line.status === 'locked'),
+    };
   }
 
   async saveStructure(tenantId: string, employeeId: string, dto: SaveStructureDto) {
     await this.requireEmployee(tenantId, employeeId);
     const { special: _special, ...resolved } = this.parseStructure(dto);
+    const ctc = dto.ctc && dto.ctc > 0 ? dto.ctc : undefined;
     return this.prisma.salaryStructure.upsert({
       where: { employeeId },
-      create: { tenantId, employeeId, ...resolved, ...this.opening(dto) },
-      update: { ...resolved, ...this.opening(dto) },
+      create: { tenantId, employeeId, ...resolved, ...this.opening(dto), ...(ctc ? { ctc } : {}) },
+      update: { ...resolved, ...this.opening(dto), ...(ctc ? { ctc } : {}) },
     });
   }
 
@@ -114,6 +148,10 @@ export class SalaryService implements OnModuleInit {
   }
 
   async generate(tenantId: string, month: string) {
+    const already = await this.prisma.salaryLine.count({
+      where: { tenantId, month, submittedToFinance: true },
+    });
+    if (already) throw new BadRequestException('This month is already generated.');
     const structures = await this.prisma.salaryStructure.findMany({
       where: { tenantId },
     });
@@ -163,14 +201,15 @@ export class SalaryService implements OnModuleInit {
   }
 
   async approvePayroll(tenantId: string, actor: AuthUser, month: string) {
-    const allowed = actor.roles.some((role) =>
-      ['HRH', 'HR_HEAD', 'SYS', 'SECURITY_ADMIN'].includes(role),
-    );
-    if (!allowed) throw new ForbiddenException('HR Head has to approve this payroll.');
+    if (!canControlPayroll(actor.roles)) throw new ForbiddenException('HR Head has to approve this payroll.');
     const ready = await this.prisma.salaryLine.count({
       where: { tenantId, month, submittedToFinance: true },
     });
     if (!ready) throw new BadRequestException('Generate the month before approving it.');
+    const existing = await this.prisma.payrollMonth.findUnique({
+      where: { tenantId_month: { tenantId, month } },
+    });
+    if (existing?.approved) throw new BadRequestException('This month is already approved.');
     const batch = await this.prisma.payrollMonth.upsert({
       where: { tenantId_month: { tenantId, month } },
       create: { tenantId, month, approved: true, approvedAt: new Date() },
@@ -267,7 +306,17 @@ export class SalaryService implements OnModuleInit {
     return this.payout(tenantId, month);
   }
 
-  async setLocked(tenantId: string, month: string, locked: boolean) {
+  async setLocked(tenantId: string, actor: AuthUser, month: string, locked: boolean) {
+    if (!canControlPayroll(actor.roles)) throw new ForbiddenException('HR Head has to lock this payroll.');
+    if (locked) {
+      const existing = await this.prisma.salaryLine.findMany({
+        where: { tenantId, month },
+        select: { status: true },
+      });
+      if (existing.length > 0 && existing.every((line) => line.status === 'locked')) {
+        throw new BadRequestException('This month is already locked.');
+      }
+    }
     const result = await this.prisma.salaryLine.updateMany({
       where: { tenantId, month },
       data: { status: locked ? 'locked' : 'draft' },
@@ -323,13 +372,22 @@ export class SalaryService implements OnModuleInit {
     });
     if (!employee) return { structure: null, lines: [], statement: null };
     const lines = await this.prisma.salaryLine.findMany({
-      where: { employeeId: employee.id, paymentStatus: 'paid' },
+      where: { employeeId: employee.id },
       orderBy: { month: 'desc' },
     });
+    const paidLines = lines.filter((line) => line.paymentStatus === 'paid');
     const latest = lines[0];
     const structure = employee.salaryStructure;
     const { fyStart } = latest ? fyPosition(latest.month) : { fyStart: '' };
     const fyLines = latest ? lines.filter((line) => line.month >= fyStart && line.month <= latest.month) : [];
+    const attendance = latest ? (await this.attendance.payByEmployee(employee.tenantId, latest.month)).get(employee.id) : null;
+    const reimbursement =
+      latest && latest.paymentStatus !== 'paid' && latest.paymentStatus !== 'direct'
+        ? await this.reimbursements.amountFor(employee.tenantId, employee.id, latest.month)
+        : 0;
+    const current = latest
+      ? freshenUnpaidLine(structure, latest, latest.month, attendance ?? null, fyLines, reimbursement)
+      : null;
     return {
       structure: employee.salaryStructure
         ? {
@@ -339,25 +397,49 @@ export class SalaryService implements OnModuleInit {
             da: employee.salaryStructure.da,
             otherAllowances: employee.salaryStructure.otherAllowances,
             special:
-              employee.salaryStructure.monthlyGross -
-              employee.salaryStructure.basic -
-              employee.salaryStructure.hra -
-              employee.salaryStructure.da -
-              employee.salaryStructure.otherAllowances -
-              employee.salaryStructure.statutoryBonus -
-              employee.salaryStructure.dailyAllowance,
+              employee.salaryStructure.ctc > 0
+                ? specialAllowanceFromCtc(
+                    employee.salaryStructure.ctc,
+                    employee.salaryStructure.basic,
+                    employee.salaryStructure.hra,
+                    employee.salaryStructure.statutoryBonus,
+                  )
+                : employee.salaryStructure.monthlyGross -
+                  employee.salaryStructure.basic -
+                  employee.salaryStructure.hra -
+                  employee.salaryStructure.da -
+                  employee.salaryStructure.otherAllowances -
+                  employee.salaryStructure.statutoryBonus -
+                  employee.salaryStructure.dailyAllowance,
             taxRegime: employee.salaryStructure.taxRegime,
           }
         : null,
-      lines,
+      lines: paidLines,
+      payslip: current
+        ? {
+            month: current.month,
+            gross: current.gross,
+            deductions: current.gross - current.netPay,
+            netPay: current.netPay,
+            paidDays: current.paidDays,
+            paid: current.paymentStatus === 'paid',
+          }
+        : null,
       statement:
-        latest && structure
+        current && structure
           ? buildStatement(
-              asStatementLine(latest),
-              fyLines.map(asStatementLine),
+              asStatementLine(current),
+              fyLines.map((line) => asStatementLine(line.month === current.month ? current : line)),
               structure.taxRegime === 'old' ? 'old' : 'new',
               structure.annualDeductions,
               structure.pfOnActual,
+              {
+                rentPaidAnnual: structure.rentPaidAnnual,
+                isMetro: structure.isMetro,
+                monthlyBasic: structure.basic,
+                monthlyHra: structure.hra,
+                monthlyDa: structure.da,
+              },
             )
           : null,
     };
@@ -376,19 +458,25 @@ export class SalaryService implements OnModuleInit {
     if (!line) throw new NotFoundException('Payslip is available after the salary is marked paid.');
     const structure = employee.salaryStructure;
     const fullSpecial = structure
-      ? structure.monthlyGross -
-        structure.basic -
-        structure.hra -
-        structure.da -
-        structure.otherAllowances -
-        structure.statutoryBonus -
-        structure.dailyAllowance
+      ? structure.ctc > 0
+        ? specialAllowanceFromCtc(structure.ctc, structure.basic, structure.hra, structure.statutoryBonus)
+        : structure.monthlyGross -
+          structure.basic -
+          structure.hra -
+          structure.da -
+          structure.otherAllowances -
+          structure.statutoryBonus -
+          structure.dailyAllowance
       : line.special;
     const earningRows = [
       ['BASIC', structure?.basic ?? line.basic, line.basic],
       ['HRA', structure?.hra ?? line.hra, line.hra],
       ['DEARNESS ALLOWANCE', structure?.da ?? line.da, line.da],
-      ['SPECIAL ALLOWANCE', fullSpecial, line.special],
+      [
+        'SPECIAL ALLOWANCE',
+        fullSpecial,
+        fullSpecial,
+      ],
       ['OTHER ALLOWANCES', structure?.otherAllowances ?? line.otherAllowances, line.otherAllowances],
       ['STATUTORY BONUS', structure?.statutoryBonus ?? line.statutoryBonus, line.statutoryBonus],
       ['DAILY ALLOWANCE', structure?.dailyAllowance ?? line.dailyAllowance, line.dailyAllowance],
@@ -396,11 +484,13 @@ export class SalaryService implements OnModuleInit {
       ['OVERTIME', line.overtime, line.overtime],
       ['INCENTIVE', line.incentive, line.incentive],
       ['ARREARS', line.arrears, line.arrears],
+      ['REIMBURSEMENT', line.reimbursement ?? 0, line.reimbursement ?? 0],
     ]
       .filter(([, full, actual]) => full !== 0 || actual !== 0)
       .map(([label, full, actual]) => ({ label: String(label), full: Number(full), actual: Number(actual) }));
     const deductionRows = [
       ['PF', line.eePf],
+      ['INSURANCE', line.insurance ?? 0],
       ['ESI', line.eeEsi],
       ['PROFESSIONAL TAX', line.pt],
       ['INCOME TAX', line.tds],
@@ -515,10 +605,11 @@ export class SalaryService implements OnModuleInit {
     });
     const prior = await this.priorPay(tenantId, employeeId, month, structure);
     const attendance = (await this.attendance.payByEmployee(tenantId, month)).get(employeeId);
+    const reimbursement = await this.reimbursements.amountFor(tenantId, employeeId, month);
     const breakdown = computeSalary(
       resolved,
       month,
-      adjustments,
+      { ...adjustments, reimbursement },
       prior,
       attendance ? { workingDays: attendance.workingDays, payableDays: attendance.payableDays } : undefined,
     );
@@ -534,11 +625,12 @@ export class SalaryService implements OnModuleInit {
     }
     const submittedToFinance = Boolean(options?.sendToFinance || previous?.submittedToFinance);
     const payoutGenerated = submittedToFinance ? false : Boolean(previous?.payoutGenerated);
+    const { lossOfPay: _lossOfPay, ...payable } = breakdown;
     const data = {
       tenantId,
       employeeId,
       month,
-      ...breakdown,
+      ...payable,
       monthDays: Math.round(breakdown.monthDays),
       paidDays: Math.round(breakdown.paidDays),
       lopDays: Math.round(breakdown.lopDays),
@@ -548,11 +640,13 @@ export class SalaryService implements OnModuleInit {
       utr: submittedToFinance ? '' : undefined,
       status: previous?.status === 'locked' ? 'locked' : submittedToFinance ? 'submitted' : 'draft',
     };
-    return this.prisma.salaryLine.upsert({
+    const saved = await this.prisma.salaryLine.upsert({
       where: { tenantId_employeeId_month: { tenantId, employeeId, month } },
       create: data,
       update: data,
     });
+    await this.reimbursements.assign(tenantId, employeeId, month);
+    return saved;
   }
 
   private async priorPay(
@@ -599,12 +693,16 @@ export class SalaryService implements OnModuleInit {
         otherAllowances: dto.otherAllowances,
         dailyAllowance: dto.dailyAllowance,
         statutoryBonus: dto.statutoryBonus,
+        ctc: dto.ctc,
         gratuityMonthly: dto.gratuityMonthly,
         leaveEncashment: dto.leaveEncashment,
+        insurance: dto.insurance,
         pfOnActual: dto.pfOnActual,
         taxRegime: dto.taxRegime,
         ptMonthly: dto.ptMonthly,
         annualDeductions: dto.annualDeductions,
+        rentPaidAnnual: dto.rentPaidAnnual,
+        isMetro: dto.isMetro,
       });
     } catch (error) {
       throw new BadRequestException(error instanceof Error ? error.message : 'Invalid salary structure.');
@@ -745,6 +843,24 @@ export class SalaryService implements OnModuleInit {
       `ALTER TABLE "SalaryStructure" ALTER COLUMN "statutoryInGross" SET DEFAULT true`,
     );
     await this.prisma.$executeRawUnsafe(
+      `ALTER TABLE "SalaryStructure" ADD COLUMN IF NOT EXISTS "ctc" INTEGER NOT NULL DEFAULT 0`,
+    );
+    await this.prisma.$executeRawUnsafe(
+      `ALTER TABLE "SalaryStructure" ADD COLUMN IF NOT EXISTS "insurance" INTEGER NOT NULL DEFAULT 0`,
+    );
+    await this.prisma.$executeRawUnsafe(
+      `ALTER TABLE "SalaryStructure" ADD COLUMN IF NOT EXISTS "rentPaidAnnual" INTEGER NOT NULL DEFAULT 0`,
+    );
+    await this.prisma.$executeRawUnsafe(
+      `ALTER TABLE "SalaryStructure" ADD COLUMN IF NOT EXISTS "isMetro" BOOLEAN NOT NULL DEFAULT false`,
+    );
+    await this.prisma.$executeRawUnsafe(
+      `ALTER TABLE "SalaryLine" ADD COLUMN IF NOT EXISTS "insurance" INTEGER NOT NULL DEFAULT 0`,
+    );
+    await this.prisma.$executeRawUnsafe(
+      `ALTER TABLE "SalaryLine" ADD COLUMN IF NOT EXISTS "reimbursement" INTEGER NOT NULL DEFAULT 0`,
+    );
+    await this.prisma.$executeRawUnsafe(
       `ALTER TABLE "SalaryStructure" ADD COLUMN IF NOT EXISTS "gratuityMonthly" INTEGER NOT NULL DEFAULT 0`,
     );
     await this.prisma.$executeRawUnsafe(
@@ -831,7 +947,209 @@ export class SalaryService implements OnModuleInit {
   }
 }
 
-function asStatementLine(line: StatementLine): StatementLine {
+function priorFromLines(
+  lines: Array<{
+    month: string;
+    fixedGross: number;
+    basic: number;
+    hra: number;
+    da: number;
+    special: number;
+    otherAllowances: number;
+    bonus: number;
+    statutoryBonus: number;
+    overtime: number;
+    incentive: number;
+    arrears: number;
+    tdsRegular: number;
+    tdsExtra: number;
+    pt: number;
+  }>,
+  month: string,
+  structure: { ytdTaxable: number; ytdTds: number; ytdPt: number },
+): PriorPay {
+  const { fyStart } = fyPosition(month);
+  return lines
+    .filter((line) => line.month >= fyStart && line.month < month)
+    .reduce<PriorPay>(
+      (sum, line) => ({
+        taxableRegular: sum.taxableRegular + line.fixedGross,
+        taxableExtras:
+          sum.taxableExtras +
+          line.bonus +
+          statutoryOutsideFixed(line) +
+          line.overtime +
+          line.incentive +
+          line.arrears,
+        tdsRegular: sum.tdsRegular + line.tdsRegular,
+        tdsExtra: sum.tdsExtra + line.tdsExtra,
+        pt: sum.pt + line.pt,
+      }),
+      {
+        taxableRegular: structure.ytdTaxable,
+        taxableExtras: 0,
+        tdsRegular: structure.ytdTds,
+        tdsExtra: 0,
+        pt: structure.ytdPt,
+      },
+    );
+}
+
+function freshenUnpaidLine<
+  T extends {
+    month: string;
+    paymentStatus: string;
+    lopDays: number;
+    bonus: number;
+    overtime: number;
+    incentive: number;
+    arrears: number;
+    loanRecovery: number;
+    advanceRecovery: number;
+    otherDeduction: number;
+    statutoryBonus: number;
+    basic: number;
+    hra: number;
+    da: number;
+    special: number;
+    otherAllowances: number;
+    monthDays: number;
+    paidDays: number;
+    fixedGross: number;
+    tdsRegular: number;
+    tdsExtra: number;
+    pt: number;
+  },
+>(
+  structure: {
+    monthlyGross: number;
+    basic: number;
+    hra: number;
+    da: number;
+    otherAllowances: number;
+    statutoryBonus: number;
+    dailyAllowance: number;
+    gratuityMonthly: number;
+    leaveEncashment: number;
+    pfOnActual: boolean;
+    taxRegime: string;
+    ptMonthly: number;
+    annualDeductions: number;
+    ytdTaxable: number;
+    ytdTds: number;
+    ytdPt: number;
+    ctc?: number;
+    insurance?: number;
+  } | null,
+  stored: T | null,
+  month: string,
+  attendance: { workingDays: number; payableDays: number; note?: string } | null,
+  history: T[],
+  reimbursement = 0,
+): (T & { warning?: string }) | null {
+  if (!stored) return null;
+  if (!structure || stored.paymentStatus === 'paid' || stored.paymentStatus === 'direct') {
+    return presentPayLine(stored, structure?.statutoryBonus ?? 0) as T & { warning?: string };
+  }
+  try {
+    const resolved = resolveStructure({
+      ...structure,
+      taxRegime: structure.taxRegime === 'old' ? 'old' : 'new',
+    });
+    const breakdown = computeSalary(
+      resolved,
+      month,
+      {
+        lopDays: stored.lopDays,
+        bonus: stored.bonus,
+        overtime: stored.overtime,
+        incentive: stored.incentive,
+        arrears: stored.arrears,
+        loanRecovery: stored.loanRecovery,
+        advanceRecovery: stored.advanceRecovery,
+        otherDeduction: stored.otherDeduction,
+        reimbursement,
+      },
+      priorFromLines(history, month, structure),
+      attendance && attendance.workingDays > 0
+        ? { workingDays: attendance.workingDays, payableDays: attendance.payableDays }
+        : undefined,
+    );
+    return {
+      ...stored,
+      ...breakdown,
+      warning: [breakdown.warning, attendance?.note].filter(Boolean).join(' '),
+    } as T & { warning?: string };
+  } catch {
+    return presentPayLine(stored, structure.statutoryBonus) as T & { warning?: string };
+  }
+}
+
+function previewPayLine(
+  structure: {
+    monthlyGross: number;
+    basic: number;
+    hra: number;
+    da: number;
+    otherAllowances: number;
+    statutoryBonus: number;
+    dailyAllowance: number;
+    gratuityMonthly: number;
+    leaveEncashment: number;
+    pfOnActual: boolean;
+    taxRegime: string;
+    ptMonthly: number;
+    annualDeductions: number;
+    ytdTaxable: number;
+    ytdTds: number;
+    ytdPt: number;
+    ctc?: number;
+    insurance?: number;
+  } | null,
+  month: string,
+  attendance: { workingDays: number; payableDays: number; note?: string } | null,
+  history: Parameters<typeof priorFromLines>[0],
+  reimbursement = 0,
+) {
+  if (!structure) return null;
+  try {
+    const resolved = resolveStructure({
+      ...structure,
+      taxRegime: structure.taxRegime === 'old' ? 'old' : 'new',
+    });
+    const breakdown = computeSalary(
+      resolved,
+      month,
+      { reimbursement },
+      priorFromLines(history, month, structure),
+      attendance && attendance.workingDays > 0
+        ? { workingDays: attendance.workingDays, payableDays: attendance.payableDays }
+        : undefined,
+    );
+    return {
+      ...breakdown,
+      month,
+      status: 'preview',
+      submittedToFinance: false,
+      payoutGenerated: false,
+      paymentStatus: 'pending',
+      warning: [breakdown.warning, attendance?.note].filter(Boolean).join(' '),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function asStatementLine(
+  line: Omit<StatementLine, 'lossOfPay' | 'insurance' | 'lopDays' | 'reimbursement' | 'tdsRegular' | 'tdsExtra'> & {
+    lossOfPay?: number;
+    insurance?: number;
+    lopDays?: number;
+    reimbursement?: number;
+    tdsRegular?: number;
+    tdsExtra?: number;
+  },
+): StatementLine {
   return {
     month: line.month,
     basic: line.basic,
@@ -845,6 +1163,7 @@ function asStatementLine(line: StatementLine): StatementLine {
     overtime: line.overtime,
     incentive: line.incentive,
     arrears: line.arrears,
+    reimbursement: line.reimbursement ?? 0,
     leaveEncashment: line.leaveEncashment,
     gross: line.gross,
     pfWages: line.pfWages,
@@ -858,9 +1177,14 @@ function asStatementLine(line: StatementLine): StatementLine {
     erEsi: line.erEsi,
     pt: line.pt,
     tds: line.tds,
+    tdsRegular: line.tdsRegular ?? 0,
+    tdsExtra: line.tdsExtra ?? 0,
     loanRecovery: line.loanRecovery ?? 0,
     advanceRecovery: line.advanceRecovery ?? 0,
     otherDeduction: line.otherDeduction,
+    lossOfPay: line.lossOfPay ?? 0,
+    lopDays: line.lopDays ?? 0,
+    insurance: line.insurance ?? 0,
     netPay: line.netPay,
     gratuityAccrual: line.gratuityAccrual,
     employerCost: line.employerCost,
@@ -955,6 +1279,8 @@ function structureFromCsv(row: Record<string, string>): SaveStructureDto {
     taxRegime: regime,
     ptMonthly: optionalInteger(row.ptMonthly),
     annualDeductions: optionalInteger(row.annualDeductions),
+    rentPaidAnnual: optionalInteger(row.rentPaidAnnual),
+    isMetro: ['yes', 'true', '1'].includes((row.isMetro || '').toLowerCase()),
     ytdTaxable: optionalInteger(row.ytdTaxable),
     ytdTds: optionalInteger(row.ytdTds),
     ytdPt: optionalInteger(row.ytdPt),

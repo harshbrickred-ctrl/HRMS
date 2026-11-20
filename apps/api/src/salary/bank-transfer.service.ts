@@ -10,7 +10,6 @@ import {
   interpretPayout,
   razorpayMissingEnv,
   razorpayWebhookValid,
-  salaryNarration,
   type RazorpayConfig,
   type RazorpayXClient,
 } from './razorpay-x';
@@ -31,28 +30,24 @@ export class BankTransferService implements OnModuleInit {
   }
 
   async overview(actor: AuthUser, month: string) {
-    const connection = await this.prisma.bankConnection.findUnique({ where: { tenantId: actor.tenantId } });
     const batches = await this.prisma.salaryTransferBatch.findMany({
       where: { tenantId: actor.tenantId, month },
       include: { transactions: true },
       orderBy: { createdAt: 'desc' },
     });
     const users = await this.userEmails(actor.tenantId, batches.flatMap((batch) => [batch.createdById, batch.authorisedById ?? '']));
-    const linked = connection?.mode === 'razorpay' ? connection : null;
     return {
-      mode: 'razorpay',
-      configured: Boolean(this.razorpay.config()),
-      missing: razorpayMissingEnv(),
-      connection: linked
-        ? {
-            bankCode: 'razorpay',
-            corporateId: 'RazorpayX',
-            accountLast4: linked.accountLast4,
-            mode: 'razorpay',
-            status: linked.status,
-            live: linked.status === 'live',
-          }
-        : null,
+      mode: 'local',
+      configured: true,
+      missing: [] as string[],
+      connection: {
+        bankCode: 'local',
+        corporateId: 'Local bank',
+        accountLast4: '0000',
+        mode: 'local',
+        status: 'mock',
+        live: false,
+      },
       batches: await Promise.all(batches.map((batch) => this.present(batch, actor, users))),
     };
   }
@@ -94,11 +89,6 @@ export class BankTransferService implements OnModuleInit {
   }
 
   async createBatch(actor: AuthUser, month: string, employeeIds: string[]) {
-    const connection = await this.prisma.bankConnection.findUnique({ where: { tenantId: actor.tenantId } });
-    if (!connection || connection.mode !== 'razorpay') {
-      throw new BadRequestException('Connect RazorpayX before creating a transfer.');
-    }
-    this.requireConfig();
     const payroll = await this.prisma.payrollMonth.findUnique({
       where: { tenantId_month: { tenantId: actor.tenantId, month } },
     });
@@ -218,21 +208,12 @@ export class BankTransferService implements OnModuleInit {
       throw new BadRequestException('Ask for a new OTP. This one has expired.');
     }
     if (batch.otpHash !== hashOtp(batch.id, otp)) throw new BadRequestException('OTP does not match.');
-    await this.prisma.salaryTransferBatch.update({
-      where: { id: batch.id },
-      data: {
-        status: 'initiated',
-        initiatedAt: new Date(),
-        otpHash: '',
-        otpExpiresAt: null,
-      },
-    });
-    await this.prisma.salaryTransferTransaction.updateMany({
-      where: { batchId: batch.id, status: 'pending' },
-      data: { status: 'initiated' },
-    });
-    await this.log(actor.tenantId, batch.id, 'initiate', `${batch.reference} confirmed. RazorpayX has not been charged.`);
-    return await this.present(await this.load(actor.tenantId, batch.id), actor, await this.userEmails(actor.tenantId, [batch.createdById]));
+    await this.settleLocal(actor, batch.id);
+    return await this.present(
+      await this.load(actor.tenantId, batch.id),
+      actor,
+      await this.userEmails(actor.tenantId, [batch.createdById, actor.userId]),
+    );
   }
 
   async authorise(actor: AuthUser, batchId: string, dto: AuthoriseTransferDto) {
@@ -240,10 +221,12 @@ export class BankTransferService implements OnModuleInit {
       throw new ForbiddenException('A finance authoriser has to approve this transfer.');
     }
     const batch = await this.load(actor.tenantId, batchId);
-    if (batch.status !== 'initiated') throw new BadRequestException('Initiate the transfer before authorising it.');
+    if (!['initiated', 'in_progress'].includes(batch.status)) {
+      throw new BadRequestException('This batch is not waiting to be paid.');
+    }
     if (dto.decision === 'reject') {
-      if (batch.transactions.some((tx) => tx.providerPayoutId)) {
-        throw new BadRequestException('RazorpayX already has payouts for this batch. Refresh the status instead of rejecting it.');
+      if (batch.transactions.some((tx) => tx.status === 'success')) {
+        throw new BadRequestException('Part of this batch is already paid. It cannot be cancelled.');
       }
       await this.release(actor.tenantId, batch.month, payableIds(batch), 'rejected');
       await this.prisma.salaryTransferBatch.update({
@@ -256,82 +239,7 @@ export class BankTransferService implements OnModuleInit {
       });
       await this.log(actor.tenantId, batch.id, 'reject', `${batch.reference} rejected. Employees can be paid again.`);
     } else {
-      const config = await this.sourceAccount(batch.tenantId, this.requireConfig());
-      const client = this.razorpay.client(config);
-      const rows = await this.payoutRows(batch);
-      let sent = 0;
-      const failedIds: string[] = [];
-      for (const row of rows) {
-        if (row.tx.status === 'skipped' || row.tx.status === 'success') continue;
-        if (row.tx.providerPayoutId) {
-          sent += 1;
-          continue;
-        }
-        try {
-          const fundAccountId = await this.fundAccount(client, batch.tenantId, row);
-          const payout = await client.createSalaryPayout({
-            fundAccountId,
-            amountRupees: row.tx.amount,
-            idempotencyKey: payoutIdempotency(row.tx.idempotencyKey),
-            referenceId: `${row.employeeCode}-${batch.month}`,
-            narration: salaryNarration(batch.month),
-          });
-          const outcome = interpretPayout(payout);
-          if (outcome.kind === 'paid') {
-            await this.prisma.salaryTransferTransaction.update({
-              where: { id: row.tx.id },
-              data: { providerPayoutId: payout.id, status: 'success', utr: outcome.utr, skipReason: '' },
-            });
-            await this.prisma.salaryLine.updateMany({
-              where: { tenantId: batch.tenantId, month: batch.month, employeeId: row.tx.employeeId },
-              data: { paymentStatus: 'paid', utr: outcome.utr, status: 'paid', payoutGenerated: true },
-            });
-          } else if (outcome.kind === 'failed') {
-            await this.prisma.salaryTransferTransaction.update({
-              where: { id: row.tx.id },
-              data: { providerPayoutId: payout.id, status: 'failed', utr: '', skipReason: outcome.reason },
-            });
-            failedIds.push(row.tx.employeeId);
-          } else {
-            await this.prisma.salaryTransferTransaction.update({
-              where: { id: row.tx.id },
-              data: { providerPayoutId: payout.id, status: 'in_progress', skipReason: outcome.note },
-            });
-          }
-          sent += 1;
-        } catch (error) {
-          const reason = error instanceof Error ? error.message : 'RazorpayX rejected this payout.';
-          await this.prisma.salaryTransferTransaction.update({
-            where: { id: row.tx.id },
-            data: { status: 'failed', skipReason: reason, utr: '' },
-          });
-          failedIds.push(row.tx.employeeId);
-        }
-      }
-      await this.release(batch.tenantId, batch.month, failedIds, 'failed');
-      const fresh = await this.load(batch.tenantId, batch.id);
-      const payable = fresh.transactions.filter((tx) => tx.status !== 'skipped');
-      const open = payable.filter((tx) => tx.status !== 'success' && tx.status !== 'failed');
-      const paid = payable.filter((tx) => tx.status === 'success');
-      const failed = payable.filter((tx) => tx.status === 'failed');
-      const status = open.length ? 'in_progress' : paid.length && failed.length ? 'partial' : paid.length ? 'success' : 'failed';
-      await this.prisma.salaryTransferBatch.update({
-        where: { id: batch.id },
-        data: {
-          status,
-          authorisedById: actor.userId,
-          authorisedAt: new Date(),
-          providerRef: 'razorpayx',
-        },
-      });
-      await this.log(
-        actor.tenantId,
-        batch.id,
-        'authorise',
-        sent > 0
-          ? `${batch.reference} sent to RazorpayX. ${paid.length} already have a UTR. The rest stay unpaid until RazorpayX returns one.`
-          : `${batch.reference} was not accepted by RazorpayX.`,
-      );
+      await this.settleLocal(actor, batch.id);
     }
     return await this.present(
       await this.load(actor.tenantId, batch.id),
@@ -392,6 +300,42 @@ export class BankTransferService implements OnModuleInit {
     await this.recomputeBatch(tx.tenantId, tx.batchId);
     await this.log(tx.tenantId, tx.batchId, 'webhook', `RazorpayX payout ${payout.id.slice(0, 8)} is ${payout.status ?? 'updated'}.`);
     return { received: true };
+  }
+
+  private localUtr() {
+    return `LOC${Date.now().toString(36).toUpperCase()}${randomBytes(2).toString('hex').toUpperCase()}`;
+  }
+
+  /** Mock settlement. The local bank marks every open row paid and writes a UTR. No real money moves. */
+  private async settleLocal(actor: AuthUser, batchId: string) {
+    const batch = await this.load(actor.tenantId, batchId);
+    let paid = 0;
+    for (const tx of batch.transactions) {
+      if (tx.status === 'skipped' || tx.status === 'success' || tx.status === 'failed') continue;
+      const utr = this.localUtr();
+      await this.prisma.salaryTransferTransaction.update({
+        where: { id: tx.id },
+        data: { status: 'success', utr, skipReason: '', providerPayoutId: `local_${tx.id}` },
+      });
+      await this.prisma.salaryLine.updateMany({
+        where: { tenantId: batch.tenantId, month: batch.month, employeeId: tx.employeeId },
+        data: { paymentStatus: 'paid', utr, status: 'paid', payoutGenerated: true },
+      });
+      paid += 1;
+    }
+    await this.prisma.salaryTransferBatch.update({
+      where: { id: batch.id },
+      data: {
+        status: paid > 0 ? 'success' : batch.status,
+        initiatedAt: batch.initiatedAt ?? new Date(),
+        authorisedById: actor.userId,
+        authorisedAt: new Date(),
+        otpHash: '',
+        otpExpiresAt: null,
+        providerRef: 'local',
+      },
+    });
+    await this.log(actor.tenantId, batch.id, 'local-pay', `${batch.reference} paid by the local bank. ${paid} salaries marked paid.`);
   }
 
   private async applyPayoutOutcome(
@@ -715,10 +659,6 @@ export class BankTransferService implements OnModuleInit {
       throw error;
     }
   }
-}
-
-function payoutIdempotency(key: string) {
-  return createHash('sha256').update(key).digest('hex').slice(0, 32);
 }
 
 function bankReady(ifsc: string, account: string) {

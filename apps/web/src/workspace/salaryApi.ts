@@ -1,6 +1,8 @@
 import { apiBlob, apiFetch } from '../lib/api';
 
 export type SalaryStructureDto = {
+  ctc?: number;
+  insurance?: number;
   monthlyGross: number;
   basic: number;
   hra: number;
@@ -14,6 +16,8 @@ export type SalaryStructureDto = {
   taxRegime: 'new' | 'old';
   ptMonthly: number;
   annualDeductions: number;
+  rentPaidAnnual?: number;
+  isMetro?: boolean;
   ytdTaxable: number;
   ytdTds: number;
   ytdPt: number;
@@ -67,16 +71,32 @@ export type SheetRow = { id: string; label: string; month: number; ytd: number }
 export type FormRow = { id: string; label: string; amount: number };
 export type CheckRow = { id: string; ok: boolean; detail: string };
 
+export type TaxBreakdownRow = {
+  id: string;
+  section: 'income' | 'deduction' | 'slab' | 'liability' | 'tds';
+  label: string;
+  amount: number;
+  rate: string;
+  formula: string;
+};
+
+export type TaxBreakdown = {
+  regime: 'new' | 'old';
+  rows: TaxBreakdownRow[];
+};
+
 export type SalaryStatement = {
   month: string;
   paidDaysNote: string;
   earnings: SheetRow[];
   deductions: SheetRow[];
   netPay: number;
+  lopDays?: number;
   netPayYtd: number;
   employer: SheetRow[];
   ytdMonths: Array<{ month: string; gross: number; deductions: number; net: number; pf: number; tds: number }>;
   form130: FormRow[];
+  taxBreakdown?: TaxBreakdown;
   checks: CheckRow[];
 };
 
@@ -112,6 +132,14 @@ export type MySalary = {
     taxRegime: string;
   } | null;
   lines: SalaryLineDto[];
+  payslip?: {
+    month: string;
+    gross: number;
+    deductions: number;
+    netPay: number;
+    paidDays: number;
+    paid: boolean;
+  } | null;
   statement: SalaryStatement | null;
 };
 
@@ -131,7 +159,10 @@ export function currentSalaryMonth() {
 }
 
 export function fetchSalaryMonth(month: string) {
-  return apiFetch<SalaryRosterRow[]>(`/api/v1/salary/month?month=${month}`);
+  return apiFetch<{ employees: SalaryRosterRow[]; approved: boolean; locked: boolean }>(
+    `/api/v1/salary/month?month=${encodeURIComponent(month)}`,
+    { cache: 'no-store' },
+  );
 }
 
 export function saveSalaryStructure(

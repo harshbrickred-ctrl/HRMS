@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useAuth } from '../auth/AuthContext';
 import { showToast } from '../ui/toast';
 import './hr-master.css';
 import './salary.css';
+import { salaryFromCtc } from './ctcSalary';
 import { SalarySheet } from './SalarySheet';
 import {
   SALARY_MONTH_TEMPLATE,
@@ -23,13 +25,14 @@ function formatDays(value: number) {
 }
 
 function salaryState(row: SalaryRosterRow) {
-  if (row.line?.submittedToFinance && row.line.payoutGenerated) return 'payout ready';
-  if (row.line?.submittedToFinance) return 'with finance';
-  if (row.line) return row.line.status;
-  return row.structure ? 'not generated' : 'no structure';
+  if (!row.line || row.line.status === 'preview') return row.structure ? 'not generated' : 'no structure';
+  if (row.line.submittedToFinance && row.line.payoutGenerated) return 'payout ready';
+  if (row.line.submittedToFinance) return 'with finance';
+  return row.line.status;
 }
 
 type StructureForm = {
+  ctc: string;
   monthlyGross: string;
   basic: string;
   hra: string;
@@ -43,9 +46,12 @@ type StructureForm = {
   taxRegime: 'new' | 'old';
   ptMonthly: string;
   annualDeductions: string;
+  rentPaidAnnual: string;
+  isMetro: boolean;
   ytdTaxable: string;
   ytdTds: string;
   ytdPt: string;
+  insurance: string;
 };
 
 type MonthForm = {
@@ -60,6 +66,7 @@ type MonthForm = {
 };
 
 const emptyStructure = (): StructureForm => ({
+  ctc: '',
   monthlyGross: '',
   basic: '',
   hra: '',
@@ -73,9 +80,12 @@ const emptyStructure = (): StructureForm => ({
   taxRegime: 'new',
   ptMonthly: '0',
   annualDeductions: '0',
+  rentPaidAnnual: '0',
+  isMetro: false,
   ytdTaxable: '0',
   ytdTds: '0',
   ytdPt: '0',
+  insurance: '0',
 });
 
 const emptyMonth = (): MonthForm => ({
@@ -95,28 +105,68 @@ function num(value: string) {
 }
 
 function rosterGross(row: SalaryRosterRow) {
-  return row.structure?.monthlyGross ?? row.line?.gross ?? 0;
+  return row.line?.gross ?? row.structure?.monthlyGross ?? 0;
 }
 
 function structureBody(structure: StructureForm) {
+  const pay = salaryFromCtc(num(structure.ctc));
   return {
-    monthlyGross: num(structure.monthlyGross),
-    basic: structure.basic === '' ? undefined : num(structure.basic),
-    hra: structure.hra === '' ? undefined : num(structure.hra),
-    da: num(structure.da),
-    otherAllowances: num(structure.otherAllowances),
-    statutoryBonus: num(structure.statutoryBonus),
-    dailyAllowance: num(structure.dailyAllowance),
-    gratuityMonthly: num(structure.gratuity),
-    leaveEncashment: num(structure.leaveEncashment),
-    pfOnActual: structure.pfOnActual,
+    ctc: pay.ctc,
+    monthlyGross: pay.gross,
+    basic: pay.basic,
+    hra: pay.hra,
+    da: 0,
+    otherAllowances: 0,
+    statutoryBonus: pay.statutoryBonus,
+    dailyAllowance: 0,
+    gratuityMonthly: pay.gratuity,
+    leaveEncashment: pay.leaveEncashment,
+    pfOnActual: false,
     taxRegime: structure.taxRegime,
     ptMonthly: num(structure.ptMonthly),
     annualDeductions: num(structure.annualDeductions),
+    // Rent / metro are saved via tax declaration approve; omit here so older APIs don't 400.
     ytdTaxable: num(structure.ytdTaxable),
     ytdTds: num(structure.ytdTds),
     ytdPt: num(structure.ytdPt),
+    insurance: num(structure.insurance),
   };
+}
+
+function CalculatedPay({
+  ctc,
+  disabled,
+  tds,
+  net,
+}: {
+  ctc: string;
+  disabled: boolean;
+  tds?: number;
+  net?: number;
+}) {
+  const pay = salaryFromCtc(num(ctc));
+  const rows: Array<[string, number]> = [
+    ['Basic this month', pay.basic],
+    ['HRA this month', pay.hra],
+    ['PF this month', pay.pf],
+    ['Statutory bonus this month', pay.statutoryBonus],
+    ['Special allowance this month', pay.special],
+    ['Gratuity this month', pay.gratuity],
+    ['Leave encashment this month', pay.leaveEncashment],
+    ['Gross this month', pay.gross],
+    ['TDS this month', tds ?? 0],
+    ['Net this month', net ?? Math.max(0, pay.gross - pay.pf)],
+  ];
+  return (
+    <>
+      {rows.map(([label, value]) => (
+        <label key={label}>
+          {label}
+          <input value={String(value)} readOnly disabled={disabled} />
+        </label>
+      ))}
+    </>
+  );
 }
 
 function downloadText(name: string, text: string) {
@@ -130,8 +180,12 @@ function downloadText(name: string, text: string) {
 }
 
 export function HrSalaryPage() {
+  const { hasRole } = useAuth();
+  const canControlPayroll = hasRole('HRH') || hasRole('SYS');
   const [month, setMonth] = useState(currentSalaryMonth);
   const [rows, setRows] = useState<SalaryRosterRow[]>([]);
+  const [monthApproved, setMonthApproved] = useState(false);
+  const [monthLocked, setMonthLocked] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [structure, setStructure] = useState<StructureForm>(emptyStructure);
   const [adjust, setAdjust] = useState<MonthForm>(emptyMonth);
@@ -140,11 +194,13 @@ export function HrSalaryPage() {
   const [busy, setBusy] = useState(false);
 
   const selected = rows.find((row) => row.employeeId === selectedId) ?? null;
-  const locked = rows.some((row) => row.line?.status === 'locked');
+  const monthGenerated = rows.some((row) => row.line?.submittedToFinance);
 
   async function load(nextMonth = month) {
     const data = await fetchSalaryMonth(nextMonth);
-    setRows(data);
+    setRows(data.employees);
+    setMonthApproved(data.approved);
+    setMonthLocked(data.locked);
     setError(null);
   }
 
@@ -160,6 +216,7 @@ export function HrSalaryPage() {
     setStructure(
       saved
         ? {
+            ctc: String(saved.ctc || (saved.basic ? saved.basic * 2 * 12 : saved.monthlyGross * 12)),
             monthlyGross: String(saved.monthlyGross),
             basic: String(saved.basic),
             hra: String(saved.hra),
@@ -173,9 +230,12 @@ export function HrSalaryPage() {
             taxRegime: saved.taxRegime,
             ptMonthly: String(saved.ptMonthly),
             annualDeductions: String(saved.annualDeductions),
+            rentPaidAnnual: String(saved.rentPaidAnnual ?? 0),
+            isMetro: Boolean(saved.isMetro),
             ytdTaxable: String(saved.ytdTaxable),
             ytdTds: String(saved.ytdTds),
             ytdPt: String(saved.ytdPt),
+            insurance: String(saved.insurance ?? 0),
           }
         : emptyStructure(),
     );
@@ -207,14 +267,30 @@ export function HrSalaryPage() {
     );
   }, [rows]);
 
+  async function persistAndCalculate() {
+    if (!selected) return;
+    await saveSalaryStructure(selected.employeeId, structureBody(structure));
+    await saveSalaryMonth(selected.employeeId, {
+      month,
+      lopDays: num(adjust.lopDays),
+      bonus: num(adjust.bonus),
+      overtime: num(adjust.overtime),
+      incentive: num(adjust.incentive),
+      arrears: num(adjust.arrears),
+      loanRecovery: num(adjust.loanRecovery),
+      advanceRecovery: num(adjust.advanceRecovery),
+      otherDeduction: num(adjust.otherDeduction),
+    });
+    await load();
+  }
+
   async function onSaveStructure(event: FormEvent) {
     event.preventDefault();
     if (!selected) return;
     setBusy(true);
     try {
-      await saveSalaryStructure(selected.employeeId, structureBody(structure));
-      await load();
-      showToast('Salary structure saved');
+      await persistAndCalculate();
+      showToast('Structure saved and TDS calculated');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save structure.');
     } finally {
@@ -227,19 +303,7 @@ export function HrSalaryPage() {
     if (!selected) return;
     setBusy(true);
     try {
-      await saveSalaryStructure(selected.employeeId, structureBody(structure));
-      await saveSalaryMonth(selected.employeeId, {
-        month,
-        lopDays: num(adjust.lopDays),
-        bonus: num(adjust.bonus),
-        overtime: num(adjust.overtime),
-        incentive: num(adjust.incentive),
-        arrears: num(adjust.arrears),
-        loanRecovery: num(adjust.loanRecovery),
-        advanceRecovery: num(adjust.advanceRecovery),
-        otherDeduction: num(adjust.otherDeduction),
-      });
-      await load();
+      await persistAndCalculate();
       showToast('Salary calculated');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not calculate salary.');
@@ -270,6 +334,7 @@ export function HrSalaryPage() {
     setBusy(true);
     try {
       const result = await approvePayroll(month);
+      await load();
       showToast(`Approved ${result.employees} salaries for bank transfer`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not approve payroll.');
@@ -281,9 +346,9 @@ export function HrSalaryPage() {
   async function onLock() {
     setBusy(true);
     try {
-      const result = await lockSalaries(month, !locked);
+      const result = await lockSalaries(month, !monthLocked);
       await load();
-      showToast(locked ? `Unlocked ${result.count} lines` : `Locked ${result.count} lines`);
+      showToast(monthLocked ? `Unlocked ${result.count} lines` : `Locked ${result.count} lines`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not lock the month.');
     } finally {
@@ -311,29 +376,76 @@ export function HrSalaryPage() {
   }
 
   return (
-    <div className="hr-master">
+    <div className="hr-master salary-screen">
       <div className="hr-master-bar">
-        <div>
-          <h1>Salary</h1>
-          <p className="hr-master-lead">
-            Set the fixed structure, then add this month&apos;s incentive, overtime, bonus, loan recovery, advance
-            recovery, or other deduction. Generate month sends that payroll to Finance for payout.
-          </p>
+        <div className="salary-stats">
+          <div>
+            <span>Gross</span>
+            <strong>{formatSalary(totals.gross)}</strong>
+          </div>
+          <div>
+            <span>Net</span>
+            <strong>{formatSalary(totals.net)}</strong>
+          </div>
+          <div>
+            <span>TDS</span>
+            <strong>{formatSalary(totals.tds)}</strong>
+          </div>
         </div>
         <div className="salary-actions">
-          <label>
-            Month
-            <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
-          </label>
-          <button type="button" className="ess-btn ess-btn-primary" disabled={busy} onClick={() => void onGenerate()}>
-            Generate month
-          </button>
-          <button type="button" className="ess-btn" disabled={busy} onClick={() => void onApprove()}>
-            Approve for bank transfer
-          </button>
-          <button type="button" className="ess-btn" disabled={busy || rows.every((row) => !row.line)} onClick={() => void onLock()}>
-            {locked ? 'Unlock month' : 'Lock month'}
-          </button>
+          <div className="salary-month-row">
+            <label>
+              Month
+              <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
+            </label>
+            <button
+              type="button"
+              className="ess-btn ess-btn-primary"
+              disabled={busy || monthGenerated}
+              title={monthGenerated ? 'This month is already generated.' : undefined}
+              onClick={() => void onGenerate()}
+            >
+              Generate month
+            </button>
+          </div>
+          {canControlPayroll ? (
+            <button
+              type="button"
+              className="ess-btn"
+              disabled={busy || !monthGenerated || monthApproved}
+              title={monthApproved ? 'This month is already approved.' : undefined}
+              onClick={() => void onApprove()}
+            >
+              Approve for bank transfer
+            </button>
+          ) : null}
+          {canControlPayroll ? (
+            <button
+              type="button"
+              className="ess-btn"
+              disabled={busy || !monthGenerated || monthLocked}
+              title={monthLocked ? 'This month is already locked.' : undefined}
+              onClick={() => void onLock()}
+            >
+              Lock month
+            </button>
+          ) : null}
+          {canControlPayroll && monthLocked ? (
+            <button type="button" className="ess-btn" disabled={busy} onClick={() => void onLock()}>
+              Unlock month
+            </button>
+          ) : null}
+          {monthGenerated || monthApproved || monthLocked ? (
+            <p className="salary-note salary-status">
+              {[
+                monthGenerated ? 'This month is already generated.' : '',
+                monthApproved ? 'This month is already approved.' : '',
+                monthLocked ? 'This month is already locked.' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -365,15 +477,8 @@ export function HrSalaryPage() {
         >
           Download template
         </button>
-        <span className="salary-note">
-          Gross {formatSalary(totals.gross)} · Net {formatSalary(totals.net)} · TDS {formatSalary(totals.tds)}
-        </span>
       </div>
       {error ? <p className="ess-alert">{error}</p> : null}
-      <p className="salary-note">
-        Leave basic or HRA blank to use 50% basic and 40% HRA. One-time bonus tax is deducted in the month it is paid.
-        Brought-forward YTD is only for months not generated here. A locked month is not overwritten.
-      </p>
 
       <div className="salary-layout">
         <div className="salary-scroll">
@@ -407,9 +512,22 @@ export function HrSalaryPage() {
                       <div className="salary-note">{row.designation || 'No designation'}</div>
                     </td>
                     <td>{row.structure || row.line ? formatSalary(rosterGross(row)) : '—'}</td>
-                    <td>{row.line ? formatSalary(row.line.eePf) : '—'}</td>
+                    <td>{row.line ? formatSalary(row.line.eePf) : row.structure ? formatSalary(salaryFromCtc(row.structure.ctc || row.structure.basic * 24).pf) : '—'}</td>
                     <td>{row.line ? formatSalary(row.line.tds) : '—'}</td>
-                    <td>{row.line ? formatSalary(row.line.netPay) : '—'}</td>
+                    <td>
+                      {row.line
+                        ? formatSalary(row.line.netPay)
+                        : row.structure
+                          ? formatSalary(
+                              Math.max(
+                                0,
+                                (row.structure.monthlyGross || salaryFromCtc(row.structure.ctc || 0).gross) -
+                                  salaryFromCtc(row.structure.ctc || row.structure.basic * 24).pf -
+                                  (row.structure.insurance ?? 0),
+                              ),
+                            )
+                          : '—'}
+                    </td>
                     <td>{salaryState(row)}</td>
                   </tr>
                 ))
@@ -418,101 +536,32 @@ export function HrSalaryPage() {
           </table>
         </div>
 
-        <form className="hr-panel salary-editor" onSubmit={onSaveStructure}>
+        <form key={selected?.employeeId ?? 'none'} className="hr-panel salary-editor" onSubmit={onSaveStructure}>
           <h2>{selected ? selected.name : 'Salary structure'}</h2>
           {selected?.line?.warning ? <p className="ess-alert">{selected.line.warning}</p> : null}
-          {!selected ? <p className="salary-note">Select an employee to set gross, basic, and tax regime.</p> : null}
+          {!selected ? <p className="salary-note">Select an employee and enter CTC.</p> : null}
           <label>
-            Monthly gross
+            CTC per year
             <input
               inputMode="numeric"
-              value={structure.monthlyGross}
-              onChange={(event) => setStructure({ ...structure, monthlyGross: event.target.value })}
+              value={structure.ctc}
+              onChange={(event) => setStructure({ ...structure, ctc: event.target.value })}
               required
               disabled={!selected}
             />
           </label>
+          <CalculatedPay
+            ctc={structure.ctc}
+            disabled={!selected}
+            tds={selected?.line?.tds}
+            net={selected?.line?.netPay}
+          />
           <label>
-            Basic (blank = 50%)
+            Insurance this month
             <input
               inputMode="numeric"
-              value={structure.basic}
-              onChange={(event) => setStructure({ ...structure, basic: event.target.value })}
-              disabled={!selected}
-            />
-          </label>
-          <label>
-            HRA (blank = 40% of basic)
-            <input
-              inputMode="numeric"
-              value={structure.hra}
-              onChange={(event) => setStructure({ ...structure, hra: event.target.value })}
-              disabled={!selected}
-            />
-          </label>
-          <label>
-            DA
-            <input inputMode="numeric" value={structure.da} onChange={(event) => setStructure({ ...structure, da: event.target.value })} disabled={!selected} />
-          </label>
-          <label>
-            Special allowance
-            <input
-              inputMode="numeric"
-              value={String(
-                num(structure.monthlyGross) -
-                  num(structure.basic) -
-                  num(structure.hra) -
-                  num(structure.da) -
-                  num(structure.otherAllowances) -
-                  num(structure.statutoryBonus) -
-                  num(structure.dailyAllowance),
-              )}
-              readOnly
-              disabled={!selected}
-            />
-          </label>
-          <label>
-            Other allowances
-            <input
-              inputMode="numeric"
-              value={structure.otherAllowances}
-              onChange={(event) => setStructure({ ...structure, otherAllowances: event.target.value })}
-              disabled={!selected}
-            />
-          </label>
-          <label>
-            Statutory bonus
-            <input
-              inputMode="numeric"
-              value={structure.statutoryBonus}
-              onChange={(event) => setStructure({ ...structure, statutoryBonus: event.target.value })}
-              disabled={!selected}
-            />
-          </label>
-          <label>
-            Daily allowance
-            <input
-              inputMode="numeric"
-              value={structure.dailyAllowance}
-              onChange={(event) => setStructure({ ...structure, dailyAllowance: event.target.value })}
-              disabled={!selected}
-            />
-          </label>
-          <label>
-            Gratuity
-            <input
-              inputMode="numeric"
-              value={structure.gratuity}
-              onChange={(event) => setStructure({ ...structure, gratuity: event.target.value })}
-              disabled={!selected}
-            />
-          </label>
-          <label>
-            Leave encashment
-            <input
-              inputMode="numeric"
-              value={structure.leaveEncashment}
-              onChange={(event) => setStructure({ ...structure, leaveEncashment: event.target.value })}
+              value={structure.insurance}
+              onChange={(event) => setStructure({ ...structure, insurance: event.target.value })}
               disabled={!selected}
             />
           </label>
@@ -546,15 +595,22 @@ export function HrSalaryPage() {
             />
           </label>
           <label>
-            <span>
-              <input
-                type="checkbox"
-                checked={structure.pfOnActual}
-                onChange={(event) => setStructure({ ...structure, pfOnActual: event.target.checked })}
-                disabled={!selected}
-              />{' '}
-              PF on actual basic + DA, above the ceiling
-            </span>
+            Annual rent paid (HRA exemption)
+            <input
+              inputMode="numeric"
+              value={structure.rentPaidAnnual}
+              onChange={(event) => setStructure({ ...structure, rentPaidAnnual: event.target.value })}
+              disabled={!selected}
+            />
+          </label>
+          <label className="ess-check">
+            <input
+              type="checkbox"
+              checked={structure.isMetro}
+              onChange={(event) => setStructure({ ...structure, isMetro: event.target.checked })}
+              disabled={!selected}
+            />
+            Metro city
           </label>
           <label>
             Brought-forward taxable pay
@@ -602,14 +658,19 @@ export function HrSalaryPage() {
                 <dd>{formatDays(selected.attendance.unpaidLeave)}</dd>
               </div>
               <div>
+                <dt>Pending leave deducted</dt>
+                <dd>{formatDays(selected.attendance.pendingLeaveDays)}</dd>
+              </div>
+              <div>
                 <dt>Total payable days</dt>
                 <dd>{formatDays(selected.attendance.payableDays)}</dd>
               </div>
             </dl>
           ) : null}
           <p className="salary-note">
-            Payable days come from attendance and approved leave. Weekends and holidays are not working days. Payable
-            days are present plus paid leave. A day with no attendance row stays present until HR marks it.
+            Payable days come from attendance. Pending leave is deducted even before approval. Approved paid leave is
+            not deducted. Weekends and holidays are not working days. A day with no attendance row stays present until
+            HR marks it.
             {selected?.attendance?.note ? ` ${selected.attendance.note}` : ''}
           </p>
           <label>
@@ -660,8 +721,7 @@ export function HrSalaryPage() {
           </button>
           {selected?.line ? (
             <p className="salary-note">
-              Net {formatSalary(selected.line.netPay)}. Employer cost {formatSalary(selected.line.employerCost)}. PF wages{' '}
-              {formatSalary(selected.line.pfWages)}.
+              Net {formatSalary(selected.line.netPay)}. PF wages {formatSalary(selected.line.pfWages)}.
             </p>
           ) : null}
         </form>

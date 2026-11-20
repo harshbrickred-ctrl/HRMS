@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PeopleOS — Income Tax &amp; TDS Guide</title>
+  <style>
+    :root {
+      --ink: #1a2332;
+      --muted: #5a6577;
+      --line: #d5dbe6;
+      --panel: #f4f6f9;
+      --accent: #0b5fff;
+      --accent-soft: #e8f0ff;
+    }
+    * { box-sizing: border-box; }
+    html { font-size: 11pt; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Segoe UI", Calibri, Arial, sans-serif;
+      line-height: 1.45;
+      background: #fff;
+    }
+    .page {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 28px 36px 48px;
+    }
+    header.doc-hero {
+      border-bottom: 3px solid var(--accent);
+      padding-bottom: 18px;
+      margin-bottom: 22px;
+    }
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 0 0 6px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.75rem;
+      line-height: 1.2;
+      font-weight: 700;
+    }
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+      padding: 12px 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 0.86rem;
+    }
+    .meta div strong { display: block; color: var(--muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    h2 {
+      margin: 28px 0 10px;
+      font-size: 1.2rem;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 6px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 18px 0 8px;
+      font-size: 1.02rem;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 10px; }
+    ul, ol { margin: 0 0 12px; padding-left: 1.25rem; }
+    li { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 0 14px;
+      font-size: 0.9rem;
+      page-break-inside: avoid;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 7px 9px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: var(--panel);
+      font-weight: 650;
+    }
+    code, .formula {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.86rem;
+    }
+    .formula-box {
+      background: var(--accent-soft);
+      border: 1px solid #c9daf8;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 0 0 14px;
+      white-space: pre-wrap;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.84rem;
+      line-height: 1.4;
+    }
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: var(--panel);
+      padding: 10px 12px;
+      margin: 0 0 14px;
+      border-radius: 0 8px 8px 0;
+    }
+    .toc {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 18px;
+    }
+    .toc ol { margin: 6px 0 0; }
+    footer {
+      margin-top: 36px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    @media print {
+      body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .page { max-width: none; padding: 0; }
+      a { color: inherit; text-decoration: none; }
+      h2 { page-break-before: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="doc-hero">
+      <p class="eyebrow">PeopleOS HRMS · Internal reference</p>
+      <h1>Income Tax &amp; TDS Guide</h1>
+      <p class="subtitle">How PeopleOS calculates India salary income tax, slabs, rebates, and monthly TDS — written for HR, Finance, and Employees.</p>
+      <div class="meta">
+        <div><strong>Audience</strong>HR · Finance · Employees</div>
+        <div><strong>Financial year</strong>April → March</div>
+        <div><strong>Language</strong>English · plain &amp; professional</div>
+      </div>
+    </header>
+
+    <nav class="toc">
+      <strong>Contents</strong>
+      <ol>
+        <li>What this system does</li>
+        <li>Roles: Employee, HR, Finance</li>
+        <li>New vs Old tax regime</li>
+        <li>Slab rates (%)</li>
+        <li>Annual tax — step by step</li>
+        <li>Monthly TDS — yearly to monthly</li>
+        <li>Worked example (₹15L CTC)</li>
+        <li>Screens &amp; where to look</li>
+        <li>Testing checklist</li>
+        <li>Notes &amp; limits</li>
+      </ol>
+    </nav>
+
+    <h2>1. What this system does</h2>
+    <p>PeopleOS estimates <strong>annual income tax</strong> on projected salary income, then deducts <strong>TDS every month</strong> from the payslip so that most of the tax is collected by March.</p>
+    <table>
+      <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>CTC</td><td>Cost to company (usually annual). Monthly gross ≈ CTC ÷ 12</td></tr>
+        <tr><td>Tax regime</td><td><strong>New</strong> or <strong>Old</strong> — different slabs and deductions</td></tr>
+        <tr><td>Taxable income</td><td>Income after allowed exemptions and deductions</td></tr>
+        <tr><td>Annual tax</td><td>Full-year tax on projected income</td></tr>
+        <tr><td>TDS</td><td>Tax Deducted at Source — cut from monthly salary</td></tr>
+        <tr><td>YTD</td><td>Year to date — totals from April through the selected month</td></tr>
+      </tbody>
+    </table>
+    <div class="callout"><strong>Key idea:</strong> Tax is calculated on a <em>yearly</em> projection. The amount taken from salary is <em>monthly</em>.</div>
+
+    <h2>2. Roles: Employee, HR, Finance</h2>
+    <h3>Employee (ESS — My Salary)</h3>
+    <table>
+      <thead><tr><th>Feature</th><th>What they can do</th></tr></thead>
+      <tbody>
+        <tr><td>Payroll / Payslip</td><td>See earnings, deductions, TDS, and net pay</td></tr>
+        <tr><td>Tax computation table</td><td>See amounts, slab %, and formulas</td></tr>
+        <tr><td>YTD Reports</td><td>Month-wise gross, deductions, PF, TDS</td></tr>
+        <tr><td>IT Statement</td><td>Form 130-style summary (paid so far or projected)</td></tr>
+        <tr><td>IT Declaration</td><td>Declare 80C / Chapter VI-A and HRA rent (old regime)</td></tr>
+        <tr><td>Proof of Investment</td><td>Upload proof files for declared investments</td></tr>
+        <tr><td>Tax regime</td><td>Request switch New ↔ Old (HR approves)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>HR</h3>
+    <table>
+      <thead><tr><th>Feature</th><th>What they can do</th></tr></thead>
+      <tbody>
+        <tr><td>Salary → Structure</td><td>Set CTC, regime, PT, annual deductions, rent, metro, brought-forward YTD</td></tr>
+        <tr><td>Save / Calculate</td><td>Recalculate payslip and monthly TDS</td></tr>
+        <tr><td>Month selector</td><td>Work on any payroll month (e.g. 2026-04, 2026-11)</td></tr>
+        <tr><td>Generate month</td><td>Submit month lines into the finance payout flow</td></tr>
+        <tr><td>Tax reviews</td><td>Approve/reject declarations, proofs, and regime-change requests</td></tr>
+        <tr><td>Payslip + Tax table</td><td>Review earnings, deductions, and full tax breakdown</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Finance</h3>
+    <table>
+      <thead><tr><th>Feature</th><th>What they can do</th></tr></thead>
+      <tbody>
+        <tr><td>Payroll month</td><td>After HR generate — approve, payout, and bank transfer flows</td></tr>
+        <tr><td>TDS on the line</td><td>TDS is already computed; net pay is after TDS</td></tr>
+        <tr><td>Reconciliation</td><td>IT statement shows tax payable vs TDS to date (shortfall / excess)</td></tr>
+      </tbody>
+    </table>
+
+    <h2>3. New vs Old tax regime</h2>
+    <h3>New regime</h3>
+    <p><strong>Allowed:</strong> standard deduction <strong>₹75,000</strong>; new slabs; rebate u/s 87A.</p>
+    <p><strong>Not allowed in this product:</strong> Chapter VI-A (80C etc.), professional tax deduction, HRA exemption — all treated as ₹0.</p>
+    <h3>Old regime</h3>
+    <p><strong>Allowed:</strong> standard deduction <strong>₹50,000</strong>; HRA exemption (Sec 10(13A)); Chapter VI-A / annual deductions; professional tax deduction (max <strong>₹2,500</strong> / year).</p>
+
+    <h2>4. Slab rates (%)</h2>
+    <p>Only the income inside each band is taxed at that band’s percentage.</p>
+    <h3>New regime</h3>
+    <table>
+      <thead><tr><th>Taxable income band</th><th>Rate</th></tr></thead>
+      <tbody>
+        <tr><td>Up to ₹4,00,000</td><td>0%</td></tr>
+        <tr><td>₹4,00,001 – ₹8,00,000</td><td>5%</td></tr>
+        <tr><td>₹8,00,001 – ₹12,00,000</td><td>10%</td></tr>
+        <tr><td>₹12,00,001 – ₹16,00,000</td><td>15%</td></tr>
+        <tr><td>₹16,00,001 – ₹20,00,000</td><td>20%</td></tr>
+        <tr><td>₹20,00,001 – ₹24,00,000</td><td>25%</td></tr>
+        <tr><td>Above ₹24,00,000</td><td>30%</td></tr>
+      </tbody>
+    </table>
+    <h3>Old regime</h3>
+    <table>
+      <thead><tr><th>Taxable income band</th><th>Rate</th></tr></thead>
+      <tbody>
+        <tr><td>Up to ₹2,50,000</td><td>0%</td></tr>
+        <tr><td>₹2,50,001 – ₹5,00,000</td><td>5%</td></tr>
+        <tr><td>₹5,00,001 – ₹10,00,000</td><td>20%</td></tr>
+        <tr><td>Above ₹10,00,000</td><td>30%</td></tr>
+      </tbody>
+    </table>
+
+    <h2>5. Annual tax — step by step</h2>
+    <ol>
+      <li><strong>Tax base</strong> — projected annual / FY salary used for tax.</li>
+      <li><strong>HRA exemption (Old only)</strong></li>
+    </ol>
+    <div class="formula-box">HRA exempt = minimum of:
+  1) Actual HRA for the year
+  2) Rent paid − 10% of (Basic + DA)
+  3) 50% of (Basic + DA) if Metro, else 40%</div>
+    <ol start="3">
+      <li><strong>Standard deduction</strong> — New ₹75,000 / Old ₹50,000 (capped at income after exemptions).</li>
+      <li><strong>Other deductions (Old only)</strong> — Chapter VI-A / annual deductions; PT up to ₹2,500.</li>
+      <li><strong>Taxable income</strong></li>
+    </ol>
+    <div class="formula-box">Taxable = Gross − HRA exempt − Std ded − Ch. VI-A − PT
+(rounded to nearest ₹10)</div>
+    <ol start="6">
+      <li><strong>Tax on slabs</strong> — sum of (slice × rate%) for each band.</li>
+      <li><strong>Rebate u/s 87A</strong>
+        <ul>
+          <li><strong>New:</strong> if taxable ≤ ₹12L → rebate up to ₹60,000; if above ₹12L → marginal relief so tax ≤ (taxable − ₹12L).</li>
+          <li><strong>Old:</strong> if taxable ≤ ₹5L → rebate up to ₹12,500.</li>
+        </ul>
+      </li>
+      <li><strong>Surcharge</strong> (high income): 0% ≤ ₹50L; 10% ₹50L–1Cr; 15% ₹1–2Cr; 25% ₹2–5Cr; above ₹5Cr → 37% Old / 25% New.</li>
+      <li><strong>Health &amp; education cess</strong> = 4% × (tax after rebate + surcharge).</li>
+      <li><strong>Total annual tax</strong> = tax after rebate + surcharge + cess.</li>
+    </ol>
+
+    <h2>6. Monthly TDS — yearly to monthly</h2>
+    <p>Financial year position: <strong>April = 1 … March = 12</strong>. <code>monthsLeft</code> includes the current payroll month.</p>
+    <h3>Regular TDS</h3>
+    <div class="formula-box">Projected regular =
+  Prior regular pay this FY
+  + This month fixed gross
+  + (monthsLeft − 1) × monthly gross
+
+Monthly regular TDS =
+  max(0, (Annual tax on projected regular − prior regular TDS) ÷ monthsLeft)</div>
+    <h3>Extra TDS</h3>
+    <p>On bonus / overtime / incentive / arrears:</p>
+    <div class="formula-box">Extra TDS = max(0,
+  Tax(regular + extras) − Tax(regular) − prior extra TDS)</div>
+    <h3>Total this month</h3>
+    <div class="formula-box">TDS = Regular TDS + Extra TDS</div>
+    <div class="callout">
+      <strong>Mid-year with blank YTD:</strong> If brought-forward taxable/TDS is empty and there are no earlier payslip lines, PeopleOS assumes the current CTC rate from April and that TDS was spread evenly. That is why ₹15L New shows about <strong>₹8,125</strong> in both April and November.
+    </div>
+
+    <h2>7. Worked example — ₹15,00,000 CTC · New regime</h2>
+    <table>
+      <thead><tr><th>Item</th><th>Amount</th></tr></thead>
+      <tbody>
+        <tr><td>Projected / annual gross</td><td>₹15,00,000</td></tr>
+        <tr><td>Standard deduction</td><td>₹75,000</td></tr>
+        <tr><td>Taxable income</td><td>₹14,25,000</td></tr>
+        <tr><td>Total annual tax (after rebate &amp; cess)</td><td>≈ ₹97,500</td></tr>
+        <tr><td>Monthly TDS</td><td>≈ ₹8,125 (97,500 ÷ 12)</td></tr>
+      </tbody>
+    </table>
+    <p>At <strong>₹12,00,000</strong> CTC New, rebate often brings annual tax to <strong>₹0</strong>, so monthly TDS is <strong>₹0</strong>.</p>
+
+    <h2>8. Screens &amp; where to look</h2>
+    <ul>
+      <li><strong>HR → Salary</strong> — structure fields, Calculate, payslip, Tax computation table (Ref, Particulars, Rate, Amount, Formula).</li>
+      <li><strong>Employee → IT Declaration / Proofs / Regime</strong> — declare investments &amp; rent; upload proofs; request regime change.</li>
+      <li><strong>HR → Tax reviews</strong> — approve declarations (syncs into structure), accept/reject proofs, decide regime changes.</li>
+      <li><strong>Employee → IT Statement / YTD</strong> — Form 130 preview and month-wise YTD after payroll exists.</li>
+    </ul>
+
+    <h2>9. Testing checklist</h2>
+    <ol>
+      <li>₹12L New → TDS often ₹0 (rebate).</li>
+      <li>₹15L New → TDS about ₹8,125 / month.</li>
+      <li>Old + rent + 80C → compare taxable / TDS vs same CTC under New.</li>
+      <li>Bonus in a month → extra TDS that month.</li>
+      <li>April then May Calculate → YTD adds both months.</li>
+      <li>Tax table under payslip shows % and formulas.</li>
+    </ol>
+
+    <h2>10. Notes &amp; limits</h2>
+    <ul>
+      <li>Rates and rebates follow the rules coded in PeopleOS. Confirm against the latest Finance Act for statutory filing.</li>
+      <li>Official Form 16 / government returns may still be issued outside this in-app preview.</li>
+      <li>Reimbursements can raise gross without always changing PF the same way.</li>
+    </ul>
+
+    <footer>
+      <p><strong>PeopleOS — Income Tax &amp; TDS Guide</strong> · Source: salary &amp; tax modules in the HRMS · For internal training and product demos.</p>
+      <p>Print this page (Ctrl+P) and choose <em>Save as PDF</em> if you need a PDF file from the browser.</p>
+    </footer>
+  </div>
+</body>
+</html>

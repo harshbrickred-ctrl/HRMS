@@ -1,17 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Download, IndianRupee } from 'lucide-react';
 import { formatInr } from '../mock/EssDataContext';
-import {
-  INVESTMENT_PROOFS,
-  IT_DECLARATION,
-  IT_STATEMENT,
-  REIMBURSEMENTS,
-  SALARY_FY,
-  SALARY_LOANS,
-  SALARY_REVISION,
-  SALARY_YTD,
-  ytdTotals,
-} from '../mock/salaryMock';
+import { SALARY_LOANS, SALARY_REVISION } from '../mock/salaryMock';
 import { StatusChip } from '../components/StatusChip';
 import { showToast } from '../../ui/toast';
 import {
@@ -21,6 +12,20 @@ import {
 } from '../../workspace/payslipApi';
 import { downloadSalarySlip, fetchMySalary, formatSalary, type MySalary } from '../../workspace/salaryApi';
 import { SalarySheet } from '../../workspace/SalarySheet';
+import { TaxSheet } from '../../workspace/TaxSheet';
+import {
+  DEFAULT_TAX_LINES,
+  deleteInvestmentProof,
+  fetchTaxSummary,
+  openInvestmentProof,
+  requestTaxRegimeChange,
+  saveTaxDeclaration,
+  submitTaxDeclaration,
+  uploadInvestmentProof,
+  withdrawTaxRegimeChange,
+  type TaxLine,
+  type TaxSummary,
+} from '../../workspace/taxApi';
 
 type Section =
   | 'payslips'
@@ -30,7 +35,8 @@ type Section =
   | 'loans'
   | 'reimbursement'
   | 'proofs'
-  | 'revision';
+  | 'revision'
+  | 'regime';
 
 function slipMonth(month: string) {
   const [year, m] = month.split('-').map(Number);
@@ -46,19 +52,42 @@ const SECTIONS: Array<{ id: Section; label: string }> = [
   { id: 'ytd', label: 'YTD Reports' },
   { id: 'statement', label: 'IT Statement' },
   { id: 'declaration', label: 'IT Declaration' },
+  { id: 'proofs', label: 'Proof of Investment' },
+  { id: 'regime', label: 'Tax regime' },
   { id: 'loans', label: 'Loans and advances' },
   { id: 'reimbursement', label: 'Reimbursement' },
-  { id: 'proofs', label: 'Proof of Investment' },
   { id: 'revision', label: 'Salary revision' },
 ];
+
+const SECTIONS_LIST = ['80C', '80CCD', '80D', '80E', '80G', 'OTHER'] as const;
 
 export function EssSalaryPage() {
   const [section, setSection] = useState<Section>('payslips');
   const [payslips, setPayslips] = useState<PayslipDto[]>([]);
   const [payroll, setPayroll] = useState<MySalary | null>(null);
+  const [tax, setTax] = useState<TaxSummary | null>(null);
+  const [lines, setLines] = useState<TaxLine[]>(DEFAULT_TAX_LINES);
+  const [rentPaidAnnual, setRentPaidAnnual] = useState('0');
+  const [isMetro, setIsMetro] = useState(false);
+  const [proofForm, setProofForm] = useState({ section: '80C', label: '', amount: '0', file: null as File | null });
+  const [regimeTo, setRegimeTo] = useState<'new' | 'old'>('old');
+  const [regimeReason, setRegimeReason] = useState('');
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const totals = ytdTotals(SALARY_YTD.months);
+
+  const loadTax = () =>
+    fetchTaxSummary()
+      .then((summary) => {
+        setTax(summary);
+        setLines(summary.declaration.lines.length ? summary.declaration.lines : DEFAULT_TAX_LINES);
+        setRentPaidAnnual(String(summary.declaration.rentPaidAnnual ?? 0));
+        setIsMetro(Boolean(summary.declaration.isMetro));
+        if (summary.structure) {
+          setRegimeTo(summary.structure.taxRegime === 'new' ? 'old' : 'new');
+        }
+      })
+      .catch(() => setTax(null));
 
   useEffect(() => {
     fetchMyPayslips()
@@ -70,7 +99,11 @@ export function EssSalaryPage() {
     fetchMySalary()
       .then(setPayroll)
       .catch(() => setPayroll(null));
+    void loadTax();
   }, []);
+
+  const declarationLocked =
+    tax?.declaration.status === 'submitted' || tax?.declaration.status === 'approved';
 
   return (
     <div className="ess-section-stack">
@@ -79,9 +112,10 @@ export function EssSalaryPage() {
           <p className="ess-leave-kicker">
             <IndianRupee size={14} aria-hidden /> Pay
           </p>
-          <h1>Salary</h1>
+          <h1>My Payout</h1>
           <p className="ess-lead">
-            Payroll, year-to-date and the Form 130 preview use the salary Finance generated. PDF files are separate. Sections without a generated payslip still show sample figures for FY {SALARY_FY}.
+            Payroll, year-to-date and Form 130 use generated salary. Declare investments, upload proofs, and request a
+            tax regime change here.
           </p>
         </div>
       </header>
@@ -173,7 +207,7 @@ export function EssSalaryPage() {
       {section === 'ytd' && payroll?.statement ? (
         <section className="ess-panel">
           <h2>Year to date</h2>
-          <p className="ess-muted">Built from generated payroll lines. A correction is a new line, not an overwritten total.</p>
+          <p className="ess-muted">Built from generated payroll lines.</p>
           <div className="ess-table-wrap">
             <table className="ess-table">
               <thead>
@@ -205,73 +239,411 @@ export function EssSalaryPage() {
 
       {section === 'ytd' && !payroll?.statement ? (
         <section className="ess-panel">
-          <h2>Year to date · FY {SALARY_FY}</h2>
-          <p className="ess-muted">Sample totals until Finance generates payroll.</p>
-          <dl className="ess-salary-metrics">
-            <div>
-              <dt>Earnings</dt>
-              <dd>{formatInr(totals.earnings)}</dd>
-            </div>
-            <div>
-              <dt>Deductions</dt>
-              <dd>{formatInr(totals.deductions)}</dd>
-            </div>
-            <div>
-              <dt>Net pay</dt>
-              <dd>{formatInr(totals.net)}</dd>
-            </div>
-            <div>
-              <dt>PF</dt>
-              <dd>{formatInr(totals.pf)}</dd>
-            </div>
-            <div>
-              <dt>TDS</dt>
-              <dd>{formatInr(totals.tds)}</dd>
-            </div>
-          </dl>
+          <h2>Year to date</h2>
+          <p className="ess-empty">YTD appears after Finance generates at least one payroll month.</p>
+        </section>
+      ) : null}
+
+      {section === 'statement' && payroll?.statement ? (
+        <>
+          {payroll.statement.taxBreakdown ? (
+            <TaxSheet
+              breakdown={payroll.statement.taxBreakdown}
+              title="Tax computation"
+              note="From salary paid this year — slabs, rates, formulas, and TDS."
+            />
+          ) : null}
+          <AmountList
+            title="Form 130 preview"
+            note="From salary paid this year. The official certificate is issued after March."
+            rows={payroll.statement.form130.map((row) => ({ label: `${row.id} ${row.label}`, amount: row.amount }))}
+          />
+        </>
+      ) : null}
+
+      {section === 'statement' && !payroll?.statement && tax?.projectedStatement ? (
+        <>
+          {tax.projectedStatement.taxBreakdown ? (
+            <TaxSheet
+              breakdown={tax.projectedStatement.taxBreakdown}
+              title="Projected tax computation"
+              note={`Based on your salary structure for FY ${tax.fy}. Updates after payroll runs.`}
+            />
+          ) : null}
+          <AmountList
+            title="Projected IT statement"
+            note={`Based on your salary structure for FY ${tax.fy}. Updates after payroll runs.`}
+            rows={tax.projectedStatement.form130.map((row) => ({
+              label: `${row.id} ${row.label}`,
+              amount: row.amount,
+            }))}
+          />
+        </>
+      ) : null}
+
+      {section === 'statement' && !payroll?.statement && !tax?.projectedStatement ? (
+        <section className="ess-panel">
+          <h2>IT statement</h2>
+          <p className="ess-empty">Save a salary structure to see a projected tax statement.</p>
+        </section>
+      ) : null}
+
+      {section === 'declaration' ? (
+        <section className="ess-panel">
+          <h2>IT declaration · FY {tax?.fy ?? '—'}</h2>
+          <p className="ess-muted">
+            Chapter VI-A and HRA rent feed old-regime TDS after HR approves. Status:{' '}
+            <StatusChip status={tax?.declaration.status ?? 'draft'} />
+          </p>
+          {tax?.declaration.decisionNote ? (
+            <p className="ess-muted">HR note: {tax.declaration.decisionNote}</p>
+          ) : null}
+          <label className="ess-field">
+            Annual rent paid
+            <input
+              type="number"
+              min={0}
+              value={rentPaidAnnual}
+              disabled={declarationLocked || busy}
+              onChange={(event) => setRentPaidAnnual(event.target.value)}
+            />
+          </label>
+          <label className="ess-check">
+            <input
+              type="checkbox"
+              checked={isMetro}
+              disabled={declarationLocked || busy}
+              onChange={(event) => setIsMetro(event.target.checked)}
+            />
+            Metro city (50% HRA cap)
+          </label>
           <div className="ess-table-wrap">
             <table className="ess-table">
               <thead>
                 <tr>
-                  <th>Month</th>
-                  <th>Earnings</th>
-                  <th>Deductions</th>
-                  <th>Net</th>
-                  <th>PF</th>
-                  <th>TDS</th>
+                  <th>Section</th>
+                  <th>Label</th>
+                  <th>Amount</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
-                {SALARY_YTD.months.map((month) => (
-                  <tr key={month.month}>
-                    <th>{month.month}</th>
-                    <td>{formatInr(month.earnings)}</td>
-                    <td>{formatInr(month.deductions)}</td>
-                    <td>{formatInr(month.net)}</td>
-                    <td>{formatInr(month.pf)}</td>
-                    <td>{formatInr(month.tds)}</td>
+                {lines.map((line, index) => (
+                  <tr key={`${line.section}-${index}`}>
+                    <td>
+                      <select
+                        value={line.section}
+                        disabled={declarationLocked || busy}
+                        onChange={(event) => {
+                          const next = [...lines];
+                          next[index] = { ...line, section: event.target.value };
+                          setLines(next);
+                        }}
+                      >
+                        {SECTIONS_LIST.map((code) => (
+                          <option key={code} value={code}>
+                            {code}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        value={line.label}
+                        disabled={declarationLocked || busy}
+                        onChange={(event) => {
+                          const next = [...lines];
+                          next[index] = { ...line, label: event.target.value };
+                          setLines(next);
+                        }}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        min={0}
+                        value={line.amount}
+                        disabled={declarationLocked || busy}
+                        onChange={(event) => {
+                          const next = [...lines];
+                          next[index] = { ...line, amount: Number(event.target.value) || 0 };
+                          setLines(next);
+                        }}
+                      />
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="ess-btn ess-btn-ghost"
+                        disabled={declarationLocked || busy || lines.length <= 1}
+                        onClick={() => setLines(lines.filter((_, i) => i !== index))}
+                      >
+                        Remove
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <div className="ess-actions">
+            <button
+              type="button"
+              className="ess-btn"
+              disabled={declarationLocked || busy}
+              onClick={() => setLines([...lines, { section: '80C', label: '', amount: 0 }])}
+            >
+              Add line
+            </button>
+            <button
+              type="button"
+              className="ess-btn"
+              disabled={declarationLocked || busy || !tax}
+              onClick={() => {
+                if (!tax) return;
+                setBusy(true);
+                setError(null);
+                void saveTaxDeclaration({
+                  fy: tax.fy,
+                  rentPaidAnnual: Math.max(0, Math.round(Number(rentPaidAnnual) || 0)),
+                  isMetro,
+                  lines: lines.map((line) => ({
+                    section: line.section,
+                    label: line.label.trim() || line.section,
+                    amount: Math.max(0, Math.round(line.amount) || 0),
+                  })),
+                })
+                  .then(() => {
+                    showToast('Declaration draft saved.');
+                    return loadTax();
+                  })
+                  .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Save failed.'))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              Save draft
+            </button>
+            <button
+              type="button"
+              className="ess-btn ess-btn-primary"
+              disabled={declarationLocked || busy || !tax}
+              onClick={() => {
+                if (!tax) return;
+                setBusy(true);
+                setError(null);
+                void saveTaxDeclaration({
+                  fy: tax.fy,
+                  rentPaidAnnual: Math.max(0, Math.round(Number(rentPaidAnnual) || 0)),
+                  isMetro,
+                  lines: lines.map((line) => ({
+                    section: line.section,
+                    label: line.label.trim() || line.section,
+                    amount: Math.max(0, Math.round(line.amount) || 0),
+                  })),
+                })
+                  .then(() => submitTaxDeclaration(tax.fy))
+                  .then(() => {
+                    showToast('Declaration submitted to HR.');
+                    return loadTax();
+                  })
+                  .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Submit failed.'))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              Submit to HR
+            </button>
+          </div>
+          {error && section === 'declaration' ? <p className="ess-alert">{error}</p> : null}
         </section>
       ) : null}
 
-      {section === 'statement' && payroll?.statement ? (
-        <AmountList
-          title="Form 130 preview"
-          note="From salary paid this year. The official certificate is issued after March."
-          rows={payroll.statement.form130.map((row) => ({ label: `${row.id} ${row.label}`, amount: row.amount }))}
-        />
+      {section === 'proofs' ? (
+        <section className="ess-panel">
+          <h2>Proof of investment · FY {tax?.fy ?? '—'}</h2>
+          <p className="ess-muted">Upload receipts for HR review. Accepting a proof does not change declared amounts.</p>
+          <div className="ess-form-grid">
+            <label className="ess-field">
+              Section
+              <select
+                value={proofForm.section}
+                onChange={(event) => setProofForm({ ...proofForm, section: event.target.value })}
+              >
+                {SECTIONS_LIST.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="ess-field">
+              Label
+              <input
+                value={proofForm.label}
+                onChange={(event) => setProofForm({ ...proofForm, label: event.target.value })}
+              />
+            </label>
+            <label className="ess-field">
+              Amount
+              <input
+                type="number"
+                min={0}
+                value={proofForm.amount}
+                onChange={(event) => setProofForm({ ...proofForm, amount: event.target.value })}
+              />
+            </label>
+            <label className="ess-field">
+              File
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*"
+                onChange={(event) => setProofForm({ ...proofForm, file: event.target.files?.[0] ?? null })}
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            className="ess-btn ess-btn-primary"
+            disabled={busy || !tax || !proofForm.file || !proofForm.label.trim()}
+            onClick={() => {
+              if (!tax || !proofForm.file) return;
+              const body = new FormData();
+              body.set('fy', tax.fy);
+              body.set('section', proofForm.section);
+              body.set('label', proofForm.label.trim());
+              body.set('amount', String(Math.max(0, Math.round(Number(proofForm.amount) || 0))));
+              body.set('file', proofForm.file);
+              setBusy(true);
+              setError(null);
+              void uploadInvestmentProof(body)
+                .then(() => {
+                  showToast('Proof uploaded.');
+                  setProofForm({ section: '80C', label: '', amount: '0', file: null });
+                  return loadTax();
+                })
+                .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Upload failed.'))
+                .finally(() => setBusy(false));
+            }}
+          >
+            Upload proof
+          </button>
+          <ul className="ess-list">
+            {(tax?.proofs ?? []).map((proof) => (
+              <li key={proof.id} className="ess-list-item">
+                <div className="ess-leave-request-head">
+                  <strong>
+                    {proof.section} · {proof.label}
+                  </strong>
+                  <StatusChip status={proof.status} />
+                </div>
+                <span>{formatInr(proof.amount)}</span>
+                <span className="ess-muted">{proof.fileName}</span>
+                <div className="ess-actions">
+                  <button
+                    type="button"
+                    className="ess-btn ess-btn-ghost"
+                    onClick={() => void openInvestmentProof(proof.id, proof.fileName)}
+                  >
+                    Open
+                  </button>
+                  {proof.status === 'pending' ? (
+                    <button
+                      type="button"
+                      className="ess-btn ess-btn-ghost"
+                      disabled={busy}
+                      onClick={() => {
+                        setBusy(true);
+                        void deleteInvestmentProof(proof.id)
+                          .then(() => loadTax())
+                          .catch((err: unknown) =>
+                            setError(err instanceof Error ? err.message : 'Could not delete proof.'),
+                          )
+                          .finally(() => setBusy(false));
+                      }}
+                    >
+                      Delete
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {!(tax?.proofs?.length) ? <p className="ess-empty">No proofs uploaded yet.</p> : null}
+          {error && section === 'proofs' ? <p className="ess-alert">{error}</p> : null}
+        </section>
       ) : null}
 
-      {section === 'statement' && !payroll?.statement ? (
-        <AmountList title="IT statement" note="Sample annual tax summary. Not a Form 16." rows={IT_STATEMENT} />
-      ) : null}
-
-      {section === 'declaration' ? (
-        <AmountList title="IT declaration" note="Sample proposed investments for this year." rows={IT_DECLARATION} />
+      {section === 'regime' ? (
+        <section className="ess-panel">
+          <h2>Tax regime</h2>
+          <p className="ess-muted">
+            Current regime:{' '}
+            <strong>{tax?.structure?.taxRegime === 'old' ? 'Old' : tax?.structure ? 'New' : 'Not set'}</strong>
+          </p>
+          {tax?.regimeRequest ? (
+            <div className="ess-list-item">
+              <div className="ess-leave-request-head">
+                <strong>
+                  {tax.regimeRequest.fromRegime} → {tax.regimeRequest.toRegime}
+                </strong>
+                <StatusChip status={tax.regimeRequest.status} />
+              </div>
+              {tax.regimeRequest.reason ? <p className="ess-muted">{tax.regimeRequest.reason}</p> : null}
+              {tax.regimeRequest.status === 'pending' ? (
+                <button
+                  type="button"
+                  className="ess-btn"
+                  disabled={busy}
+                  onClick={() => {
+                    setBusy(true);
+                    void withdrawTaxRegimeChange(tax.regimeRequest!.id)
+                      .then(() => {
+                        showToast('Request withdrawn.');
+                        return loadTax();
+                      })
+                      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Withdraw failed.'))
+                      .finally(() => setBusy(false));
+                  }}
+                >
+                  Withdraw request
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              <label className="ess-field">
+                Request change to
+                <select value={regimeTo} onChange={(event) => setRegimeTo(event.target.value as 'new' | 'old')}>
+                  <option value="new">New regime</option>
+                  <option value="old">Old regime</option>
+                </select>
+              </label>
+              <label className="ess-field">
+                Reason
+                <input value={regimeReason} onChange={(event) => setRegimeReason(event.target.value)} />
+              </label>
+              <button
+                type="button"
+                className="ess-btn ess-btn-primary"
+                disabled={busy || !tax?.structure}
+                onClick={() => {
+                  setBusy(true);
+                  setError(null);
+                  void requestTaxRegimeChange(regimeTo, regimeReason)
+                    .then(() => {
+                      showToast('Regime change submitted.');
+                      setRegimeReason('');
+                      return loadTax();
+                    })
+                    .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Request failed.'))
+                    .finally(() => setBusy(false));
+                }}
+              >
+                Submit to HR
+              </button>
+            </>
+          )}
+          {error && section === 'regime' ? <p className="ess-alert">{error}</p> : null}
+        </section>
       ) : null}
 
       {section === 'loans' ? (
@@ -309,36 +681,10 @@ export function EssSalaryPage() {
       {section === 'reimbursement' ? (
         <section className="ess-panel">
           <h2>Reimbursement</h2>
-          <p className="ess-muted">Sample claims. Submitting a claim is not available yet.</p>
-          <ul className="ess-list">
-            {REIMBURSEMENTS.map((claim) => (
-              <li key={claim.title} className="ess-list-item">
-                <div className="ess-leave-request-head">
-                  <strong>{claim.title}</strong>
-                  <StatusChip status={claim.status} />
-                </div>
-                <span>{formatInr(claim.amount)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {section === 'proofs' ? (
-        <section className="ess-panel">
-          <h2>Proof of investment</h2>
-          <p className="ess-muted">Sample proof status. Files are not uploaded from this screen.</p>
-          <ul className="ess-list">
-            {INVESTMENT_PROOFS.map((proof) => (
-              <li key={proof.name} className="ess-list-item">
-                <div className="ess-leave-request-head">
-                  <strong>{proof.name}</strong>
-                  <StatusChip status={proof.status} />
-                </div>
-                <span className="ess-muted">Updated {proof.updated}</span>
-              </li>
-            ))}
-          </ul>
+          <p className="ess-muted">Claims, receipts, and manager approval are on the Reimbursement page.</p>
+          <Link className="ess-btn" to="/ess/reimbursements">
+            Open reimbursement
+          </Link>
         </section>
       ) : null}
 
@@ -371,7 +717,15 @@ export function EssSalaryPage() {
   );
 }
 
-function AmountList({ title, note, rows }: { title: string; note: string; rows: Array<{ label: string; amount: number; status?: string; note?: string }> }) {
+function AmountList({
+  title,
+  note,
+  rows,
+}: {
+  title: string;
+  note: string;
+  rows: Array<{ label: string; amount: number; status?: string; note?: string }>;
+}) {
   return (
     <section className="ess-panel">
       <h2>{title}</h2>

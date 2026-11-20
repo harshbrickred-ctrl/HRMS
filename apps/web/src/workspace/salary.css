@@ -1,3 +1,109 @@
+.salary-screen {
+  animation: salary-screen-in 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.salary-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.salary-stats div {
+  min-width: 7.5rem;
+  padding: 8px 14px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  animation: salary-rise 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.salary-stats div:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.salary-stats div:nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.salary-stats span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.salary-stats strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.salary-screen .salary-scroll {
+  animation: salary-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+}
+
+.salary-screen .salary-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.salary-screen .salary-table tbody tr {
+  animation: salary-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: background-color 180ms ease;
+}
+
+.salary-screen .salary-table tbody tr:nth-child(1) { animation-delay: 90ms; }
+.salary-screen .salary-table tbody tr:nth-child(2) { animation-delay: 130ms; }
+.salary-screen .salary-table tbody tr:nth-child(3) { animation-delay: 170ms; }
+.salary-screen .salary-table tbody tr:nth-child(4) { animation-delay: 210ms; }
+.salary-screen .salary-table tbody tr:nth-child(5) { animation-delay: 250ms; }
+.salary-screen .salary-table tbody tr:nth-child(6) { animation-delay: 290ms; }
+.salary-screen .salary-table tbody tr:nth-child(7) { animation-delay: 330ms; }
+.salary-screen .salary-table tbody tr:nth-child(8) { animation-delay: 370ms; }
+
+.salary-screen .salary-table tbody tr:hover {
+  background: color-mix(in srgb, var(--ink) 4%, var(--surface));
+}
+
+.salary-screen .salary-table tbody tr.is-selected,
+.salary-screen .salary-table tbody tr.is-selected:hover {
+  background: var(--accent-fill);
+}
+
+.salary-screen .salary-editor {
+  animation: salary-panel-in 460ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes salary-screen-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes salary-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes salary-panel-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .salary-screen,
+  .salary-screen .salary-stats div,
+  .salary-screen .salary-scroll,
+  .salary-screen .salary-table tbody tr,
+  .salary-screen .salary-editor {
+    animation: none;
+  }
+}
+
 .salary-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -71,7 +177,42 @@
 .salary-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: 8px;
+}
+
+.salary-month-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.salary-month-row label {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.salary-month-row input[type='month'] {
+  height: 32px;
+  min-height: 32px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.salary-status {
+  flex: 1 0 100%;
 }
 
 .salary-attendance {
@@ -118,6 +259,45 @@
   .salary-sheet-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.salary-sheet-stack {
+  display: grid;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.tax-sheet {
+  margin-top: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line, #d8dee6);
+}
+
+.tax-table th:nth-child(3),
+.tax-table td.tax-rate {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.tax-table th:nth-child(5),
+.tax-table td.tax-formula {
+  text-align: left;
+  font-size: 0.92em;
+  color: var(--muted, #5b6472);
+  max-width: 28rem;
+}
+
+.tax-section-row td {
+  background: color-mix(in srgb, var(--panel, #f4f6f8) 88%, #1d4ed8 12%);
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.tax-total-row td {
+  font-weight: 700;
+  border-top: 2px solid color-mix(in srgb, currentColor 18%, transparent);
 }
 
 .payout-upload input {

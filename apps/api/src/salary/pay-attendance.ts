@@ -1,4 +1,4 @@
-export type AttendanceSlice = { date: string; status: string };
+export type AttendanceSlice = { date: string; status: string; explicitAbsent?: boolean };
 
 export type LeaveSlice = {
   code: string;
@@ -45,7 +45,7 @@ export function buildAttendancePay(input: {
   leaves: LeaveSlice[];
 }): AttendancePay {
   const holidays = new Set(input.holidays);
-  const attendance = new Map(input.attendance.map((day) => [day.date, day.status]));
+  const attendance = new Map(input.attendance.map((day) => [day.date, day]));
   const working = input.dates.filter((date) => !isWeekend(date) && !holidays.has(date));
   let present = 0;
   let paidLeave = 0;
@@ -62,6 +62,7 @@ export function buildAttendancePay(input: {
       if (!units) continue;
       if (leave.status === 'Pending') {
         pendingLeaveDays += units;
+        unpaid += units;
         continue;
       }
       if (leave.status !== 'Approved') continue;
@@ -71,7 +72,8 @@ export function buildAttendancePay(input: {
     paid = Math.min(1, paid);
     unpaid = Math.min(1 - paid, unpaid);
     let remaining = 1 - paid - unpaid;
-    const status = attendance.get(date);
+    const row = attendance.get(date);
+    const status = row?.status === 'absent' && !row.explicitAbsent ? undefined : row?.status;
     if (remaining > 0 && !status) {
       present += remaining;
       unmarkedDays += remaining;
@@ -107,7 +109,7 @@ export function buildAttendancePay(input: {
     notes.push(`${halves(missingPunchDays)} missing punch day(s) are unpaid until the punch is corrected.`);
   }
   if (pendingLeaveDays > 0) {
-    notes.push(`${halves(pendingLeaveDays)} leave day(s) are still pending and are not treated as leave yet.`);
+    notes.push(`${halves(pendingLeaveDays)} pending leave day(s) are deducted from salary until the leave is approved.`);
   }
   return {
     workingDays: working.length,

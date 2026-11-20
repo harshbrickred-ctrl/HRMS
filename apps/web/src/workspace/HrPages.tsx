@@ -105,11 +105,12 @@ export function HrWorkflowsPage() {
       .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load queues.'));
   }, []);
   const stuck = queues.reduce((sum, item) => sum + item.stuck, 0);
+  const withTax = [{ id: 'tax', name: 'Tax reviews', stuck: 0, href: '/hr/tax' }, ...queues];
   return (
     <div className="ess-section-stack">
       <Insights
         items={[
-          ['Queues', queues.length],
+          ['Queues', withTax.length],
           ['Stuck', stuck],
           ['Clear', queues.filter((item) => item.stuck === 0).length],
         ]}
@@ -118,7 +119,7 @@ export function HrWorkflowsPage() {
       <section className="ess-panel">
         <h2>Live queues</h2>
         <ul className="ess-list">
-          {queues.map((item) => (
+          {withTax.map((item) => (
             <li key={item.id} className="ess-list-item">
               <div className="ess-leave-request-head">
                 <strong>{item.name}</strong>

@@ -102,7 +102,10 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Pay',
     emphasis: 'subtle',
     roles: [],
-    items: [{ to: '/ess/salary', label: 'Salary', icon: 'salary' }],
+    items: [
+      { to: '/ess/salary', label: 'My Payout', icon: 'salary' },
+      { to: '/ess/reimbursements', label: 'Reimbursement', icon: 'documents' },
+    ],
   },
   {
     id: 'workplace',
@@ -206,6 +209,7 @@ const NAV_SECTIONS: NavSection[] = [
     roles: [...HR_ROLES],
     items: [
       { to: '/hr/documents', label: 'Document Center', icon: 'hrDocuments' },
+      { to: '/hr/tax', label: 'Tax reviews', icon: 'salary' },
       { to: '/hr/workflows', label: 'Workflows', icon: 'workflows' },
     ],
   },

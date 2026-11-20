@@ -37,6 +37,7 @@ export class PrismaService
     await this.$connect();
     await this.ensureLeaveHalfColumns();
     await this.ensureEmployeeBankColumns();
+    await this.ensureDepartmentHeadColumn();
     await this.ensureRoleCatalog();
   }
 
@@ -128,6 +129,12 @@ export class PrismaService
         }
       }
     }
+  }
+
+  private async ensureDepartmentHeadColumn() {
+    await this.$executeRawUnsafe(
+      `ALTER TABLE "Department" ADD COLUMN IF NOT EXISTS "headId" TEXT`,
+    );
   }
 
   private async ensureEmployeeBankColumns() {

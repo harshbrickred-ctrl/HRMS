@@ -19,7 +19,7 @@ describe('attendance pay', () => {
         { date: '2026-11-02', status: 'present' },
         { date: '2026-11-03', status: 'present' },
         { date: '2026-11-04', status: 'half_day' },
-        { date: '2026-11-06', status: 'absent' },
+        { date: '2026-11-06', status: 'absent', explicitAbsent: true },
       ],
       leaves: [
         {
@@ -39,7 +39,7 @@ describe('attendance pay', () => {
     expect(sheet.payableDays).toBe(2.5);
   });
 
-  it('keeps pending leave out of the paid and unpaid totals', () => {
+  it('deducts pending leave from payable days', () => {
     const sheet = buildAttendancePay({
       dates: ['2026-11-02'],
       holidays: [],
@@ -55,9 +55,22 @@ describe('attendance pay', () => {
         },
       ],
     });
-    expect(sheet.present).toBe(1);
-    expect(sheet.unpaidLeave).toBe(0);
+    expect(sheet.present).toBe(0);
+    expect(sheet.unpaidLeave).toBe(1);
     expect(sheet.pendingLeaveDays).toBe(1);
+    expect(sheet.payableDays).toBe(0);
+  });
+
+  it('keeps an automatic absent day payable until HR marks it absent', () => {
+    const sheet = buildAttendancePay({
+      dates: ['2026-11-02'],
+      holidays: [],
+      attendance: [{ date: '2026-11-02', status: 'absent' }],
+      leaves: [],
+    });
+    expect(sheet.workingDays).toBe(1);
+    expect(sheet.present).toBe(1);
     expect(sheet.payableDays).toBe(1);
+    expect(sheet.unpaidLeave).toBe(0);
   });
 });

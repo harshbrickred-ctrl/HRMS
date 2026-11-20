@@ -151,7 +151,7 @@ export class SalaryController {
   @Post('lock')
   @Permissions('salary.manage')
   lock(@CurrentUser() user: AuthUser, @Body() dto: LockMonthDto) {
-    return this.salary.setLocked(user.tenantId, dto.month, dto.locked);
+    return this.salary.setLocked(user.tenantId, user, dto.month, dto.locked);
   }
 
   @Post('upload')

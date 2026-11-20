@@ -41,6 +41,10 @@ model Tenant {
   payslips             Payslip[]
   salaryStructures     SalaryStructure[]
   salaryLines          SalaryLine[]
+  reimbursementClaims  ReimbursementClaim[]
+  taxDeclarations      TaxDeclaration[]
+  investmentProofs     InvestmentProof[]
+  taxRegimeChanges     TaxRegimeChangeRequest[]
   payrollMonths        PayrollMonth[]
   bankConnection       BankConnection?
   transferBatches      SalaryTransferBatch[]
@@ -265,6 +269,10 @@ model Employee {
   payslips     Payslip[]
   salaryStructure SalaryStructure?
   salaryLines  SalaryLine[]
+  reimbursementClaims ReimbursementClaim[]
+  taxDeclarations TaxDeclaration[]
+  investmentProofs InvestmentProof[]
+  taxRegimeChanges TaxRegimeChangeRequest[]
   assetAssignments AssetAssignment[]
   assetTickets AssetTicket[]
   headOfDepartments Department[] @relation("DepartmentHead")
@@ -402,6 +410,7 @@ model SalaryStructure {
   tenantId         String
   employeeId       String   @unique
   monthlyGross     Int
+  ctc              Int      @default(0)
   basic            Int
   hra              Int
   da               Int      @default(0)
@@ -410,10 +419,13 @@ model SalaryStructure {
   dailyAllowance   Int      @default(0)
   gratuityMonthly  Int      @default(0)
   leaveEncashment  Int      @default(0)
+  insurance        Int      @default(0)
   pfOnActual       Boolean  @default(false)
   taxRegime        String   @default("new")
   ptMonthly        Int      @default(0)
   annualDeductions Int      @default(0)
+  rentPaidAnnual   Int      @default(0)
+  isMetro          Boolean  @default(false)
   ytdTaxable       Int      @default(0)
   ytdTds           Int      @default(0)
   ytdPt            Int      @default(0)
@@ -423,6 +435,83 @@ model SalaryStructure {
   employee         Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
+}
+
+model TaxDeclaration {
+  id              String               @id @default(cuid())
+  tenantId        String
+  employeeId      String
+  fy              String
+  status          String               @default("draft")
+  rentPaidAnnual  Int                  @default(0)
+  isMetro         Boolean              @default(false)
+  decisionNote    String               @default("")
+  decidedAt       DateTime?
+  decidedById     String               @default("")
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee        Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  lines           TaxDeclarationLine[]
+
+  @@unique([tenantId, employeeId, fy])
+  @@index([tenantId, status])
+  @@index([employeeId])
+}
+
+model TaxDeclarationLine {
+  id             String         @id @default(cuid())
+  declarationId  String
+  section        String
+  label          String
+  amount         Int            @default(0)
+  declaration    TaxDeclaration @relation(fields: [declarationId], references: [id], onDelete: Cascade)
+
+  @@index([declarationId])
+}
+
+model InvestmentProof {
+  id          String   @id @default(cuid())
+  tenantId    String
+  employeeId  String
+  fy          String
+  section     String
+  label       String
+  amount      Int      @default(0)
+  fileName    String
+  fileType    String
+  file        Bytes
+  status      String   @default("pending")
+  decisionNote String  @default("")
+  decidedAt   DateTime?
+  decidedById String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([tenantId, employeeId, fy])
+}
+
+model TaxRegimeChangeRequest {
+  id           String    @id @default(cuid())
+  tenantId     String
+  employeeId   String
+  fromRegime   String
+  toRegime     String
+  reason       String    @default("")
+  status       String    @default("pending")
+  decisionNote String    @default("")
+  decidedAt    DateTime?
+  decidedById  String    @default("")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee     Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([employeeId])
 }
 
 model SalaryLine {
@@ -444,7 +533,9 @@ model SalaryLine {
   overtime        Int      @default(0)
   incentive       Int      @default(0)
   arrears         Int      @default(0)
+  reimbursement   Int      @default(0)
   leaveEncashment Int      @default(0)
+  insurance       Int      @default(0)
   fixedGross      Int
   gross           Int
   pfWages         Int
@@ -479,6 +570,30 @@ model SalaryLine {
 
   @@unique([tenantId, employeeId, month])
   @@index([tenantId, month])
+}
+
+model ReimbursementClaim {
+  id           String    @id @default(cuid())
+  tenantId     String
+  employeeId   String
+  expenseDate  String
+  days         Int
+  amount       Int
+  reason       String
+  receiptName  String
+  receiptType  String
+  receipt      Bytes
+  status       String    @default("pending")
+  salaryMonth  String    @default("")
+  decidedAt    DateTime?
+  decidedById  String    @default("")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee     Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([employeeId])
 }
 
 model PayrollMonth {

@@ -17,6 +17,7 @@ import { EssNotificationsPage } from './ess/pages/EssNotificationsPage';
 import { EssPeoplePage, EssPersonDetailPage } from './ess/pages/EssPeoplePage';
 import { EssPermissionsPage } from './ess/pages/EssPermissionsPage';
 import { EssProfilePage } from './ess/pages/EssProfilePage';
+import { ReimbursementPage } from './ess/pages/ReimbursementPage';
 import { EssSalaryPage } from './ess/pages/EssSalaryPage';
 import { EssSettingsPage } from './ess/pages/EssSettingsPage';
 import { EssTeamPage } from './ess/pages/EssTeamPage';
@@ -49,6 +50,7 @@ import {
   TeamLeavePage,
 } from './workspace/RolePages';
 import { HrSalaryPage } from './workspace/HrSalaryPage';
+import { HrTaxPage } from './workspace/HrTaxPage';
 import { FinancePayoutPage } from './workspace/FinancePayoutPage';
 import {
   ADMIN_ROLES,
@@ -112,6 +114,7 @@ export default function App() {
               <Route path="profile" element={<EssProfilePage />} />
               <Route path="permissions" element={<EssPermissionsPage />} />
               <Route path="salary" element={<EssSalaryPage />} />
+              <Route path="reimbursements" element={<ReimbursementPage />} />
               <Route path="notifications" element={<EssNotificationsPage />} />
               <Route path="settings" element={<EssSettingsPage />} />
               <Route path="helpdesk" element={<EssHelpdeskPage />} />
@@ -142,6 +145,7 @@ export default function App() {
               <Route path="leave" element={<HrLeaveAdminPage />} />
               <Route path="attendance" element={<HrAttendanceAdminPage />} />
               <Route path="salary" element={<HrSalaryPage />} />
+              <Route path="tax" element={<HrTaxPage />} />
               <Route path="documents" element={<HrDocumentsPage />} />
               <Route path="workflows" element={<HrWorkflowsPage />} />
             </Route>

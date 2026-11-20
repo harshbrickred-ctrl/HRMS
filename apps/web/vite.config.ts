@@ -7,9 +7,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://peopleos-api.vercel.app',
+        target: 'http://localhost:3000',
         changeOrigin: true,
-        secure: true,
       },
     },
   },

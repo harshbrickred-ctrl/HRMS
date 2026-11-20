@@ -13,6 +13,9 @@ module.exports = (options, webpack) => {
       '@prisma/adapter-neon': 'commonjs @prisma/adapter-neon',
       '@neondatabase/serverless': 'commonjs @neondatabase/serverless',
       ws: 'commonjs ws',
+      // Keep validators outside the bundle so whitelist metadata matches ValidationPipe.
+      'class-validator': 'commonjs class-validator',
+      'class-transformer': 'commonjs class-transformer',
     },
     output: {
       ...options.output,
