@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
+import { Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { EssDataProvider } from '../ess/mock/EssDataContext';

@@ -63,7 +63,6 @@ import {
 import { ItAssetAllocatePage } from './workspace/ItAssetAllocatePage';
 import { ItAssetApproversPage } from './workspace/ItAssetApproversPage';
 import { ItAssetCategoriesPage } from './workspace/ItAssetCategoriesPage';
-import { ItAssetDashboardPage } from './workspace/ItAssetDashboardPage';
 import { ItAssetDetailPage } from './workspace/ItAssetDetailPage';
 import { ItAssetFormPage } from './workspace/ItAssetFormPage';
 import { ItAssetHistoryPage } from './workspace/ItAssetHistoryPage';
