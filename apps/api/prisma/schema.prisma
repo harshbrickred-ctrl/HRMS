@@ -46,6 +46,8 @@ model Tenant {
   assetStatusHistory   AssetStatusHistory[]
   assetRequests        AssetRequest[]
   assetMaintenance     AssetMaintenance[]
+  appraisalCycles      AppraisalCycle[]
+  employeeAppraisals   EmployeeAppraisal[]
 }
 
 model User {
@@ -80,6 +82,8 @@ model User {
   assetRequestDecisions AssetRequestDecision[]
   assetMaintenanceCreated AssetMaintenance[] @relation("AssetMaintenanceCreatedBy")
   assetMaintenanceUpdated AssetMaintenance[] @relation("AssetMaintenanceUpdatedBy")
+  appraisalCyclesCreated AppraisalCycle[] @relation("AppraisalCycleCreatedBy")
+  appraisalReviews      AppraisalReview[]
 
   @@unique([tenantId, email])
   @@index([email])
@@ -260,6 +264,8 @@ model Employee {
   assetRequests AssetRequest[] @relation("AssetRequestFor")
   assetRequestsToApprove AssetRequest[] @relation("AssetRequestManager")
   assetRequestsToApproveAsHead AssetRequest[] @relation("AssetRequestHead")
+  appraisals             EmployeeAppraisal[] @relation("AppraisalSubject")
+  appraisalsAsManager    EmployeeAppraisal[] @relation("AppraisalManager")
 
   @@unique([tenantId, employeeCode])
   @@index([tenantId])
@@ -328,6 +334,136 @@ model Notification {
 
   @@index([tenantId, userId, createdAt])
   @@index([userId, readAt])
+}
+
+enum AppraisalCycleStatus {
+  Draft
+  Active
+  Closed
+}
+
+enum AppraisalStatus {
+  Draft
+  Self_Appraisal_Pending
+  Submitted
+  Manager_Review_Pending
+  Manager_Approved
+  HR_Review_Pending
+  HR_Approved
+  Management_Approval_Pending
+  Completed
+  Rejected
+  Revision_Requested
+}
+
+model AppraisalCycle {
+  id             String              @id @default(cuid())
+  tenantId       String
+  name           String
+  periodStart    DateTime            @db.Date
+  periodEnd      DateTime            @db.Date
+  selfStart      DateTime            @db.Date
+  selfDeadline   DateTime            @db.Date
+  reviewDeadline DateTime            @db.Date
+  status         AppraisalCycleStatus @default(Draft)
+  createdById    String
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy      User                @relation("AppraisalCycleCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  kpis           CycleKpi[]
+  appraisals     EmployeeAppraisal[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, status])
+}
+
+model CycleKpi {
+  id          String              @id @default(cuid())
+  cycleId     String
+  title       String
+  description String              @default("")
+  category    String              @default("Performance")
+  weight      Decimal             @default(1) @db.Decimal(6, 3)
+  required    Boolean             @default(true)
+  sortOrder   Int                 @default(0)
+  cycle       AppraisalCycle      @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  responses   AppraisalKpiResponse[]
+
+  @@index([cycleId, sortOrder])
+}
+
+model EmployeeAppraisal {
+  id                       String              @id @default(cuid())
+  tenantId                 String
+  cycleId                  String
+  employeeId               String
+  managerEmployeeId        String?
+  status                   AppraisalStatus     @default(Self_Appraisal_Pending)
+  revisionReturnStage      String              @default("")
+  goals                    Json                @default("[]")
+  achievements             Json                @default("[]")
+  selfFeedback             String              @default("")
+  managerFeedback          String              @default("")
+  managerStrengths         String              @default("")
+  managerImprovementAreas  String              @default("")
+  managerRating            Decimal?            @db.Decimal(5, 2)
+  hrFeedback               String              @default("")
+  hrRating                 Decimal?            @db.Decimal(5, 2)
+  promotionRecommendation  String              @default("")
+  salaryIncreasePercent    Decimal?            @db.Decimal(6, 2)
+  salaryIncreaseAmount     Decimal?            @db.Decimal(14, 2)
+  managementFeedback       String              @default("")
+  finalRating              Decimal?            @db.Decimal(5, 2)
+  submittedAt              DateTime?
+  completedAt              DateTime?
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+  tenant                   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cycle                    AppraisalCycle      @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  employee                 Employee            @relation("AppraisalSubject", fields: [employeeId], references: [id], onDelete: Restrict)
+  manager                  Employee?           @relation("AppraisalManager", fields: [managerEmployeeId], references: [id], onDelete: SetNull)
+  kpiResponses             AppraisalKpiResponse[]
+  reviews                  AppraisalReview[]
+
+  @@unique([cycleId, employeeId])
+  @@index([tenantId, status])
+  @@index([tenantId, cycleId, status])
+  @@index([managerEmployeeId, status])
+  @@index([employeeId, createdAt])
+}
+
+model AppraisalKpiResponse {
+  id                 String            @id @default(cuid())
+  appraisalId        String
+  cycleKpiId         String
+  selfRating         Int?
+  selfComment        String            @default("")
+  managerRating      Int?
+  managerComment     String            @default("")
+  appraisal          EmployeeAppraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+  cycleKpi           CycleKpi          @relation(fields: [cycleKpiId], references: [id], onDelete: Restrict)
+
+  @@unique([appraisalId, cycleKpiId])
+  @@index([cycleKpiId])
+}
+
+model AppraisalReview {
+  id          String            @id @default(cuid())
+  appraisalId String
+  actorUserId String
+  stage       String
+  action      String
+  fromStatus  String            @default("")
+  toStatus    String
+  comment     String            @default("")
+  changes     Json?
+  createdAt   DateTime          @default(now())
+  appraisal   EmployeeAppraisal @relation(fields: [appraisalId], references: [id], onDelete: Restrict)
+  actor       User              @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([appraisalId, createdAt])
+  @@index([actorUserId, createdAt])
 }
 
 enum HelpdeskTicketStatus {

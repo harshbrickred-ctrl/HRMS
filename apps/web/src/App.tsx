@@ -70,6 +70,14 @@ import { HrAlumniPage } from './workspace/HrAlumniPage';
 import { HrAlumniCareersPage, HrAlumniEngagementPage } from './workspace/HrAlumniProgramsPages';
 import { HrAlumniRecordPage } from './workspace/HrAlumniRecordPage';
 import { HrAlumniRequestsPage } from './workspace/HrAlumniRequestsPage';
+import {
+  AppraisalCyclesPage,
+  HrAppraisalsPage,
+  ManagementAppraisalsPage,
+  ManagerAppraisalsPage,
+  SelfAppraisalsPage,
+} from './workspace/AppraisalPages';
+import { AppraisalAdminDetailPage, AppraisalAdminPage } from './workspace/AppraisalAdminPage';
 
 function RoleOutlet({ roles }: { roles: string[] }) {
   return (
@@ -116,6 +124,7 @@ export default function App() {
             <Route path="/ess" element={<EssLayout />}>
               <Route index element={<EssHomePage />} />
               <Route path="leave" element={<EssLeavePage />} />
+              <Route path="appraisals" element={<ProtectedRoute permission="appraisal.self"><SelfAppraisalsPage /></ProtectedRoute>} />
               <Route path="attendance" element={<EssAttendancePage />} />
               <Route path="people" element={<EssPeoplePage />} />
               <Route path="team" element={<EssTeamPage />} />
@@ -137,6 +146,7 @@ export default function App() {
             <Route path="/manager" element={<RoleOutlet roles={['MANAGER']} />}>
               <Route index element={<ManagerOverviewPage />} />
               <Route path="inbox" element={<ManagerInboxPage />} />
+              <Route path="appraisals" element={<ManagerAppraisalsPage />} />
               <Route path="team-leave" element={<TeamLeavePage />} />
               <Route path="team-attendance" element={<TeamAttendancePage />} />
               <Route path="directory" element={<TeamDirectoryPage />} />
@@ -150,6 +160,8 @@ export default function App() {
               <Route path="attendance" element={<HrAttendanceAdminPage />} />
               <Route path="documents" element={<HrDocumentsPage />} />
               <Route path="workflows" element={<HrWorkflowsPage />} />
+              <Route path="appraisals" element={<HrAppraisalsPage />} />
+              <Route path="appraisal-cycles" element={<AppraisalCyclesPage />} />
               <Route path="alumni" element={<HrAlumniPage />} />
               <Route path="alumni/requests" element={<HrAlumniRequestsPage />} />
               <Route path="alumni/engagement" element={<HrAlumniEngagementPage />} />
@@ -157,7 +169,10 @@ export default function App() {
               <Route path="alumni/:id" element={<HrAlumniRecordPage />} />
             </Route>
 
-            <Route
+          <Route path="/admin/appraisals" element={<ProtectedRoute roles={['SECURITY_ADMIN', 'HR_EXEC', 'HR_HEAD']} permission="appraisal.admin.read"><AppraisalAdminPage /></ProtectedRoute>} />
+          <Route path="/admin/appraisals/:id" element={<ProtectedRoute roles={['SECURITY_ADMIN', 'HR_EXEC', 'HR_HEAD']} permission="appraisal.admin.read"><AppraisalAdminDetailPage /></ProtectedRoute>} />
+
+          <Route
               path="/admin"
               element={
                 <RoleOutlet roles={['SECURITY_ADMIN', 'IT_ADMIN']} />
@@ -205,6 +220,10 @@ export default function App() {
             >
               <Route index element={<LeadershipOverviewPage />} />
               <Route path="reports" element={<LeadershipReportsPage />} />
+            </Route>
+
+            <Route path="/management" element={<RoleOutlet roles={['MANAGEMENT_APPROVER']} />}>
+              <Route path="appraisals" element={<ManagementAppraisalsPage />} />
             </Route>
           </Route>
 

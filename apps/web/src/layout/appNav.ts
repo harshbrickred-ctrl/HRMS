@@ -43,6 +43,8 @@ export type NavSectionId =
   | 'time'
   | 'pay'
   | 'workplace'
+  | 'employee-appraisal'
+  | 'admin-appraisals'
   | 'account'
   | 'support'
   | 'it-assets'
@@ -54,7 +56,8 @@ export type NavSectionId =
   | 'hr-programs'
   | 'admin-access'
   | 'admin-platform'
-  | 'leadership';
+  | 'leadership'
+  | 'management-appraisals';
 
 export type NavEmphasis = 'subtle' | 'clear';
 
@@ -105,6 +108,20 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: 'employee-appraisal',
+    label: 'Performance',
+    emphasis: 'subtle',
+    roles: ['EMPLOYEE', 'MANAGER', 'HR_EXEC', 'HR_HEAD'],
+    items: [{ to: '/ess/appraisals', label: 'My Appraisal', icon: 'overview' }],
+  },
+  {
+    id: 'admin-appraisals',
+    label: 'Performance',
+    emphasis: 'clear',
+    roles: ['SECURITY_ADMIN'],
+    items: [{ to: '/admin/appraisals', label: 'Appraisals', icon: 'workflows' }],
+  },
+  {
     id: 'account',
     label: 'Account',
     emphasis: 'subtle',
@@ -130,6 +147,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: '/manager', label: 'Overview', icon: 'overview', end: true },
       { to: '/manager/inbox', label: 'Inbox', icon: 'inbox' },
+      { to: '/manager/appraisals', label: 'Team Appraisals', icon: 'workflows' },
     ],
   },
   {
@@ -193,6 +211,9 @@ const NAV_SECTIONS: NavSection[] = [
       { to: '/hr/documents', label: 'Document Center', icon: 'hrDocuments' },
       { to: '/hr/workflows', label: 'Workflows', icon: 'workflows' },
       { to: '/hr/alumni', label: 'Alumni', icon: 'people' },
+      { to: '/hr/appraisals', label: 'Appraisal Reviews', icon: 'workflows' },
+      { to: '/admin/appraisals', label: 'Appraisal Overview', icon: 'reports' },
+      { to: '/hr/appraisal-cycles', label: 'Appraisal Cycles', icon: 'reports' },
     ],
   },
   {
@@ -251,6 +272,13 @@ const NAV_SECTIONS: NavSection[] = [
         icon: 'leadershipReports',
       },
     ],
+  },
+  {
+    id: 'management-appraisals',
+    label: 'Management',
+    emphasis: 'clear',
+    roles: ['MANAGEMENT_APPROVER'],
+    items: [{ to: '/management/appraisals', label: 'Final Appraisals', icon: 'leadership' }],
   },
 ];
 

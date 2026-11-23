@@ -7,6 +7,7 @@ export const ROLE_CATALOG: { code: string; name: string }[] = [
   { code: 'IT_ADMIN', name: 'IT Admin' },
   { code: 'SECURITY_ADMIN', name: 'Security Admin' },
   { code: 'LEADERSHIP_READ', name: 'Leadership Read' },
+  { code: 'MANAGEMENT_APPROVER', name: 'Management Appraisal Approver' },
 ];
 
 export const PERMISSIONS: { code: string; description: string }[] = [
@@ -34,6 +35,15 @@ export const PERMISSIONS: { code: string; description: string }[] = [
   { code: 'assets.self', description: 'View currently assigned assets and raise asset tickets' },
   { code: 'assets.manage', description: 'Manage the asset register, categories, assignments, and history' },
   { code: 'assets.tickets.manage', description: 'Handle asset issues, queries, and new-asset requests' },
+  { code: 'appraisal.self', description: 'View and submit own appraisals' },
+  { code: 'appraisal.team.read', description: 'View assigned team appraisals' },
+  { code: 'appraisal.manager.review', description: 'Review and decide assigned team appraisals' },
+  { code: 'appraisal.hr.read', description: 'View tenant appraisal records for HR review' },
+  { code: 'appraisal.hr.review', description: 'Review, return, reject, and approve appraisals as HR' },
+  { code: 'appraisal.cycle.manage', description: 'Create, configure, and launch appraisal cycles' },
+  { code: 'appraisal.management.review', description: 'Approve or reject HR-approved appraisals' },
+  { code: 'appraisal.compensation.read', description: 'View confidential compensation and promotion recommendations' },
+  { code: 'appraisal.admin.read', description: 'View appraisal progress and review data for administration' },
 ];
 
 /** role code → permission codes */
@@ -45,6 +55,7 @@ export const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
     'audit.read',
     'leave.self',
     'leave.approve',
+    'appraisal.admin.read',
   ],
   IT_ADMIN: [
     'rbac.assign',
@@ -58,6 +69,12 @@ export const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
     'leave.approve',
   ],
   HR_HEAD: [
+    'appraisal.self',
+    'appraisal.hr.read',
+    'appraisal.hr.review',
+    'appraisal.cycle.manage',
+    'appraisal.compensation.read',
+    'appraisal.admin.read',
     'rbac.read',
     'audit.read',
     'reports.read',
@@ -79,8 +96,12 @@ export const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
     'assets.tickets.manage',
   ],
   LEADERSHIP_READ: ['audit.read', 'reports.read'],
+  MANAGEMENT_APPROVER: ['appraisal.management.review', 'appraisal.compensation.read'],
   FINANCE_READ: ['reports.read', 'payslip.self'],
   MANAGER: [
+    'appraisal.self',
+    'appraisal.team.read',
+    'appraisal.manager.review',
     'reports.read',
     'attendance.self',
     'attendance.team.read',
@@ -92,6 +113,12 @@ export const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
     'payslip.self',
   ],
   HR_EXEC: [
+    'appraisal.self',
+    'appraisal.hr.read',
+    'appraisal.hr.review',
+    'appraisal.cycle.manage',
+    'appraisal.compensation.read',
+    'appraisal.admin.read',
     'hr.manage',
     'reports.read',
     'attendance.self',
@@ -107,5 +134,5 @@ export const ROLE_PERMISSION_MATRIX: Record<string, string[]> = {
     'payslip.manage',
     'payslip.self',
   ],
-  EMPLOYEE: ['attendance.self', 'leave.self', 'helpdesk.self', 'payslip.self', 'assets.self'],
+  EMPLOYEE: ['attendance.self', 'leave.self', 'helpdesk.self', 'payslip.self', 'assets.self', 'appraisal.self'],
 };
