@@ -2,7 +2,7 @@ import { formatSalary, type SalaryStatement, type SheetRow } from './salaryApi';
 import { TaxSheet } from './TaxSheet';
 import './salary.css';
 
-function MoneyTable({ title, rows, net, netYtd }: { title: string; rows: SheetRow[]; net?: number; netYtd?: number }) {
+function MoneyTable({ title, rows, net }: { title: string; rows: SheetRow[]; net?: number }) {
   return (
     <div className="salary-scroll">
       <table className="salary-table">
@@ -12,7 +12,6 @@ function MoneyTable({ title, rows, net, netYtd }: { title: string; rows: SheetRo
             <th>Ref</th>
             <th>Component</th>
             <th>This month</th>
-            <th>Year to date</th>
           </tr>
         </thead>
         <tbody>
@@ -21,15 +20,13 @@ function MoneyTable({ title, rows, net, netYtd }: { title: string; rows: SheetRo
               <td>{row.id}</td>
               <td>{row.label}</td>
               <td>{formatSalary(row.month)}</td>
-              <td>{formatSalary(row.ytd)}</td>
             </tr>
           ))}
-          {net != null && netYtd != null ? (
+          {net != null ? (
             <tr>
               <td>NET-02</td>
               <td>Net pay</td>
               <td>{formatSalary(net)}</td>
-              <td>{formatSalary(netYtd)}</td>
             </tr>
           ) : null}
         </tbody>
@@ -55,12 +52,7 @@ export function SalarySheet({ statement }: { statement: SalaryStatement }) {
         </p>
         <div className="salary-sheet-grid">
           <MoneyTable title="Earnings (SAL-20)" rows={statement.earnings} />
-          <MoneyTable
-            title="Deductions (NET-01)"
-            rows={statement.deductions}
-            net={statement.netPay}
-            netYtd={statement.netPayYtd}
-          />
+          <MoneyTable title="Deductions (NET-01)" rows={statement.deductions} net={statement.netPay} />
         </div>
         <p className={failed.length ? 'ess-alert' : 'salary-note'}>
           {failed.length
