@@ -127,6 +127,193 @@
   gap: 16px;
 }
 
+.hr-add .hr-flow-head {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+.hr-add .hr-back {
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hr-add .hr-back:hover {
+  color: var(--ink);
+}
+
+.hr-add .hr-flow-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+
+.hr-add .hr-flow-kicker {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hr-add .hr-steps {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.hr-add .hr-step {
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+}
+
+.hr-add .hr-step-bar {
+  display: block;
+  height: 3px;
+  border-radius: 99px;
+  background: var(--line);
+}
+
+.hr-add .hr-step.is-done .hr-step-bar {
+  background: var(--accent);
+}
+
+.hr-add .hr-step.is-current .hr-step-bar {
+  background: var(--ink);
+}
+
+.hr-add .hr-step-label {
+  display: grid;
+  gap: 1px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.hr-add .hr-step.is-current .hr-step-label,
+.hr-add .hr-step.is-done .hr-step-label {
+  color: var(--ink);
+}
+
+.hr-add .hr-step-index {
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.hr-add .hr-panel {
+  animation: hr-add-in 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hr-add .hr-panel-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.hr-add .hr-panel-head p {
+  margin: 4px 0 0;
+  max-width: 40rem;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.hr-add .hr-flow-actions {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.hr-add .hr-role:has(input:checked) {
+  border-color: color-mix(in srgb, var(--ink) 35%, var(--line));
+  background: var(--accent-fill);
+}
+
+.hr-pay-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.hr-pay-preview div {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+}
+
+.hr-pay-preview dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hr-pay-preview dd {
+  margin: 4px 0 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hr-review-groups {
+  display: grid;
+  gap: 18px;
+}
+
+.hr-review-groups h4 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hr-add .hr-review {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 20px;
+}
+
+.hr-add .hr-review li {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+@keyframes hr-add-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hr-add .hr-panel {
+    animation: none;
+  }
+}
+
 .hr-flow-head h2,
 .hr-record-head h2 {
   margin: 8px 0 0;
@@ -381,7 +568,8 @@
 @media (max-width: 800px) {
   .hr-steps,
   .hr-grid,
-  .hr-review li {
+  .hr-review li,
+  .hr-add .hr-review {
     grid-template-columns: 1fr;
   }
 

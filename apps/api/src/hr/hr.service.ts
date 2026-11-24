@@ -12,6 +12,7 @@ import { randomUUID } from 'crypto';
 import path from 'path';
 import { Readable } from 'stream';
 import { AttendanceService } from '../attendance/attendance.service';
+import { specialAllowanceFromCtc, structureFromCtc } from '../salary/salary-calc';
 import { PrismaService } from '../prisma/prisma.service';
 import { rolesSeniorToActor, SYSTEM_ADMIN_CODES } from '../rbac/role-matrix';
 import { LEAVE_CATALOG, leaveTypeName } from './leave-catalog';
@@ -47,6 +48,7 @@ const employeeInclude = {
   salaryStructure: {
     select: {
       monthlyGross: true,
+      ctc: true,
       basic: true,
       hra: true,
       da: true,
@@ -55,6 +57,7 @@ const employeeInclude = {
       dailyAllowance: true,
       gratuityMonthly: true,
       leaveEncashment: true,
+      insurance: true,
     },
   },
 } satisfies Prisma.EmployeeInclude;
@@ -82,6 +85,8 @@ type PayInput = {
   dailyAllowance?: number;
   gratuity?: number;
   leaveEncashment?: number;
+  ctc?: number;
+  insurance?: number;
 };
 
 function rupee(value: number | undefined) {
@@ -110,15 +115,15 @@ function bankData(dto: PayInput, required: boolean) {
 }
 
 function payAmounts(dto: PayInput, required: boolean) {
-  const basic = rupee(dto.basic);
-  const hra = rupee(dto.hra);
-  const special = rupee(dto.specialAllowance);
-  const statutoryBonus = rupee(dto.statutoryBonus);
-  const dailyAllowance = rupee(dto.dailyAllowance);
-  const gratuityMonthly = rupee(dto.gratuity);
-  const leaveEncashment = rupee(dto.leaveEncashment);
-  if (required && basic <= 0) throw new BadRequestException('Enter basic salary.');
-  return { basic, hra, special, statutoryBonus, dailyAllowance, gratuityMonthly, leaveEncashment };
+  if (required && !(dto.ctc && dto.ctc > 0)) throw new BadRequestException('Enter CTC.');
+  if (dto.ctc && dto.ctc > 0) {
+    try {
+      return structureFromCtc(rupee(dto.ctc));
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : 'Enter a valid CTC.');
+    }
+  }
+  return null;
 }
 
 @Injectable()
@@ -344,6 +349,7 @@ export class HrService {
       });
       const bank = bankData(dto, true);
       const pay = payAmounts(dto, true);
+      if (!pay) throw new BadRequestException('Enter CTC.');
       const employee = await tx.employee.create({
         data: {
           tenantId,
@@ -369,13 +375,18 @@ export class HrService {
         data: {
           tenantId,
           employeeId: employee.id,
-          monthlyGross: pay.basic + pay.hra + pay.special + pay.statutoryBonus + pay.dailyAllowance,
+          ctc: pay.ctc,
+          monthlyGross: pay.monthlyGross,
           basic: pay.basic,
           hra: pay.hra,
+          da: 0,
+          otherAllowances: 0,
           statutoryBonus: pay.statutoryBonus,
-          dailyAllowance: pay.dailyAllowance,
+          dailyAllowance: 0,
           gratuityMonthly: pay.gratuityMonthly,
           leaveEncashment: pay.leaveEncashment,
+          // Monthly premium entered by HR. Deducted from net with PF.
+          insurance: Math.max(0, rupee(dto.insurance)),
         },
       });
       await tx.auditEvent.create({
@@ -428,14 +439,7 @@ export class HrService {
     const passwordHash = dto.password ? await bcrypt.hash(dto.password, 10) : undefined;
     const touchesBank =
       dto.bankName !== undefined || dto.ifscCode !== undefined || dto.bankAccountNumber !== undefined;
-    const touchesPay =
-      dto.basic !== undefined ||
-      dto.hra !== undefined ||
-      dto.specialAllowance !== undefined ||
-      dto.statutoryBonus !== undefined ||
-      dto.dailyAllowance !== undefined ||
-      dto.gratuity !== undefined ||
-      dto.leaveEncashment !== undefined;
+    const touchesPay = dto.ctc !== undefined;
     const bank = touchesBank ? bankData(dto, false) : null;
     const pay = touchesPay ? payAmounts(dto, false) : null;
     await this.prisma.$transaction(async (tx) => {
@@ -460,42 +464,37 @@ export class HrService {
         },
       });
       if (pay) {
-        const existing = await tx.salaryStructure.findUnique({ where: { employeeId: id } });
-        const anyPay =
-          pay.basic + pay.hra + pay.special + pay.statutoryBonus + pay.dailyAllowance + pay.gratuityMonthly + pay.leaveEncashment > 0;
-        if (anyPay || existing) {
-          const monthlyGross =
-            pay.basic +
-            pay.hra +
-            pay.special +
-            pay.statutoryBonus +
-            pay.dailyAllowance +
-            (existing?.da ?? 0) +
-            (existing?.otherAllowances ?? 0);
-          await tx.salaryStructure.upsert({
-            where: { employeeId: id },
-            create: {
-              tenantId,
-              employeeId: id,
-              monthlyGross,
-              basic: pay.basic,
-              hra: pay.hra,
-              statutoryBonus: pay.statutoryBonus,
-              dailyAllowance: pay.dailyAllowance,
-              gratuityMonthly: pay.gratuityMonthly,
-              leaveEncashment: pay.leaveEncashment,
-            },
-            update: {
-              monthlyGross,
-              basic: pay.basic,
-              hra: pay.hra,
-              statutoryBonus: pay.statutoryBonus,
-              dailyAllowance: pay.dailyAllowance,
-              gratuityMonthly: pay.gratuityMonthly,
-              leaveEncashment: pay.leaveEncashment,
-            },
-          });
-        }
+        await tx.salaryStructure.upsert({
+          where: { employeeId: id },
+          create: {
+            tenantId,
+            employeeId: id,
+            ctc: pay.ctc,
+            monthlyGross: pay.monthlyGross,
+            basic: pay.basic,
+            hra: pay.hra,
+            da: 0,
+            otherAllowances: 0,
+            statutoryBonus: pay.statutoryBonus,
+            dailyAllowance: 0,
+            gratuityMonthly: pay.gratuityMonthly,
+            leaveEncashment: pay.leaveEncashment,
+            insurance: Math.max(0, rupee(dto.insurance)),
+          },
+          update: {
+            ctc: pay.ctc,
+            monthlyGross: pay.monthlyGross,
+            basic: pay.basic,
+            hra: pay.hra,
+            da: 0,
+            otherAllowances: 0,
+            statutoryBonus: pay.statutoryBonus,
+            dailyAllowance: 0,
+            gratuityMonthly: pay.gratuityMonthly,
+            leaveEncashment: pay.leaveEncashment,
+            insurance: Math.max(0, rupee(dto.insurance)),
+          },
+        });
       }
       await tx.auditEvent.create({
         data: {
@@ -693,20 +692,29 @@ export class HrService {
       bankAccountNumber: row.bankAccountNumber,
       salary: row.salaryStructure
         ? {
+            ctc: row.salaryStructure.ctc,
+            pf: Math.round((Math.min(row.salaryStructure.basic, 25_000) * 12) / 100),
             basic: row.salaryStructure.basic,
             hra: row.salaryStructure.hra,
-            special:
-              row.salaryStructure.monthlyGross -
-              row.salaryStructure.basic -
-              row.salaryStructure.hra -
-              row.salaryStructure.da -
-              row.salaryStructure.otherAllowances -
-              row.salaryStructure.statutoryBonus -
-              row.salaryStructure.dailyAllowance,
+            special: row.salaryStructure.ctc > 0
+              ? specialAllowanceFromCtc(
+                  row.salaryStructure.ctc,
+                  row.salaryStructure.basic,
+                  row.salaryStructure.hra,
+                  row.salaryStructure.statutoryBonus,
+                )
+              : row.salaryStructure.monthlyGross -
+                row.salaryStructure.basic -
+                row.salaryStructure.hra -
+                row.salaryStructure.da -
+                row.salaryStructure.otherAllowances -
+                row.salaryStructure.statutoryBonus -
+                row.salaryStructure.dailyAllowance,
             statutoryBonus: row.salaryStructure.statutoryBonus,
             dailyAllowance: row.salaryStructure.dailyAllowance,
             gratuity: row.salaryStructure.gratuityMonthly,
             leaveEncashment: row.salaryStructure.leaveEncashment,
+            insurance: row.salaryStructure.insurance,
           }
         : null,
     };

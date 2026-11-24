@@ -2,7 +2,7 @@ import { formatSalary, type SalaryStatement, type SheetRow } from './salaryApi';
 import { TaxSheet } from './TaxSheet';
 import './salary.css';
 
-function MoneyTable({ title, rows, net }: { title: string; rows: SheetRow[]; net?: number }) {
+function MoneyTable({ title, rows }: { title: string; rows: SheetRow[] }) {
   return (
     <div className="salary-scroll">
       <table className="salary-table">
@@ -22,13 +22,6 @@ function MoneyTable({ title, rows, net }: { title: string; rows: SheetRow[]; net
               <td>{formatSalary(row.month)}</td>
             </tr>
           ))}
-          {net != null ? (
-            <tr>
-              <td>NET-02</td>
-              <td>Net pay</td>
-              <td>{formatSalary(net)}</td>
-            </tr>
-          ) : null}
         </tbody>
       </table>
     </div>
@@ -38,21 +31,45 @@ function MoneyTable({ title, rows, net }: { title: string; rows: SheetRow[]; net
 export function SalarySheet({ statement }: { statement: SalaryStatement }) {
   const failed = statement.checks.filter((check) => !check.ok);
   const tax = statement.taxBreakdown;
+  const totalEarnings =
+    statement.earnings.find((row) => row.id === 'SAL-20')?.month ??
+    statement.earnings.reduce((sum, row) => sum + row.month, 0);
+  const totalDeductions = statement.deductions.reduce((sum, row) => sum + row.month, 0);
+  const earningRows = statement.earnings.filter((row) => row.id !== 'SAL-20');
 
   return (
     <div className="salary-sheet-stack">
       <section className="salary-sheet">
         <h2>Payslip for {statement.month}</h2>
         <p className="salary-note">
-          Net pay {formatSalary(statement.netPay)}.
           {statement.lopDays
-            ? ` Loss of pay: ${statement.lopDays} day${statement.lopDays === 1 ? '' : 's'} deducted.`
-            : ' No loss of pay this month.'}{' '}
+            ? `Loss of pay: ${statement.lopDays} day${statement.lopDays === 1 ? '' : 's'} deducted.`
+            : 'No loss of pay this month.'}{' '}
           This month is one month of the yearly CTC. {statement.paidDaysNote}
         </p>
         <div className="salary-sheet-grid">
-          <MoneyTable title="Earnings (SAL-20)" rows={statement.earnings} />
-          <MoneyTable title="Deductions (NET-01)" rows={statement.deductions} net={statement.netPay} />
+          <MoneyTable title="Earnings (SAL-20)" rows={earningRows} />
+          <MoneyTable title="Deductions (NET-01)" rows={statement.deductions} />
+        </div>
+        <div className="salary-net-box" aria-label="Net pay summary">
+          <div className="salary-net-line">
+            <span>Total earnings</span>
+            <strong>{formatSalary(totalEarnings)}</strong>
+          </div>
+          <div className="salary-net-op" aria-hidden="true">
+            −
+          </div>
+          <div className="salary-net-line">
+            <span>Total deductions</span>
+            <strong>{formatSalary(totalDeductions)}</strong>
+          </div>
+          <div className="salary-net-op" aria-hidden="true">
+            =
+          </div>
+          <div className="salary-net-line is-result">
+            <span>Net pay</span>
+            <strong>{formatSalary(statement.netPay)}</strong>
+          </div>
         </div>
         <p className={failed.length ? 'ess-alert' : 'salary-note'}>
           {failed.length

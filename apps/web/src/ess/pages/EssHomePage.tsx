@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { fetchMyAttendance, punchMe } from '../../workspace/attendanceApi';
+import { downloadSalarySlip, fetchMySalary, type MySalary } from '../../workspace/salaryApi';
 import {
   ArrowRight,
   BarChart3,
@@ -16,15 +17,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { EmployeePhoto } from '../components/EmployeePhoto';
 import { StatusChip } from '../components/StatusChip';
 import { localToday, useEssData } from '../mock/EssDataContext';
-import { ensureChristmas, type AttendanceDay, type Payslip } from '../mock/essMock';
-
-function lineTotal(lines: { amount: number }[]) {
-  return lines.reduce((sum, line) => sum + line.amount, 0);
-}
-
-function netPay(slip: Payslip) {
-  return lineTotal(slip.earnings) - lineTotal(slip.deductions);
-}
+import { ensureChristmas } from '../mock/essMock';
 
 function formatToday() {
   return new Date().toLocaleDateString('en-IN', {
@@ -43,14 +36,6 @@ function shortMonth(month: string) {
   });
 }
 
-function paidDaysFor(month: string, attendance: AttendanceDay[]) {
-  const [year, mon] = month.split('-').map(Number);
-  const daysInMonth = new Date(year, mon, 0).getDate();
-  const inMonth = attendance.filter((day) => day.date.startsWith(month));
-  if (inMonth.length === 0) return daysInMonth;
-  return inMonth.filter((day) => day.status !== 'Absent').length;
-}
-
 function holidayWhen(date: string) {
   const value = new Date(`${date}T12:00:00`);
   return {
@@ -58,24 +43,6 @@ function holidayWhen(date: string) {
     month: value.toLocaleDateString('en-IN', { month: 'short' }),
     weekday: value.toLocaleDateString('en-IN', { weekday: 'long' }),
   };
-}
-
-function downloadPayslip(slip: Payslip, gross: number, deductions: number) {
-  const rows = [
-    `Payslip,${slip.label}`,
-    ...slip.earnings.map((line) => `Earning,${line.label},${line.amount}`),
-    ...slip.deductions.map((line) => `Deduction,${line.label},${line.amount}`),
-    `Gross,${gross}`,
-    `Deductions,${deductions}`,
-    `Net,${gross - deductions}`,
-  ];
-  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `payslip-${slip.month}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 type Shortcut = {
@@ -96,7 +63,6 @@ export function EssHomePage() {
     holidays,
     attendance,
     corrections,
-    payslips,
     salaryHidden,
     toggleSalaryHidden,
     showAmount,
@@ -135,11 +101,25 @@ export function EssHomePage() {
     (sum, balance) => (balance.code === 'LOP' ? sum : sum + balance.available),
     0,
   );
-  const latestPayslip = payslips[0];
-  const latestGross = latestPayslip ? lineTotal(latestPayslip.earnings) : 0;
-  const latestDeductions = latestPayslip ? lineTotal(latestPayslip.deductions) : 0;
+  const [payroll, setPayroll] = useState<MySalary | null>(null);
+  useEffect(() => {
+    let cancel = false;
+    fetchMySalary()
+      .then((data) => {
+        if (!cancel) setPayroll(data);
+      })
+      .catch(() => {
+        if (!cancel) setPayroll(null);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, []);
+  const latestPayslip = payroll?.payslip ?? null;
+  const latestGross = latestPayslip?.gross ?? 0;
+  const latestDeductions = latestPayslip?.deductions ?? 0;
   const deductionShare = latestGross === 0 ? 0 : (latestDeductions / latestGross) * 100;
-  const paidDays = latestPayslip ? paidDaysFor(latestPayslip.month, attendance) : 0;
+  const paidDays = latestPayslip?.paidDays ?? 0;
   const upcomingSorted = ensureChristmas(holidays)
     .filter((holiday) => holiday.date.slice(0, 10) >= today)
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -411,7 +391,7 @@ export function EssHomePage() {
                   aria-label={
                     salaryHidden
                       ? 'Salary hidden'
-                      : `Net pay ${showAmount(netPay(latestPayslip))}, deductions ${showAmount(latestDeductions)}`
+                      : `Net pay ${showAmount(latestPayslip.netPay)}, deductions ${showAmount(latestDeductions)}`
                   }
                 >
                   <span className="ess-donut-hole" />
@@ -442,17 +422,25 @@ export function EssHomePage() {
                     <i className="ess-swatch ess-swatch--net" aria-hidden />
                     Net
                   </dt>
-                  <dd>{showAmount(netPay(latestPayslip))}</dd>
+                  <dd>{showAmount(latestPayslip.netPay)}</dd>
                 </div>
               </dl>
               <div className="ess-pay-links">
-                <button
-                  type="button"
-                  className="ess-btn ess-btn-ghost"
-                  onClick={() => downloadPayslip(latestPayslip, latestGross, latestDeductions)}
-                >
-                  Download
-                </button>
+                {latestPayslip.paid ? (
+                  <button
+                    type="button"
+                    className="ess-btn ess-btn-ghost"
+                    onClick={() => {
+                      void downloadSalarySlip(latestPayslip.month);
+                    }}
+                  >
+                    Download
+                  </button>
+                ) : (
+                  <Link to="/ess/salary" className="ess-btn ess-btn-ghost">
+                    Open payslip
+                  </Link>
+                )}
                 <button
                   type="button"
                   className="ess-btn ess-btn-ghost"

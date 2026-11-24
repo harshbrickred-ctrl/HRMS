@@ -661,7 +661,7 @@ export class AttendanceService implements OnModuleInit {
     const [days, leaves, holidays, employees] = await Promise.all([
       this.prisma.attendanceDay.findMany({
         where: { tenantId, attendanceDate: { gte: start, lte: end } },
-        select: { employeeId: true, attendanceDate: true, status: true },
+        select: { employeeId: true, attendanceDate: true, status: true, overrideStatus: true },
       }),
       this.prisma.leaveRequest.findMany({
         where: {
@@ -698,7 +698,11 @@ export class AttendanceService implements OnModuleInit {
           .map((holiday) => isoFromDateOnly(holiday.holidayDate)),
         attendance: days
           .filter((day) => day.employeeId === employee.id)
-          .map((day) => ({ date: isoFromDateOnly(day.attendanceDate), status: day.status })),
+          .map((day) => ({
+            date: isoFromDateOnly(day.attendanceDate),
+            status: day.status,
+            explicitAbsent: day.overrideStatus === 'absent',
+          })),
         leaves: leaves
           .filter((leave) => leave.employeeId === employee.id)
           .map((leave) => ({

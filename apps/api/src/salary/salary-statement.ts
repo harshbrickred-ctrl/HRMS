@@ -180,8 +180,6 @@ export function buildStatement(
     row('SAL-19', 'Arrears', current.arrears, ytd.arrears),
     row('REIM-01', 'Reimbursement', current.reimbursement, ytd.reimbursement),
     row('SAL-20', 'Gross earnings', current.gross, ytd.gross, true),
-    row('LOP-01', lopLabel, current.lossOfPay, ytd.lossOfPay, true),
-    row('NET-04', 'Net pay', current.netPay, ytd.netPay, true),
   ].filter((item): item is SheetRow => Boolean(item));
 
   const deductions = [

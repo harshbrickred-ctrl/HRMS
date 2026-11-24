@@ -75,7 +75,12 @@ export function FinancePayoutPage() {
   useEffect(() => {
     setSelected([]);
     load(month).catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load payout.'));
-    // Reload when the payout month changes.
+    function refresh() {
+      load(month).catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load payout.'));
+    }
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+    // Reload when the payout month changes, and again when the page is focused after an approval.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month]);
 
@@ -91,6 +96,16 @@ export function FinancePayoutPage() {
 
   const selectedRows = rows.filter((row) => selected.includes(row.employeeId));
   const selectedNet = selectedRows.reduce((sum, row) => sum + row.netPay, 0);
+  const fileTargets = selectedRows.length
+    ? selectedRows
+    : rows.filter((row) => row.eligible && (row.paymentStatus === 'pending' || row.paymentStatus === 'file'));
+  const downloadNote = !batch.approved
+    ? 'HR Head has to approve this month before the bank file can be downloaded.'
+    : fileTargets.length === 0
+      ? 'No Ready employee is left for a bank file.'
+      : selected.length === 0
+        ? 'No one is ticked, so this downloads every Ready employee who is not already in a direct transfer.'
+        : '';
 
   const visibleIds = visible.map((row) => row.employeeId);
   const allChecked = visibleIds.length > 0 && visibleIds.every((id) => selected.includes(id));
@@ -119,7 +134,7 @@ export function FinancePayoutPage() {
   async function onBankFile() {
     setBusy(true);
     try {
-      const result = await createBankFile(month, template, selected);
+      const result = await createBankFile(month, template, fileTargets.map((row) => row.employeeId));
       downloadText(result.fileName, result.csv);
       await load();
       showToast('Bank file downloaded. Upload it on the bank portal. Salary is not transferred yet.');
@@ -244,9 +259,10 @@ export function FinancePayoutPage() {
             <option key={item.id} value={item.id}>{item.label}</option>
           ))}
         </select>
-        <button type="button" className="ess-btn ess-btn-primary" disabled={busy || !batch.approved || selected.length === 0} onClick={() => void onBankFile()}>
+        <button type="button" className="ess-btn ess-btn-primary" disabled={busy || !batch.approved || fileTargets.length === 0} title={downloadNote} onClick={() => void onBankFile()}>
           Download bank file
         </button>
+        {downloadNote ? <p className="hr-master-lead">{downloadNote}</p> : null}
         <label className="ess-btn payout-upload">
           Upload statement
           <input

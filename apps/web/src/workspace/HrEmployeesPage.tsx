@@ -16,6 +16,7 @@ import {
   type HrOrg,
   type HrRole,
 } from './hrApi';
+import { salaryFromCtc } from './ctcSalary';
 import { showToast } from '../ui/toast';
 import './hr-master.css';
 
@@ -34,13 +35,8 @@ type Draft = {
   bankName: string;
   ifscCode: string;
   bankAccountNumber: string;
-  basic: string;
-  hra: string;
-  specialAllowance: string;
-  statutoryBonus: string;
-  dailyAllowance: string;
-  gratuity: string;
-  leaveEncashment: string;
+  ctc: string;
+  insurance: string;
 };
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'DISABLED';
@@ -51,7 +47,7 @@ const STEP_COPY = [
   'Name, work email, and the password you will share with them.',
   'Where they sit in the organization. You can leave a field unassigned.',
   'Bank name, IFSC and the account where salary is credited.',
-  'Monthly salary structure. Basic is required. The other amounts can be zero.',
+  'Enter yearly CTC and the monthly insurance amount. PF and insurance are deducted from this month’s gross.',
   'Roles decide which sections this account can open.',
   'Check the record, then create the account.',
 ];
@@ -71,22 +67,20 @@ const emptyDraft = (): Draft => ({
   bankName: '',
   ifscCode: '',
   bankAccountNumber: '',
-  basic: '',
-  hra: '',
-  specialAllowance: '',
-  statutoryBonus: '',
-  dailyAllowance: '',
-  gratuity: '',
-  leaveEncashment: '',
+  ctc: '',
+  insurance: '',
 });
 
 function messageOf(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong';
 }
 
-function rupees(raw: string) {
-  const value = amount(raw) ?? 0;
+function money(value: number) {
   return `₹${value.toLocaleString('en-IN')}`;
+}
+
+function rupees(raw: string) {
+  return money(amount(raw) ?? 0);
 }
 
 function fullName(person: { firstName: string; lastName: string }) {
@@ -113,13 +107,12 @@ function draftFrom(person: HrEmployee): Draft {
     bankName: person.bankName ?? '',
     ifscCode: person.ifscCode ?? '',
     bankAccountNumber: person.bankAccountNumber ?? '',
-    basic: person.salary ? String(person.salary.basic) : '',
-    hra: person.salary ? String(person.salary.hra) : '',
-    specialAllowance: person.salary ? String(person.salary.special) : '',
-    statutoryBonus: person.salary ? String(person.salary.statutoryBonus) : '',
-    dailyAllowance: person.salary ? String(person.salary.dailyAllowance) : '',
-    gratuity: person.salary ? String(person.salary.gratuity) : '',
-    leaveEncashment: person.salary ? String(person.salary.leaveEncashment) : '',
+    ctc: person.salary?.ctc
+      ? String(person.salary.ctc)
+      : person.salary?.basic
+        ? String(person.salary.basic * 2 * 12)
+        : '',
+    insurance: person.salary?.insurance ? String(person.salary.insurance) : '',
   };
 }
 
@@ -142,19 +135,13 @@ function bankError(form: Draft, required: boolean) {
 }
 
 function salaryError(form: Draft, required: boolean) {
-  const fields: Array<[string, string]> = [
-    ['Basic salary', form.basic],
-    ['HRA', form.hra],
-    ['Special allowance', form.specialAllowance],
-    ['Statutory bonus', form.statutoryBonus],
-    ['Daily allowance', form.dailyAllowance],
-    ['Gratuity', form.gratuity],
-    ['Leave encashment', form.leaveEncashment],
-  ];
-  for (const [label, raw] of fields) {
-    if (raw.trim() && amount(raw) == null) return `${label} must be a whole number of rupees.`;
+  if (form.ctc.trim() && amount(form.ctc) == null) return 'CTC must be a whole number of rupees.';
+  const ctc = amount(form.ctc) ?? 0;
+  if (required && ctc <= 0) return 'Enter CTC.';
+  if (form.insurance.trim() && amount(form.insurance) == null) return 'Insurance must be a whole number of rupees.';
+  if (ctc > 0 && salaryFromCtc(ctc).special < 0) {
+    return 'CTC is too low for basic, HRA and the ₹1,400 statutory bonus.';
   }
-  if (required && (amount(form.basic) ?? 0) <= 0) return 'Enter basic salary.';
   return null;
 }
 
@@ -163,13 +150,8 @@ function payPayload(form: Draft) {
     bankName: form.bankName.trim(),
     ifscCode: form.ifscCode.trim().toUpperCase(),
     bankAccountNumber: form.bankAccountNumber.replace(/\s/g, ''),
-    basic: amount(form.basic) ?? 0,
-    hra: amount(form.hra) ?? 0,
-    specialAllowance: amount(form.specialAllowance) ?? 0,
-    statutoryBonus: amount(form.statutoryBonus) ?? 0,
-    dailyAllowance: amount(form.dailyAllowance) ?? 0,
-    gratuity: amount(form.gratuity) ?? 0,
-    leaveEncashment: amount(form.leaveEncashment) ?? 0,
+    ctc: amount(form.ctc) ?? 0,
+    insurance: amount(form.insurance) ?? 0,
   };
 }
 
@@ -443,7 +425,7 @@ export function HrEmployeesPage() {
 
   if (mode === 'add') {
     return (
-      <div className="hr-master">
+      <div className="hr-master hr-add">
         <form
           className="hr-flow"
           noValidate
@@ -456,17 +438,21 @@ export function HrEmployeesPage() {
           <div className="hr-flow-head">
             <button
               type="button"
-              className="ess-btn"
+              className="hr-back"
               onClick={() => {
                 if (confirmLeave('Leave this new member without creating the account?')) openDirectory();
               }}
             >
               Back to directory
             </button>
-            <h2>Add member</h2>
-            <p className="hr-flow-copy">{STEP_COPY[step]}</p>
+            <div className="hr-flow-title">
+              <h2>Add employee</h2>
+              <p className="hr-flow-kicker">
+                {step + 1} of {STEPS.length}
+              </p>
+            </div>
           </div>
-          <ol className="hr-steps">
+          <ol className="hr-steps" aria-label="Add employee steps">
             {STEPS.map((label, index) => (
               <li key={label}>
                 <button
@@ -481,13 +467,20 @@ export function HrEmployeesPage() {
                     }
                   }}
                 >
-                  <span className="hr-step-index">Step {index + 1}</span>
-                  <span className="hr-step-label">{label}</span>
+                  <span className="hr-step-bar" aria-hidden="true" />
+                  <span className="hr-step-label">
+                    <span className="hr-step-index">{index + 1}</span>
+                    {label}
+                  </span>
                 </button>
               </li>
             ))}
           </ol>
-          <section className="hr-panel" aria-label={STEPS[step]}>
+          <section className="hr-panel" key={step} aria-label={STEPS[step]}>
+            <header className="hr-panel-head">
+              <h3>{STEPS[step]}</h3>
+              <p>{STEP_COPY[step]}</p>
+            </header>
             {error ? (
               <p className="hr-alert" role="alert">
                 {error}
@@ -512,35 +505,35 @@ export function HrEmployeesPage() {
                 roles={roleNames(form.roleCodes)}
               />
             ) : null}
-          </section>
-          <div className="hr-flow-actions">
-            <button
-              type="button"
-              className="ess-btn"
-              onClick={() => {
-                if (confirmLeave('Leave this new member without creating the account?')) openDirectory();
-              }}
-            >
-              Cancel
-            </button>
-            <div className="hr-flow-actions-end">
-              {step > 0 ? (
-                <button
-                  type="button"
-                  className="ess-btn"
-                  onClick={() => {
-                    setError(null);
-                    setStep((current) => current - 1);
-                  }}
-                >
-                  Back
-                </button>
-              ) : null}
-              <button type="submit" className="ess-btn ess-btn-primary" disabled={submitting}>
-                {step < STEPS.length - 1 ? 'Continue' : submitting ? 'Creating…' : 'Create account'}
+            <div className="hr-flow-actions">
+              <button
+                type="button"
+                className="ess-btn"
+                onClick={() => {
+                  if (confirmLeave('Leave this new member without creating the account?')) openDirectory();
+                }}
+              >
+                Cancel
               </button>
+              <div className="hr-flow-actions-end">
+                {step > 0 ? (
+                  <button
+                    type="button"
+                    className="ess-btn"
+                    onClick={() => {
+                      setError(null);
+                      setStep((current) => current - 1);
+                    }}
+                  >
+                    Back
+                  </button>
+                ) : null}
+                <button type="submit" className="ess-btn ess-btn-primary" disabled={submitting}>
+                  {step < STEPS.length - 1 ? 'Continue' : submitting ? 'Creating…' : 'Create account'}
+                </button>
+              </div>
             </div>
-          </div>
+          </section>
         </form>
       </div>
     );
@@ -918,52 +911,20 @@ function EmployeeFields({
     salary: (
       <div className="hr-grid">
         <TextField
-          id="emp-basic"
-          label="Basic salary"
-          value={form.basic}
+          id="emp-ctc"
+          label="CTC per year"
+          value={form.ctc}
           required
-          onChange={(value) => setForm((current) => ({ ...current, basic: value }))}
+          onChange={(value) => setForm((current) => ({ ...current, ctc: value }))}
         />
         <TextField
-          id="emp-hra"
-          label="HRA"
-          value={form.hra}
-          onChange={(value) => setForm((current) => ({ ...current, hra: value }))}
+          id="emp-insurance"
+          label="Insurance this month"
+          value={form.insurance}
+          onChange={(value) => setForm((current) => ({ ...current, insurance: value }))}
         />
-        <TextField
-          id="emp-special"
-          label="Special allowance"
-          value={form.specialAllowance}
-          onChange={(value) => setForm((current) => ({ ...current, specialAllowance: value }))}
-        />
-        <TextField
-          id="emp-bonus"
-          label="Statutory bonus"
-          value={form.statutoryBonus}
-          onChange={(value) => setForm((current) => ({ ...current, statutoryBonus: value }))}
-        />
-        <TextField
-          id="emp-daily"
-          label="Daily allowance"
-          value={form.dailyAllowance}
-          onChange={(value) => setForm((current) => ({ ...current, dailyAllowance: value }))}
-        />
-        <TextField
-          id="emp-gratuity"
-          label="Gratuity"
-          value={form.gratuity}
-          onChange={(value) => setForm((current) => ({ ...current, gratuity: value }))}
-        />
-        <TextField
-          id="emp-leave"
-          label="Leave encashment"
-          value={form.leaveEncashment}
-          onChange={(value) => setForm((current) => ({ ...current, leaveEncashment: value }))}
-        />
-        <p className="hr-hint is-wide">
-          Amounts are monthly rupees. Blank means zero. Monthly gross is basic, HRA, special allowance, statutory bonus, and daily allowance.
-          Gratuity and leave encashment are not added to that gross.
-        </p>
+        <CalculatedSalary ctc={form.ctc} insurance={form.insurance} />
+        <p className="hr-hint is-wide">Yearly rupees. 12 LPA is 1200000. One month of that CTC is the gross, then PF and insurance come off.</p>
       </div>
     ),
     access: (
@@ -996,6 +957,32 @@ function EmployeeFields({
       </div>
     ),
   };
+}
+
+function CalculatedSalary({ ctc, insurance }: { ctc: string; insurance: string }) {
+  const pay = salaryFromCtc(amount(ctc) ?? 0);
+  const cover = amount(insurance) ?? 0;
+  const rows: Array<[string, number]> = [
+    ['Basic this month', pay.basic],
+    ['HRA this month', pay.hra],
+    ['Statutory bonus this month', pay.statutoryBonus],
+    ['Special allowance this month', pay.special],
+    ['Leave encashment this month', pay.leaveEncashment],
+    ['Gross this month', pay.gross],
+    ['PF deducted', pay.pf],
+    ['Insurance deducted', cover],
+    ['Net this month', pay.gross - pay.pf - cover],
+  ];
+  return (
+    <dl className="hr-pay-preview is-wide">
+      {rows.map(([label, value]) => (
+        <div key={label}>
+          <dt>{label}</dt>
+          <dd>{money(value)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
 function TextField({
@@ -1116,39 +1103,73 @@ function Review({
   manager: string;
   roles: string;
 }) {
-  const rows: Array<[string, string]> = [
-    ['Name', fullName(form)],
-    ['Email', form.email.trim()],
-    ['Designation', form.designation.trim() || 'Not set'],
-    ['Department', department],
-    ['Location', location],
-    ['Team', team],
-    ['Manager', manager],
-    ['Roles', roles || 'None'],
-    ['Account', form.status === 'ACTIVE' ? 'Active' : 'Inactive'],
-    ['Bank', form.bankName.trim() || 'Not set'],
-    ['IFSC', form.ifscCode.trim().toUpperCase() || 'Not set'],
-    ['Account number', form.bankAccountNumber.replace(/\s/g, '') || 'Not set'],
-    ['Basic salary', rupees(form.basic)],
-    ['HRA', rupees(form.hra)],
-    ['Special allowance', rupees(form.specialAllowance)],
-    ['Statutory bonus', rupees(form.statutoryBonus)],
-    ['Daily allowance', rupees(form.dailyAllowance)],
-    ['Gratuity', rupees(form.gratuity)],
-    ['Leave encashment', rupees(form.leaveEncashment)],
-    ['Password', 'Will be set on this account'],
+  const pay = salaryFromCtc(amount(form.ctc) ?? 0);
+  const groups: Array<[string, Array<[string, string]>]> = [
+    [
+      'Person',
+      [
+        ['Name', fullName(form) || 'Not set'],
+        ['Email', form.email.trim() || 'Not set'],
+        ['Designation', form.designation.trim() || 'Not set'],
+        ['Password', 'Set on this account'],
+      ],
+    ],
+    [
+      'Placement',
+      [
+        ['Department', department],
+        ['Location', location],
+        ['Team', team],
+        ['Manager', manager],
+      ],
+    ],
+    [
+      'Bank',
+      [
+        ['Bank', form.bankName.trim() || 'Not set'],
+        ['IFSC', form.ifscCode.trim().toUpperCase() || 'Not set'],
+        ['Account number', form.bankAccountNumber.replace(/\s/g, '') || 'Not set'],
+      ],
+    ],
+    [
+      'Salary',
+      [
+        ['CTC per year', rupees(form.ctc)],
+        ['Basic', money(pay.basic)],
+        ['HRA', money(pay.hra)],
+        ['Statutory bonus', money(pay.statutoryBonus)],
+        ['Special allowance', money(pay.special)],
+        ['Leave encashment', money(pay.leaveEncashment)],
+        ['Gross', money(pay.gross)],
+        ['PF', money(pay.pf)],
+        ['Insurance', rupees(form.insurance)],
+        ['Net', money(pay.gross - pay.pf - (amount(form.insurance) ?? 0))],
+      ],
+    ],
+    [
+      'Access',
+      [
+        ['Roles', roles || 'None'],
+        ['Account', form.status === 'ACTIVE' ? 'Active' : 'Inactive'],
+      ],
+    ],
   ];
   return (
-    <>
-      <ul className="hr-review">
-        {rows.map(([label, value]) => (
-          <li key={label}>
-            <span>{label}</span>
-            <strong>{value}</strong>
-          </li>
-        ))}
-      </ul>
+    <div className="hr-review-groups">
+      {groups.map(([title, rows]) => (
+        <section key={title}>
+          <h4>{title}</h4>
+          <ul className="hr-review">
+            {rows.map(([label, value]) => (
+              <li key={label}>
+                <span>{label}</span>
+                <strong>{value}</strong>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
       <p className="hr-hint">The employee code is assigned when the account is created.</p>
-    </>
+    </div>
   );
 }

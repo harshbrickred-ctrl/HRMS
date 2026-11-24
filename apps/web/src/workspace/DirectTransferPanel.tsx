@@ -8,8 +8,6 @@ import {
   fetchPayout,
   formatSalary,
   issueTransferOtp,
-  registerBank,
-  syncTransfer,
   verifyTransferOtp,
   type DirectPayout,
   type PayoutRow,
@@ -20,8 +18,8 @@ const OPEN_STATUS = ['pending', 'initiated', 'in_progress'];
 
 const STATUS_LABEL: Record<string, string> = {
   pending: 'Waiting for confirmation',
-  initiated: 'Ready to authorise',
-  in_progress: 'Sent to RazorpayX',
+  initiated: 'Confirmed',
+  in_progress: 'Paying',
   success: 'Paid',
   partial: 'Partly paid',
   failed: 'Failed',
@@ -87,10 +85,9 @@ export function DirectTransferPanel({ month }: { month: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month]);
 
-  const connection = data?.connection ?? null;
   const openBatch = data?.batches.find((batch) => OPEN_STATUS.includes(batch.status)) ?? null;
   const earlier = (data?.batches ?? []).filter((batch) => batch.id !== openBatch?.id);
-  const step = connection ? stepFor(openBatch) : 0;
+  const step = stepFor(openBatch);
   const readyIds = useMemo(() => rows.filter((row) => !blockReason(row)).map((row) => row.employeeId), [rows]);
   const pickedRows = rows.filter((row) => picked.includes(row.employeeId) && readyIds.includes(row.employeeId));
   const pickedNet = pickedRows.reduce((sum, row) => sum + row.netPay, 0);
@@ -108,19 +105,6 @@ export function DirectTransferPanel({ month }: { month: string }) {
 
   function toggleAll() {
     setPicked(allChecked ? [] : readyIds);
-  }
-
-  async function onRegister() {
-    setBusy(true);
-    try {
-      await registerBank();
-      await load();
-      showToast('RazorpayX connected. No salary has been sent.');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not connect RazorpayX.');
-    } finally {
-      setBusy(false);
-    }
   }
 
   async function onCreate() {
@@ -162,7 +146,7 @@ export function DirectTransferPanel({ month }: { month: string }) {
       const issued = await issueTransferOtp(openBatch.id);
       setConfirmationCode(issued.confirmationCode);
       setOtp('');
-      showToast('Confirmation code is on screen. RazorpayX is not charged yet.');
+      showToast('Confirmation code is on screen. Salary is paid only after you confirm.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start verification.');
     } finally {
@@ -178,7 +162,7 @@ export function DirectTransferPanel({ month }: { month: string }) {
       setConfirmationCode('');
       setOtp('');
       await load();
-      showToast('Confirmed. Authorise the batch to send it to RazorpayX.');
+      showToast('Confirmed. The local bank marked this batch paid.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not verify the code.');
     } finally {
@@ -186,75 +170,37 @@ export function DirectTransferPanel({ month }: { month: string }) {
     }
   }
 
-  async function onAuthorise(decision: 'approve' | 'reject') {
+  async function onFinish(decision: 'approve' | 'reject') {
     if (!openBatch) return;
     setBusy(true);
     try {
       await authoriseTransfer(openBatch.id, decision);
       await load();
-      showToast(
-        decision === 'approve'
-          ? 'Sent to RazorpayX. Refresh the status. Salary stays unpaid until a UTR arrives.'
-          : 'Transfer rejected. Employees can be selected again.',
-      );
+      showToast(decision === 'approve' ? 'Local bank marked this batch paid.' : 'Transfer cancelled. Employees can be selected again.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not authorise the transfer.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onSync() {
-    if (!openBatch) return;
-    setBusy(true);
-    try {
-      const batch = await syncTransfer(openBatch.id);
-      await load();
-      const paid = batch.transactions.filter((tx) => tx.status === 'success').length;
-      const note = batch.transactions.map((tx) => tx.skipReason).find(Boolean);
-      showToast(paid ? `RazorpayX paid ${paid} with a UTR.` : note || 'RazorpayX status refreshed. No UTR yet, so nobody is marked paid.');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not read the RazorpayX status.');
+      setError(err instanceof Error ? err.message : 'Could not finish the transfer.');
     } finally {
       setBusy(false);
     }
   }
 
   if (!data) {
-    return <p className="salary-note">Loading direct transfer…</p>;
+    return error ? <p className="ess-alert">{error}</p> : <p className="salary-note">Loading direct transfer…</p>;
   }
 
   return (
     <div className="payout-direct">
       {error ? <p className="ess-alert">{error}</p> : null}
 
-      <div className="payout-connect">
-        {!data.configured ? (
-          <p>RazorpayX keys are missing on the API server ({data.missing.join(', ')}).</p>
-        ) : connection ? (
-          <p>
-            {connection.live
-              ? `RazorpayX · account ending ${connection.accountLast4} · Live`
-              : `RazorpayX · account ending ${connection.accountLast4} · Test mode. Test mode does not move real money.`}
-          </p>
-        ) : (
-          <p>Connect RazorpayX first. The key stays on the server, and no salary is sent by connecting.</p>
-        )}
-        {data.configured ? (
-          <button type="button" className={connection ? 'ess-btn' : 'ess-btn ess-btn-primary'} disabled={busy} onClick={() => void onRegister()}>
-            {connection ? 'Reconnect' : 'Connect RazorpayX'}
-          </button>
-        ) : null}
-      </div>
+      <p className="salary-note">Local bank mock. Select people, confirm the code, and those salaries are marked paid. No real money moves.</p>
 
       <ol className="payout-steps" aria-label="Direct transfer steps">
-        <li className={step === 1 ? 'is-current' : step > 1 ? 'is-done' : ''}>1. Select employees</li>
+        <li className={step <= 1 ? 'is-current' : 'is-done'}>1. Select employees</li>
         <li className={step === 2 ? 'is-current' : step > 2 ? 'is-done' : ''}>2. Confirm</li>
-        <li className={step === 3 ? 'is-current' : step > 3 ? 'is-done' : ''}>3. Authorise</li>
-        <li className={step === 4 ? 'is-current' : ''}>4. Paid when UTR arrives</li>
+        <li className={step > 2 ? 'is-current' : ''}>3. Paid by local bank</li>
       </ol>
 
-      {step === 1 ? (
+      {step <= 1 ? (
         <section className="payout-stage">
           <div>
             <h2>Who should be paid?</h2>
@@ -274,7 +220,7 @@ export function DirectTransferPanel({ month }: { month: string }) {
             <button
               type="button"
               className="ess-btn ess-btn-primary"
-              disabled={busy || !connection || !approved || pickedRows.length === 0}
+              disabled={busy || !approved || pickedRows.length === 0}
               onClick={() => void onCreate()}
             >
               Create batch for selected
@@ -288,7 +234,7 @@ export function DirectTransferPanel({ month }: { month: string }) {
           <div>
             <h2>Confirm {openBatch.reference}</h2>
             <p>
-              {openBatch.willPayCount} employees · {formatSalary(openBatch.totalAmount)}. Nothing is sent until you confirm. RazorpayX is charged only when you authorise.
+              {openBatch.willPayCount} employees · {formatSalary(openBatch.totalAmount)}. Enter the confirmation code and the local bank marks them paid.
             </p>
           </div>
           <BatchPeople batch={openBatch} />
@@ -316,43 +262,21 @@ export function DirectTransferPanel({ month }: { month: string }) {
         </section>
       ) : null}
 
-      {openBatch && step === 3 ? (
+      {openBatch && step > 2 ? (
         <section className="payout-stage">
           <div>
-            <h2>Authorise {openBatch.reference}</h2>
+            <h2>{openBatch.reference}</h2>
             <p>
-              {`${openBatch.willPayCount} employees · ${formatSalary(openBatch.totalAmount)}. ${
-                openBatch.canAuthorise
-                  ? 'Authorise to send it to RazorpayX. Salary stays unpaid until a UTR arrives.'
-                  : 'A finance role is required to authorise this batch.'
-              }`}
+              {openBatch.willPayCount} employees · {formatSalary(openBatch.totalAmount)}. Mark paid writes a local UTR. Cancel puts these employees back in the list.
             </p>
-          </div>
-          <BatchPeople batch={openBatch} />
-          <div className="payout-action">
-            <button type="button" className="ess-btn" disabled={busy || !openBatch.canAuthorise} onClick={() => void onAuthorise('reject')}>
-              Reject
-            </button>
-            <button type="button" className="ess-btn ess-btn-primary" disabled={busy || !openBatch.canAuthorise} onClick={() => void onAuthorise('approve')}>
-              Authorise on RazorpayX
-            </button>
-          </div>
-        </section>
-      ) : null}
-
-      {openBatch && step === 4 ? (
-        <section className="payout-stage">
-          <div>
-            <h2>{openBatch.reference} is with RazorpayX</h2>
-            <p>Salary is marked paid only when RazorpayX returns a UTR. Refresh to read the latest status.</p>
-            {[...new Set(openBatch.transactions.map((tx) => tx.skipReason).filter(Boolean))].map((note) => (
-              <p key={note} className="ess-alert">{note}</p>
-            ))}
           </div>
           <BatchPeople batch={openBatch} showUtr />
           <div className="payout-action">
-            <button type="button" className="ess-btn ess-btn-primary" disabled={busy} onClick={() => void onSync()}>
-              Refresh RazorpayX status
+            <button type="button" className="ess-btn" disabled={busy} onClick={() => void onFinish('reject')}>
+              Cancel transfer
+            </button>
+            <button type="button" className="ess-btn ess-btn-primary" disabled={busy} onClick={() => void onFinish('approve')}>
+              Mark paid
             </button>
           </div>
         </section>

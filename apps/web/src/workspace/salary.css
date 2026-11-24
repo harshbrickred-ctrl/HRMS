@@ -248,6 +248,44 @@
   gap: 12px;
 }
 
+.salary-net-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line, #d8dee6);
+  border-radius: var(--radius-sm, 8px);
+  background: color-mix(in srgb, var(--panel, #f4f6f8) 92%, #0b5fff 8%);
+}
+
+.salary-net-line {
+  display: grid;
+  gap: 2px;
+  min-width: 7.5rem;
+}
+
+.salary-net-line span {
+  color: var(--muted, #5b6472);
+  font-size: 12px;
+}
+
+.salary-net-line strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.salary-net-line.is-result strong {
+  font-size: 17px;
+}
+
+.salary-net-op {
+  color: var(--muted, #5b6472);
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1;
+}
+
 .salary-table caption {
   caption-side: top;
   padding: 8px 10px 0;

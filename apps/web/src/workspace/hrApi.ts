@@ -59,6 +59,8 @@ export type HrEmployee = {
   ifscCode: string;
   bankAccountNumber: string;
   salary: {
+    ctc?: number;
+    pf?: number;
     basic: number;
     hra: number;
     special: number;
@@ -66,6 +68,7 @@ export type HrEmployee = {
     dailyAllowance: number;
     gratuity: number;
     leaveEncashment: number;
+    insurance?: number;
   } | null;
   leaveBalances?: HrLeaveBalance[];
   documents?: HrDocument[];

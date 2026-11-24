@@ -120,6 +120,18 @@ export class CreateEmployeeDto {
   @Type(() => Number)
   @IsInt()
   @Min(0)
+  ctc?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  insurance?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
   basic?: number;
 
   @IsOptional()
@@ -223,6 +235,18 @@ export class UpdateEmployeeDto {
   @IsString()
   @MaxLength(18)
   bankAccountNumber?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  ctc?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  insurance?: number;
 
   @IsOptional()
   @Type(() => Number)

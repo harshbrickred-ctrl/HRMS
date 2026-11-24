@@ -160,9 +160,6 @@ export class LeaveService {
     if (!onBehalf && dto.code === 'SL' && (fromDate > today || toDate > today)) {
       throw new BadRequestException('Sick leave cannot be applied for a future date.');
     }
-    if (!onBehalf && !employee.managerId) {
-      throw new BadRequestException('No manager is assigned for this leave request.');
-    }
     const catalog = LEAVE_CATALOG.find((item) => item.code === dto.code);
     if (!catalog) throw new BadRequestException('Unknown leave type.');
     const holidays = await this.holidayIsoList(employee.tenantId, employee.locationId);
@@ -235,6 +232,8 @@ export class LeaveService {
         href: '/manager/inbox',
         kind: 'leave',
       });
+    } else if (!employee.managerId) {
+      await this.notifyHrLeaveOfficers(employee, catalog.type, fromDate);
     }
     await this.audit(employee.tenantId, employee.userId, 'leave.request.create', request.id, {
       code: dto.code,
@@ -428,6 +427,34 @@ export class LeaveService {
       pending: 0,
       available: 0,
     }));
+  }
+
+  private async notifyHrLeaveOfficers(
+    employee: { id: string; tenantId: string; userId: string | null; firstName: string; lastName: string },
+    leaveType: string,
+    fromDate: string,
+  ) {
+    const officers = await this.prisma.user.findMany({
+      where: {
+        tenantId: employee.tenantId,
+        status: 'ACTIVE',
+        id: employee.userId ? { not: employee.userId } : undefined,
+        roles: { some: { role: { code: { in: ['HRA', 'HRH', 'HRBP', 'HR_EXEC', 'HR_HEAD'] } } } },
+      },
+      select: { id: true },
+    });
+    await Promise.all(
+      officers.map((officer) =>
+        this.notifications.notify({
+          tenantId: employee.tenantId,
+          userId: officer.id,
+          title: 'Leave request pending',
+          body: `${employee.firstName} ${employee.lastName} · ${leaveType} · ${fromDate}`,
+          href: '/hr/leave',
+          kind: 'leave',
+        }),
+      ),
+    );
   }
 
   private async isLeaveOfficer(userId: string) {
