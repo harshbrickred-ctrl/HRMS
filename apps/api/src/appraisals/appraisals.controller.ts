@@ -6,6 +6,8 @@ import { PermissionsGuard } from '../rbac/permissions.guard';
 import { PermissionsService } from '../rbac/permissions.service';
 import {
   CreateCycleDto,
+  CsvImportDto,
+  AssignmentPreviewDto,
   DecisionDto,
   HrReviewDto,
   ManagerReviewDto,
@@ -129,9 +131,32 @@ export class AppraisalCycleController {
   @Get()
   list(@CurrentUser() user: AuthUser) { return this.appraisals.listCycles(user.tenantId); }
 
+  @Get('assignment-directory')
+  assignmentDirectory(@CurrentUser() user: AuthUser) { return this.appraisals.assignmentDirectory(user.tenantId); }
+
+  @Post(':id/assignments/preview')
+  previewAssignments(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: AssignmentPreviewDto) { return this.appraisals.previewAssignments(user.tenantId, id, dto); }
+
+  @Post(':id/assignments/confirm')
+  confirmAssignments(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: AssignmentPreviewDto) { return this.appraisals.confirmAssignments(user.tenantId, user.userId, id, dto); }
+
+  @Get('imports')
+  history(@CurrentUser() user: AuthUser) { return this.appraisals.importHistory(user.tenantId); }
+
+  @Post('imports/preview')
+  previewImport(@CurrentUser() user: AuthUser, @Body() dto: CsvImportDto) { return this.appraisals.previewImport(user.tenantId, dto); }
+
+  @Post('imports/confirm')
+  confirmImport(@CurrentUser() user: AuthUser, @Body() dto: CsvImportDto) { return this.appraisals.confirmImport(user.tenantId, user.userId, dto); }
+
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateCycleDto) {
     return this.appraisals.createCycle(user.tenantId, user.userId, dto);
+  }
+
+  @Put(':id')
+  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: CreateCycleDto) {
+    return this.appraisals.updateCycle(user.tenantId, id, dto);
   }
 
   @Put(':id/kpis')

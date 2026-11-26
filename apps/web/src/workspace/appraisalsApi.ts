@@ -2,7 +2,7 @@ import { apiFetch } from '../lib/api';
 
 export type AppraisalKpi = {
   cycleKpiId: string;
-  cycleKpi: { id: string; title: string; description: string; category: string; weight: number; required: boolean };
+  cycleKpi: { id: string; title: string; subKpiName?: string; description: string; category: string; weight: number; subWeight?: number; required: boolean };
   selfRating: number | null;
   selfComment: string;
   managerRating: number | null;
@@ -84,11 +84,15 @@ export function fetchAppraisalSummary(scope: 'me' | 'manager' | 'hr' | 'manageme
 }
 
 export function fetchAppraisalCycles() {
-  return apiFetch<Array<{ id: string; name: string; status: string; _count: { appraisals: number }; kpis: Array<{ id: string; title: string; weight: number }> }>>('/api/v1/appraisal-cycles');
+  return apiFetch<Array<{ id: string; name: string; status: string; periodStart: string; periodEnd: string; selfStart: string; selfDeadline: string; reviewDeadline: string; _count: { appraisals: number }; kpis: Array<{ id: string; title: string; category: string; weight: number; subKpiName?: string; subWeight?: number; required: boolean }> }>>('/api/v1/appraisal-cycles');
 }
 
 export function createAppraisalCycle(body: object) {
   return apiFetch<{ id: string }>('/api/v1/appraisal-cycles', { method: 'POST', body: JSON.stringify(body) });
+}
+
+export function updateAppraisalCycle(id: string, body: object) {
+  return apiFetch(`/api/v1/appraisal-cycles/${id}`, { method: 'PUT', body: JSON.stringify(body) });
 }
 
 export function setAppraisalCycleKpis(id: string, kpis: object[]) {
@@ -101,4 +105,39 @@ export function launchAppraisalCycle(id: string) {
 
 export function closeAppraisalCycle(id: string) {
   return apiFetch(`/api/v1/appraisal-cycles/${id}/close`, { method: 'POST', body: '{}' });
+}
+
+export type AssignmentEmployee = { id: string; employeeCode: string; employeeName: string; department: string; designation: string; reportingManagerCode: string; reportingManagerName: string };
+export type AssignmentRequest = {
+  mode: 'all' | 'department' | 'designation' | 'manager' | 'selected' | 'excel';
+  filterValue?: string;
+  selectedEmployeeCodes?: string[];
+  excludedEmployeeCodes?: string[];
+  rows?: Array<{ employeeCode: string; employeeName?: string; department?: string; designation?: string; reportingManagerCode?: string; include: string }>;
+};
+export type AssignmentPreview = { totalEligible: number; selectedCount: number; excludedCount: number; alreadyAssignedCount: number; toAssignCount: number; employees: Array<{ employeeCode: string; name: string; department: string; designation: string; managerCode: string; alreadyAssigned: boolean }>; excludedEmployees: Array<{ employeeCode: string; name: string }>; errors: Array<{ row: number; message: string }>; canConfirm: boolean };
+
+export function fetchAppraisalAssignmentDirectory() {
+  return apiFetch<{ employees: AssignmentEmployee[]; departments: string[]; designations: string[]; managers: Array<{ employeeCode: string; name: string }> }>('/api/v1/appraisal-cycles/assignment-directory');
+}
+
+export function previewAppraisalAssignments(cycleId: string, request: AssignmentRequest) {
+  return apiFetch<AssignmentPreview>(`/api/v1/appraisal-cycles/${cycleId}/assignments/preview`, { method: 'POST', body: JSON.stringify(request) });
+}
+
+export function confirmAppraisalAssignments(cycleId: string, request: AssignmentRequest) {
+  return apiFetch<{ cycleId: string; assignedCount: number; alreadyAssignedCount: number; excludedCount: number }>(`/api/v1/appraisal-cycles/${cycleId}/assignments/confirm`, { method: 'POST', body: JSON.stringify(request) });
+}
+
+export type AppraisalImportRequest = { cycleId: string; fileName: string; csv?: string; workbookBase64?: string };
+export function previewAppraisalImport(body: AppraisalImportRequest) {
+  return apiFetch<{ totalRows: number; validRows: number; invalidRows: number; totalEmployees?: number; totalCategories?: number; totalCheckpoints?: number; errors: Array<{ row: number; message: string }>; canImport: boolean }>('/api/v1/appraisal-cycles/imports/preview', { method: 'POST', body: JSON.stringify(body) });
+}
+
+export function confirmAppraisalImport(body: AppraisalImportRequest) {
+  return apiFetch<{ importId: string; importedRows: number; employeesImported: number; appraisalRecordsCreated: number; skippedCount: number; failedRows: number }>('/api/v1/appraisal-cycles/imports/confirm', { method: 'POST', body: JSON.stringify(body) });
+}
+
+export function fetchAppraisalImportHistory() {
+  return apiFetch<Array<{ id: string; fileName: string; status: string; totalRows: number; importedRows: number; failedRows: number; errors: Array<{ row: number; message: string }>; createdAt: string }>>('/api/v1/appraisal-cycles/imports');
 }

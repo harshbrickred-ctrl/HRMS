@@ -48,6 +48,7 @@ model Tenant {
   assetMaintenance     AssetMaintenance[]
   appraisalCycles      AppraisalCycle[]
   employeeAppraisals   EmployeeAppraisal[]
+  appraisalImports     AppraisalImport[]
 }
 
 model User {
@@ -83,6 +84,7 @@ model User {
   assetMaintenanceCreated AssetMaintenance[] @relation("AssetMaintenanceCreatedBy")
   assetMaintenanceUpdated AssetMaintenance[] @relation("AssetMaintenanceUpdatedBy")
   appraisalCyclesCreated AppraisalCycle[] @relation("AppraisalCycleCreatedBy")
+  appraisalImportsCreated AppraisalImport[]
   appraisalReviews      AppraisalReview[]
 
   @@unique([tenantId, email])
@@ -373,6 +375,7 @@ model AppraisalCycle {
   createdBy      User                @relation("AppraisalCycleCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   kpis           CycleKpi[]
   appraisals     EmployeeAppraisal[]
+  imports        AppraisalImport[]
 
   @@unique([tenantId, name])
   @@index([tenantId, status])
@@ -382,9 +385,11 @@ model CycleKpi {
   id          String              @id @default(cuid())
   cycleId     String
   title       String
+  subKpiName  String              @default("")
   description String              @default("")
   category    String              @default("Performance")
   weight      Decimal             @default(1) @db.Decimal(6, 3)
+  subWeight   Decimal             @default(100) @db.Decimal(6, 3)
   required    Boolean             @default(true)
   sortOrder   Int                 @default(0)
   cycle       AppraisalCycle      @relation(fields: [cycleId], references: [id], onDelete: Cascade)
@@ -408,6 +413,7 @@ model EmployeeAppraisal {
   managerStrengths         String              @default("")
   managerImprovementAreas  String              @default("")
   managerRating            Decimal?            @db.Decimal(5, 2)
+  selfRating               Decimal?            @db.Decimal(5, 2)
   hrFeedback               String              @default("")
   hrRating                 Decimal?            @db.Decimal(5, 2)
   promotionRecommendation  String              @default("")
@@ -464,6 +470,25 @@ model AppraisalReview {
 
   @@index([appraisalId, createdAt])
   @@index([actorUserId, createdAt])
+}
+
+model AppraisalImport {
+  id          String   @id @default(cuid())
+  tenantId    String
+  createdById String
+  cycleId     String
+  fileName    String   @default("appraisal.csv")
+  status      String   @default("Completed")
+  totalRows   Int      @default(0)
+  importedRows Int     @default(0)
+  failedRows  Int      @default(0)
+  errors      Json     @default("[]")
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  cycle       AppraisalCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, createdAt])
 }
 
 enum HelpdeskTicketStatus {
